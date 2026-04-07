@@ -1,0 +1,37 @@
+<div class="restaurant-list-container">
+  <h1>All Restaurants</h1>
+  
+  <div class="search-box">
+    <input
+      type="text"
+      [(ngModel)]="searchText"
+      placeholder="Search restaurants..."
+      class="search-input"
+    />
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading restaurants...</div>
+
+  <div class="restaurant-table" *ngIf="!loading">
+    <table>
+      <thead>
+        <tr>
+          <th>Restaurant Name</th>
+          <th>Cuisine</th>
+          <th>Rating</th>
+          <th>Address</th>
+          <th>Veg</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let restaurant of filteredRestaurants">
+          <td>{{ restaurant.restaurantName }}</td>
+          <td>{{ restaurant.cuisine.join(', ') }}</td>
+          <td>{{ restaurant.rating }}</td>
+          <td>{{ restaurant.address }}</td>
+          <td>{{ restaurant.isVeg ? 'Yes' : 'No' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

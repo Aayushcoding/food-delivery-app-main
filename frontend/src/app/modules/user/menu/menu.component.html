@@ -1,0 +1,31 @@
+<div class="menu-container">
+  <button (click)="goToCart()" class="btn-back">Back to Cart</button>
+  
+  <h1>Restaurant Menu</h1>
+
+  <div *ngIf="loading" class="loading">Loading menu...</div>
+
+  <div class="menu-grid" *ngIf="!loading">
+    <div *ngFor="let item of menus" class="menu-card">
+      <div class="menu-header">
+        <h3>{{ item.itemName }}</h3>
+        <span class="veg" *ngIf="item.isVeg">[VEG]</span>
+      </div>
+      <p class="category">{{ item.category }}</p>
+      <p class="description">{{ item.description }}</p>
+      <div class="menu-footer">
+        <span class="price">₹{{ item.price }}</span>
+        <span class="rating">⭐ {{ item.rating }}</span>
+      </div>
+      <div class="add-to-cart">
+        <input
+          type="number"
+          min="1"
+          [(ngModel)]="quantities[item.menuId]"
+          class="quantity-input"
+        />
+        <button (click)="addToCart(item)" class="btn-add">Add to Cart</button>
+      </div>
+    </div>
+  </div>
+</div>

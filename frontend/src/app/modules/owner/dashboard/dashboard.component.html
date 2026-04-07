@@ -1,0 +1,29 @@
+<div class="dashboard-container">
+  <h1>Owner Dashboard</h1>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <h3>Total Orders</h3>
+      <p class="stat-value">{{ totalOrders }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Total Revenue</h3>
+      <p class="stat-value">₹{{ totalRevenue }}</p>
+    </div>
+    <div class="stat-card">
+      <h3>Menu Items</h3>
+      <p class="stat-value">{{ totalMenuItems }}</p>
+    </div>
+  </div>
+
+  <div class="actions-grid">
+    <button (click)="navigateTo('add-menu')" class="action-btn">
+      <span class="icon">➕</span>
+      Add New Menu Item
+    </button>
+    <button (click)="navigateTo('manage-orders')" class="action-btn">
+      <span class="icon">📋</span>
+      Manage Orders
+    </button>
+  </div>
+</div>

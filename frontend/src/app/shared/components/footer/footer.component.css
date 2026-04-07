@@ -1,0 +1,74 @@
+/* Modern Footer Styles */
+
+.footer {
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  color: #ecf0f1;
+  position: relative;
+  overflow: hidden;
+}
+
+.footer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color) 0%, var(--accent-color) 100%);
+}
+
+.brand-section h3 {
+  color: var(--primary-color);
+}
+
+.social-links a {
+  transition: all 0.3s ease;
+}
+
+.social-links a:hover {
+  color: var(--primary-color) !important;
+  transform: translateY(-2px);
+}
+
+.footer a:hover {
+  color: var(--primary-color) !important;
+}
+
+.app-buttons .btn {
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.app-buttons .btn:hover {
+  background: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  transform: translateY(-1px);
+}
+
+.footer-bottom {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .footer .row {
+    text-align: center;
+  }
+
+  .social-links {
+    justify-content: center;
+  }
+
+  .app-buttons {
+    justify-content: center;
+  }
+
+  .footer-bottom .row {
+    text-align: center;
+  }
+
+  .footer-bottom .col-md-6 {
+    margin-bottom: 1rem;
+  }
+}

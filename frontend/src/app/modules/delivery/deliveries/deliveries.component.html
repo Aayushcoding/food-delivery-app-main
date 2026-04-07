@@ -1,0 +1,33 @@
+<div class="deliveries-container">
+  <h1>Active Deliveries</h1>
+
+  <div *ngIf="loading" class="loading">Loading deliveries...</div>
+
+  <div *ngIf="!loading && deliveries.length === 0" class="no-deliveries">
+    <p>No active deliveries at the moment.</p>
+  </div>
+
+  <div class="deliveries-grid" *ngIf="!loading && deliveries.length > 0">
+    <div *ngFor="let delivery of deliveries" class="delivery-card">
+      <div class="delivery-header">
+        <h3>Order #{{ delivery.orderId.substring(0, 8) }}...</h3>
+        <span [ngClass]="getStatusClass(delivery.status)">
+          {{ delivery.status }}
+        </span>
+      </div>
+      <div class="delivery-details">
+        <p><strong>User:</strong> {{ delivery.userId }}</p>
+        <p><strong>Total Amount:</strong> ₹{{ delivery.totalAmount }}</p>
+        <p><strong>Items:</strong> {{ delivery.items.length }}</p>
+      </div>
+      <div class="delivery-actions">
+        <select #statusSelect (change)="updateDeliveryStatus(delivery.orderId, statusSelect.value)" class="status-select">
+          <option value="">Update Status</option>
+          <option value="Preparing">Preparing</option>
+          <option value="Out for Delivery">Out for Delivery</option>
+          <option value="Delivered">Delivered</option>
+        </select>
+      </div>
+    </div>
+  </div>
+</div>

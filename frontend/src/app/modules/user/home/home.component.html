@@ -1,0 +1,129 @@
+<div class="home-container">
+  <!-- Hero Section -->
+  <section class="hero-section position-relative overflow-hidden">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="container position-relative">
+      <div class="row align-items-center min-vh-75">
+        <div class="col-lg-6 text-white">
+          <h1 class="display-4 fw-bold mb-4 fade-in">Delicious Food,<br>Delivered Fast</h1>
+          <p class="lead mb-4">Order from your favorite restaurants and get fresh, hot meals delivered to your doorstep in minutes.</p>
+
+          <!-- Search Bar -->
+          <div class="search-container mb-4">
+            <div class="input-group input-group-lg">
+              <input type="text" class="form-control" placeholder="Enter your delivery address" aria-label="Delivery address">
+              <button class="btn btn-primary px-4" type="button">
+                <i class="fas fa-search me-2"></i>Find Food
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6 d-none d-lg-block">
+          <div class="hero-image-container">
+            <img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=500&h=400&fit=crop" alt="Food delivery" class="img-fluid rounded-3 shadow-lg slide-up">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categories Section -->
+  <section class="categories-section py-5 bg-light">
+    <div class="container">
+      <h2 class="text-center mb-5 fw-bold">What's on your mind?</h2>
+      <div class="row g-4">
+        <div class="col-6 col-md-3" *ngFor="let category of categories">
+          <div class="category-card card border-0 text-center p-3 h-100" (click)="filterByCategory(category)">
+            <div class="category-icon mb-3">
+              <i [class]="category.icon" class="fa-3x text-primary"></i>
+            </div>
+            <h6 class="card-title mb-0 fw-semibold">{{ category.name }}</h6>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Restaurants Section -->
+  <section class="restaurants-section py-5">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Featured Restaurants</h2>
+        <a routerLink="/user/restaurants" class="btn btn-outline-primary">View All</a>
+      </div>
+
+      <div *ngIf="loading" class="text-center py-5">
+        <div class="spinner"></div>
+        <p class="mt-3 text-muted">Loading delicious restaurants...</p>
+      </div>
+
+      <div class="row g-4" *ngIf="!loading">
+        <div class="col-lg-4 col-md-6" *ngFor="let restaurant of restaurants.slice(0, 6)">
+          <div class="restaurant-card card h-100 border-0 shadow-sm">
+            <div class="card-img-container position-relative">
+              <img [src]="restaurant.imageUrl || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=250&fit=crop'"
+                   [alt]="restaurant.restaurantName"
+                   class="card-img-top"
+                   style="height: 200px; object-fit: cover;">
+              <div class="rating-badge position-absolute top-0 end-0 m-3">
+                <span class="badge bg-success">
+                  <i class="fas fa-star me-1"></i>{{ restaurant.rating }}
+                </span>
+              </div>
+              <div class="veg-badge position-absolute top-0 start-0 m-3" *ngIf="restaurant.isVeg">
+                <span class="badge bg-success">Pure Veg</span>
+              </div>
+            </div>
+
+            <div class="card-body d-flex flex-column">
+              <h5 class="card-title fw-bold mb-2">{{ restaurant.restaurantName }}</h5>
+              <p class="card-text text-muted mb-2">
+                <i class="fas fa-utensils me-1"></i>{{ restaurant.cuisine.join(', ') }}
+              </p>
+              <p class="card-text text-muted small mb-3">
+                <i class="fas fa-map-marker-alt me-1"></i>{{ restaurant.address }}
+              </p>
+
+              <div class="mt-auto">
+                <button (click)="viewMenu(restaurant.restaurantId)"
+                        class="btn btn-primary w-100">
+                  <i class="fas fa-eye me-2"></i>View Menu
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section class="features-section py-5 bg-primary text-white">
+    <div class="container">
+      <div class="row g-4 text-center">
+        <div class="col-md-4">
+          <div class="feature-icon mb-3">
+            <i class="fas fa-clock fa-3x"></i>
+          </div>
+          <h5 class="fw-bold">Fast Delivery</h5>
+          <p>Hot and fresh food delivered in 30 minutes</p>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-icon mb-3">
+            <i class="fas fa-shield-alt fa-3x"></i>
+          </div>
+          <h5 class="fw-bold">Safe & Hygienic</h5>
+          <p>Contactless delivery with sanitized packaging</p>
+        </div>
+        <div class="col-md-4">
+          <div class="feature-icon mb-3">
+            <i class="fas fa-utensils fa-3x"></i>
+          </div>
+          <h5 class="fw-bold">Best Quality</h5>
+          <p>Fresh ingredients from trusted restaurants</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>

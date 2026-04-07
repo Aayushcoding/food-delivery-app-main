@@ -1,0 +1,42 @@
+<div class="orders-container">
+  <h1>Manage Orders</h1>
+
+  <div *ngIf="loading" class="loading">Loading orders...</div>
+
+  <div class="orders-table" *ngIf="!loading">
+    <table>
+      <thead>
+        <tr>
+          <th>Order ID</th>
+          <th>User ID</th>
+          <th>Total Amount</th>
+          <th>Items</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let order of orders">
+          <td>{{ order.orderId.substring(0, 8) }}...</td>
+          <td>{{ order.userId }}</td>
+          <td>₹{{ order.totalAmount }}</td>
+          <td>{{ order.items.length }}</td>
+          <td>
+            <span [ngClass]="getStatusClass(order.status)">
+              {{ order.status }}
+            </span>
+          </td>
+          <td>
+            <select #statusSelect (change)="updateOrderStatus(order.orderId, statusSelect.value)" class="status-select">
+              <option value="">Change Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Preparing">Preparing</option>
+              <option value="Out for Delivery">Out for Delivery</option>
+              <option value="Delivered">Delivered</option>
+            </select>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
