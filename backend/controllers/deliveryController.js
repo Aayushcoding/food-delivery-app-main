@@ -1,18 +1,41 @@
+// controllers/deliveryAgentController.js
+// Fields: id, agentName, contactNo, isAvailable, vehicleNo
+// String query: DeliveryAgent.findOne({ id: value }) — NO findById(), NO populate()
+
 const DeliveryAgent = require('../models/DeliveryAgent');
 
-// Get all delivery agents
+// ── GET ALL DELIVERY AGENTS ────────────────────────────────────────────────────
+// GET /api/agents?isAvailable=true&search=nisha&page=1&limit=10
 const getDeliveryAgents = async (req, res) => {
   try {
-    const agents = await DeliveryAgent.find();
-    res.json(agents);
+    const { isAvailable, search, page = 1, limit = 10 } = req.query;
+    const filter = {};
+
+    if (isAvailable !== undefined) filter.isAvailable = isAvailable === 'true';
+    if (search) {
+      filter.$or = [
+        { agentName: { $regex: search, $options: 'i' } },
+        { vehicleNo: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const skip  = (parseInt(page) - 1) * parseInt(limit);
+    const total = await DeliveryAgent.countDocuments(filter);
+    const agents = await DeliveryAgent.find(filter)
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    res.json({ success: true, total, page: parseInt(page), data: agents });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get single delivery agent
+// ── GET SINGLE DELIVERY AGENT ──────────────────────────────────────────────────
+// GET /api/agents/:id   (id = "agent_001")
 const getDeliveryAgent = async (req, res) => {
   try {
+    // String-based query — DO NOT use findById()
     const agent = await DeliveryAgent.findOne({ id: req.params.id });
     if (!agent) return res.status(404).json({ message: 'Delivery agent not found' });
     res.json(agent);
@@ -21,47 +44,56 @@ const getDeliveryAgent = async (req, res) => {
   }
 };
 
-// Create delivery agent
+// ── CREATE DELIVERY AGENT ──────────────────────────────────────────────────────
+// POST /api/agents
 const createDeliveryAgent = async (req, res) => {
-  const agent = new DeliveryAgent(req.body);
   try {
-    const newAgent = await agent.save();
-    res.status(201).json(newAgent);
+    const { id, agentName, contactNo, vehicleNo } = req.body;
+
+    if (!id || !agentName || !contactNo || !vehicleNo) {
+      return res.status(400).json({ message: 'id, agentName, contactNo and vehicleNo are required' });
+    }
+
+    const existing = await DeliveryAgent.findOne({ id });
+    if (existing) return res.status(409).json({ message: `Agent '${id}' already exists` });
+
+    const agent = new DeliveryAgent(req.body);
+    const saved = await agent.save();
+    res.status(201).json({ success: true, data: saved });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Update delivery agent
+// ── UPDATE DELIVERY AGENT ──────────────────────────────────────────────────────
+// PUT /api/agents/:id
 const updateDeliveryAgent = async (req, res) => {
   try {
-    const updatedAgent = await DeliveryAgent.findOneAndUpdate(
+    const updates = { ...req.body };
+    delete updates.id; // prevent id override
+
+    const updated = await DeliveryAgent.findOneAndUpdate(
       { id: req.params.id },
-      req.body,
-      { new: true }
+      { $set: updates },
+      { new: true, runValidators: true }
     );
-    if (!updatedAgent) return res.status(404).json({ message: 'Delivery agent not found' });
-    res.json(updatedAgent);
+    if (!updated) return res.status(404).json({ message: 'Delivery agent not found' });
+    res.json({ success: true, data: updated });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-// Delete delivery agent
+// ── DELETE DELIVERY AGENT ──────────────────────────────────────────────────────
+// DELETE /api/agents/:id
 const deleteDeliveryAgent = async (req, res) => {
   try {
     const agent = await DeliveryAgent.findOneAndDelete({ id: req.params.id });
     if (!agent) return res.status(404).json({ message: 'Delivery agent not found' });
-    res.json({ message: 'Delivery agent deleted' });
+    res.json({ success: true, message: 'Delivery agent deleted' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-module.exports = {
-  getDeliveryAgents,
-  getDeliveryAgent,
-  createDeliveryAgent,
-  updateDeliveryAgent,
-  deleteDeliveryAgent
-};
+module.exports = { getDeliveryAgents, getDeliveryAgent, createDeliveryAgent, updateDeliveryAgent, deleteDeliveryAgent };

@@ -284,11 +284,11 @@ infosys-project-og/
 - `DELETE /api/restaurants/:id` - Delete restaurant
 
 ### Menus
-- `GET /api/menus` - Get all menu items
-- `GET /api/menus/:id` - Get single menu item
-- `POST /api/menus` - Create menu item
-- `PUT /api/menus/:id` - Update menu item
-- `DELETE /api/menus/:id` - Delete menu item
+- `GET /api/menu` - Get all menu items
+- `GET /api/menu/:id` - Get single menu item
+- `POST /api/menu` - Create menu item
+- `PUT /api/menu/:id` - Update menu item
+- `DELETE /api/menu/:id` - Delete menu item
 
 ### Orders
 - `GET /api/orders` - Get all orders
@@ -298,11 +298,11 @@ infosys-project-og/
 - `DELETE /api/orders/:id` - Delete order
 
 ### Cart
-- `GET /api/carts` - Get all carts
-- `GET /api/carts/:id` - Get single cart
-- `POST /api/carts` - Create cart
-- `PUT /api/carts/:id` - Update cart
-- `DELETE /api/carts/:id` - Delete cart
+- `GET /api/cart` - Get all carts
+- `GET /api/cart/:id` - Get single cart
+- `POST /api/cart` - Create cart
+- `PUT /api/cart/:id` - Update cart
+- `DELETE /api/cart/:id` - Delete cart
 
 ### Delivery Agents
 - `GET /api/delivery-agents` - Get all agents

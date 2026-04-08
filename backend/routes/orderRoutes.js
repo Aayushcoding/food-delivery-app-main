@@ -9,10 +9,24 @@ const {
   deleteOrder
 } = require('../controllers/orderController');
 
-router.get('/', auth, getOrders); // Both customers and owners can view orders
-router.get('/:id', auth, getOrder); // Both can view specific order
-router.post('/', auth, roleAuth(['Customer']), createOrder); // Only customers can create orders
-router.put('/:id', auth, roleAuth(['Owner']), updateOrder); // Only owners can update order status
-router.delete('/:id', auth, roleAuth(['Owner']), deleteOrder); // Only owners can delete orders
+// TODO: Add auth middleware here after JWT implementation
+// router.get('/', auth, getOrders);
+router.get('/', getOrders);
+
+// TODO: Add auth middleware here after JWT implementation
+// router.get('/:id', auth, getOrder);
+router.get('/:id', getOrder);
+
+// TODO: Add auth middleware here after JWT implementation
+// router.post('/', auth, roleAuth(['Customer']), createOrder);
+router.post('/', createOrder);
+
+// TODO: Add auth middleware here after JWT implementation
+// router.put('/:id', auth, roleAuth(['Owner']), updateOrder);
+router.put('/:id', updateOrder);
+
+// TODO: Add auth middleware here after JWT implementation
+// router.delete('/:id', auth, roleAuth(['Owner']), deleteOrder);
+router.delete('/:id', deleteOrder);
 
 module.exports = router;
