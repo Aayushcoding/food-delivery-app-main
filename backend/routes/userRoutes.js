@@ -1,20 +1,24 @@
 ////userRoutes.js
-const express=require('express');
-const router=express.Router();
-const{
-getUsers,
-getUser,
-createUser,
-loginUser,
-updateUser,
-deleteUser
-}=require('../controllers/userController');
+const express = require('express');
+const router = express.Router();
+const { auth, roleAuth } = require('../middleware/auth');
+const {
+  getUsers,
+  getUser,
+  createUser,
+  updateUser,
+  deleteUser
+} = require('../controllers/userController');
 
-router.get('/',getUsers);
-router.get('/:id',getUser);
-router.post('/signup',createUser); // change made here
-router.post('/login',loginUser);
-router.put('/:id',updateUser);
-router.delete('/:id',deleteUser);
+// Public
+router.get('/', getUsers);
+router.get('/:id', getUser);
 
-module.exports=router;
+// Registration (public — use /api/auth/register/* instead, this is legacy)
+router.post('/signup', createUser);
+
+// Protected
+router.put('/:id', auth, updateUser);
+router.delete('/:id', auth, updateUser);
+
+module.exports = router;

@@ -7642,6 +7642,63 @@
       "status": "pending",
       "createdAt": "2026-04-12T08:19:41.282Z",
       "updatedAt": "2026-04-12T08:19:41.282Z"
+    },
+    {
+      "id": "order_107",
+      "userId": "usr_011",
+      "restaurantId": "rest_012",
+      "items": [
+        {
+          "itemId": "menu_001",
+          "name": "Veg Spring Roll",
+          "price": 525.54,
+          "quantity": 2,
+          "restaurantId": "rest_012"
+        }
+      ],
+      "totalAmount": 1051.08,
+      "deliveryAddress": "224 Juhu Beach Road, Hyderabad",
+      "status": "confirmed",
+      "createdAt": "2026-04-12T15:49:56.487Z",
+      "updatedAt": "2026-04-12T15:49:56.536Z"
+    },
+    {
+      "id": "order_108",
+      "userId": "usr_011",
+      "restaurantId": "rest_012",
+      "items": [
+        {
+          "itemId": "menu_001",
+          "name": "Veg Spring Roll",
+          "price": 525.54,
+          "quantity": 1,
+          "restaurantId": "rest_012"
+        }
+      ],
+      "totalAmount": 525.54,
+      "deliveryAddress": "224 Juhu Beach Road, Hyderabad",
+      "status": "pending",
+      "createdAt": "2026-04-12T15:54:53.591Z",
+      "updatedAt": "2026-04-12T15:54:53.591Z"
+    },
+    {
+      "id": "order_109",
+      "userId": "usr_011",
+      "restaurantId": "rest_012",
+      "items": [
+        {
+          "itemId": "menu_001",
+          "name": "Veg Spring Roll",
+          "price": 525.54,
+          "quantity": 2,
+          "restaurantId": "rest_012"
+        }
+      ],
+      "totalAmount": 1051.08,
+      "deliveryAddress": "224 Juhu Beach Road, Hyderabad",
+      "status": "confirmed",
+      "createdAt": "2026-04-12T15:55:43.488Z",
+      "updatedAt": "2026-04-12T15:55:43.761Z"
     }
   ],
   "carts": [
@@ -9044,28 +9101,6 @@
         }
       ],
       "totalAmount": 4035.12
-    },
-    {
-      "id": "cart_051",
-      "userId": "usr_011",
-      "restaurantId": "rest_007",
-      "items": [],
-      "totalAmount": 0,
-      "createdAt": "2026-04-12T05:30:29.285Z"
-    },
-    {
-      "id": "cart_052",
-      "userId": "usr_061",
-      "restaurantId": "rest_020",
-      "items": [
-        {
-          "itemId": "menu_025",
-          "quantity": 1,
-          "price": 744.47
-        }
-      ],
-      "totalAmount": 744.47,
-      "createdAt": "2026-04-12T08:20:09.476Z"
     }
   ]
 }

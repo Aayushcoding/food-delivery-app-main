@@ -1,8 +1,12 @@
 ////middleware/auth.js
 // ─────────────────────────────────────────────────────────────────────
-// Simple token validation (no JWT).
+// Token validation (no JWT).
 // Token format produced by authController: "logged-in-<userId>-<timestamp>"
+// auth        → validates token, attaches req.user = { id, role }
+// roleAuth    → checks req.user.role against allowed roles array
 // ─────────────────────────────────────────────────────────────────────
+
+const db = require('../utils/dbManager');
 
 const auth = (req, res, next) => {
   const token = req.headers['authorization'] || req.headers['x-auth-token'];
@@ -16,29 +20,46 @@ const auth = (req, res, next) => {
     return res.status(401).json({ success: false, message: 'Invalid token format.' });
   }
 
-  // Extract userId from token: "logged-in-<userId>-<timestamp>"
-  const parts = token.split('-');
-  // parts[0]="logged", parts[1]="in", parts[2]=userId prefix...
-  // userId is everything between "logged-in-" and the last "-<timestamp>"
-  // Safe extraction: remove "logged-in-" prefix, then strip last "-<timestamp>" segment
-  const withoutPrefix = token.slice('logged-in-'.length); // "<userId>-<timestamp>"
+  // Extract userId: "logged-in-<userId>-<timestamp>"
+  // Remove "logged-in-" prefix → "<userId>-<timestamp>"
+  // Strip last "-<timestamp>" segment → "<userId>"
+  const withoutPrefix = token.slice('logged-in-'.length);
   const lastDash = withoutPrefix.lastIndexOf('-');
+  if (lastDash === -1) {
+    return res.status(401).json({ success: false, message: 'Invalid token.' });
+  }
   const userId = withoutPrefix.substring(0, lastDash);
 
   if (!userId) {
-    return res.status(401).json({ success: false, message: 'Invalid token.' });
+    return res.status(401).json({ success: false, message: 'Invalid token: missing userId.' });
   }
 
-  req.user = { id: userId };
+  // Look up user in db.json to get role (single source of truth)
+  const user = db.getUser(userId);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Token invalid: user not found.' });
+  }
+
+  // Attach user identity and role to request
+  req.user = { id: userId, role: user.role };
   next();
 };
 
-// Role-based access: checks req.user.role (set by calling code or can be enriched)
+// Role-based access — call after auth middleware
+// Usage: roleAuth(['Owner']) or roleAuth(['Customer', 'Owner'])
 const roleAuth = (roles) => {
   return (req, res, next) => {
-    // For now we trust the role from the token holder — roles can be checked per-route
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Not authenticated.' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: `Access denied. This action requires role: ${roles.join(' or ')}.`
+      });
+    }
     next();
   };
 };
 
-module.exports = { auth, roleAuth };
+module.exports = { auth, roleAuth };

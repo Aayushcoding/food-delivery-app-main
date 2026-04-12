@@ -1,86 +1,108 @@
 ////menuController.js
 const db = require('../utils/dbManager');
 
-// GET /api/menu (all items or search by restaurantId)
+// ── GET ALL MENU ITEMS (public — available items only) ─────────────────────────
+// GET /api/menu  (optional ?restaurantId=xxx filter)
 const getAllMenuItems = async(req, res) => {
   try {
     const { restaurantId } = req.query;
-    let items = db.getAllMenus();
-    
+    let items = db.getAllMenus().filter(m => m.isAvailable);
+
     if (restaurantId) {
       items = items.filter(m => m.restaurantId === restaurantId);
     }
-    
+
     res.json({ success: true, data: items });
   } catch(err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// GET /api/menu/restaurant/:restaurantId (all items for a restaurant)
+// ── GET MENU BY RESTAURANT (public — available items only) ─────────────────────
+// GET /api/menu/restaurant/:restaurantId
 const getMenuByRestaurant = async(req, res) => {
   try {
     const { restaurantId } = req.params;
-    
+
     if (!restaurantId || restaurantId.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'restaurantId is required' });
     }
-    
-    // Verify restaurant exists
+
     const restaurant = db.getRestaurant(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ success: false, message: 'Restaurant not found' });
     }
-    
-    const items = db.getMenuByRestaurant(restaurantId)
-      .filter(m => m.isAvailable);
+
+    // Only available items for customers
+    const items = db.getMenuByRestaurant(restaurantId).filter(m => m.isAvailable);
     res.json({ success: true, data: items });
   } catch(err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
+// ── GET MENU BY RESTAURANT FOR OWNER (auth required — ALL items) ───────────────
+// GET /api/menu/owner/restaurant/:restaurantId
+// Owner sees all items including unavailable ones — needed for management
+const getMenuByRestaurantOwner = async(req, res) => {
+  try {
+    const { restaurantId } = req.params;
+
+    if (!restaurantId || restaurantId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'restaurantId is required' });
+    }
+
+    const restaurant = db.getRestaurant(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    // No availability filter — owner sees ALL menu items
+    const items = db.getMenuByRestaurant(restaurantId);
+    res.json({ success: true, data: items });
+  } catch(err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// ── SEARCH MENU ITEMS (public) ─────────────────────────────────────────────────
 // GET /api/menu/search?search=itemName
 const searchMenuItems = async(req, res) => {
   try {
     const { search } = req.query;
     let items = db.getAllMenus().filter(m => m.isAvailable);
-    
+
     if (search) {
-      items = items.filter(m => 
+      items = items.filter(m =>
         m.itemName.toLowerCase().includes(search.toLowerCase())
       );
     }
-    
+
     res.json({ success: true, data: items });
   } catch(err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// POST /api/menu (owner adds menu item)
+// ── ADD MENU ITEM (owner only) ─────────────────────────────────────────────────
+// POST /api/menu
 const addMenuItem = async(req, res) => {
   try {
     const { restaurantId, itemName, price, description, isVeg, category } = req.body;
 
-    // Validation
     if (!restaurantId || restaurantId.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'restaurantId is required' });
     }
-    
     if (!itemName || itemName.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'itemName is required' });
     }
-    
-    if (price === undefined || price === null || price < 0) {
-      return res.status(400).json({ success: false, message: 'price is required and must be >= 0' });
+    if (price === undefined || price === null || isNaN(Number(price)) || Number(price) < 0) {
+      return res.status(400).json({ success: false, message: 'price must be a non-negative number' });
     }
-    
     if (!category || category.trim().length === 0) {
       return res.status(400).json({ success: false, message: 'category is required' });
     }
 
-    // Verify restaurant exists
     const restaurant = db.getRestaurant(restaurantId);
     if (!restaurant) {
       return res.status(404).json({ success: false, message: `Restaurant '${restaurantId}' not found` });
@@ -88,11 +110,11 @@ const addMenuItem = async(req, res) => {
 
     const item = db.createMenuItem({
       restaurantId,
-      itemName,
-      price,
-      description,
-      isVeg,
-      category
+      itemName: itemName.trim(),
+      price: Number(price),
+      description: description || '',
+      isVeg: !!isVeg,
+      category: category.trim()
     });
 
     res.status(201).json({ success: true, message: 'Menu item added', data: item });
@@ -101,45 +123,48 @@ const addMenuItem = async(req, res) => {
   }
 };
 
-// PUT /api/menu/:id (owner updates menu item)
+// ── UPDATE MENU ITEM (owner only) ──────────────────────────────────────────────
+// PUT /api/menu/:id
 const updateMenuItem = async(req, res) => {
   try {
-    const { itemName, price, description, isVeg, category, isAvailable, rating } = req.body;
-    
-    const item = db.updateMenuItem(req.params.id, {
-      itemName,
-      price,
-      description,
-      isVeg,
-      category,
-      isAvailable,
-      rating
-    });
-    
-    if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
+    const existing = db.getMenuItem(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Menu item not found' });
     }
-    
-    res.json({ success: true, message: 'Item updated', data: item });
+
+    const { itemName, price, description, isVeg, category, isAvailable } = req.body;
+
+    const updates = {};
+    if (itemName !== undefined) updates.itemName = itemName;
+    if (price !== undefined) updates.price = Number(price);
+    if (description !== undefined) updates.description = description;
+    if (isVeg !== undefined) updates.isVeg = !!isVeg;
+    if (category !== undefined) updates.category = category;
+    if (isAvailable !== undefined) updates.isAvailable = !!isAvailable;
+
+    const item = db.updateMenuItem(req.params.id, updates);
+    res.json({ success: true, message: 'Menu item updated', data: item });
   } catch(err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// DELETE /api/menu/:id (owner deletes menu item)
+// ── DELETE MENU ITEM (owner only) ──────────────────────────────────────────────
+// DELETE /api/menu/:id
 const deleteMenuItem = async(req, res) => {
   try {
     const item = db.deleteMenuItem(req.params.id);
     if (!item) {
-      return res.status(404).json({ success: false, message: 'Item not found' });
+      return res.status(404).json({ success: false, message: 'Menu item not found' });
     }
-    res.json({ success: true, message: 'Item deleted successfully' });
+    res.json({ success: true, message: 'Menu item deleted successfully' });
   } catch(err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// GET /api/menu/:id — get a single menu item by its menuId
+// ── GET MENU ITEM BY ID (public) ───────────────────────────────────────────────
+// GET /api/menu/:id
 const getMenuItemById = async(req, res) => {
   try {
     const item = db.getMenuItem(req.params.id);
@@ -155,9 +180,10 @@ const getMenuItemById = async(req, res) => {
 module.exports = {
   getAllMenuItems,
   getMenuByRestaurant,
+  getMenuByRestaurantOwner,
   searchMenuItems,
   addMenuItem,
   updateMenuItem,
   deleteMenuItem,
   getMenuItemById
-};
+};

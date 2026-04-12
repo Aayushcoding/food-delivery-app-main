@@ -1,86 +1,37 @@
 ////seed.js
-const mongoose=require('mongoose');
-const fs=require('fs');
-const path=require('path');
-require('dotenv').config({path:"../.env"});
+// ─────────────────────────────────────────────────────────────────────────────
+// SEED — NOT NEEDED
+// The database (config/db.json) already contains all required seed data.
+// Running this file is safe: it will print a message and exit cleanly.
+//
+// DO NOT run this file — it was previously using Mongoose (MongoDB) which is
+// not connected in this project. All data lives in db.json via dbManager.js.
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ✅ USE SAME DB CONFIG
-const connectDB=require('../config/db');
+const path = require('path');
+const fs   = require('fs');
 
-// Models
-const User=require('../models/User');
-const Restaurant=require('../models/Restaurant');
-const Menu=require('../models/Menu');
-const Cart=require('../models/Cart');
-const Order=require('../models/Order');
-const DeliveryAgent=require('../models/DeliveryAgent');
+const dbPath = path.join(__dirname, '../config/db.json');
 
-async function seedData(){
-try{
-// 🔥 CONNECT DB
-await connectDB();
+try {
+  const raw  = fs.readFileSync(dbPath, 'utf-8');
+  const data = JSON.parse(raw);
 
-console.log('✅ MongoDB Connected');
-
-// 🔥 CLEAR OLD DATA
-await User.deleteMany({});
-await Restaurant.deleteMany({});
-await Menu.deleteMany({});
-await Cart.deleteMany({});
-await Order.deleteMany({});
-await DeliveryAgent.deleteMany({});
-
-console.log('🧹 Old data cleared');
-
-// 🔥 READ db.json
-const dbPath=path.join(__dirname,'../config/db.json');
-const rawData=fs.readFileSync(dbPath,'utf-8');
-const data=JSON.parse(rawData);
-
-// ⚠️ SAFETY CHECK
-if(!data){
-throw new Error('db.json empty or invalid');
+  console.log('');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  SEED — NOT REQUIRED');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log(`  Users:       ${(data.users        || []).length}`);
+  console.log(`  Restaurants: ${(data.restaurants  || []).length}`);
+  console.log(`  Menus:       ${(data.menus        || []).length}`);
+  console.log(`  Orders:      ${(data.orders       || []).length}`);
+  console.log(`  Carts:       ${(data.carts        || []).length}`);
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  db.json already has data. Nothing to seed.');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('');
+  process.exit(0);
+} catch(err) {
+  console.error('Could not read db.json:', err.message);
+  process.exit(1);
 }
-
-// 🔥 INSERT DATA
-if(data.users?.length){
-await User.insertMany(data.users);
-console.log(`👤 Inserted ${data.users.length} users`);
-}
-
-if(data.restaurants?.length){
-await Restaurant.insertMany(data.restaurants);
-console.log(`🏪 Inserted ${data.restaurants.length} restaurants`);
-}
-
-if(data.menus?.length){
-await Menu.insertMany(data.menus);
-console.log(`🍔 Inserted ${data.menus.length} menus`);
-}
-
-if(data.deliveryAgents?.length){
-await DeliveryAgent.insertMany(data.deliveryAgents);
-console.log(`🚴 Inserted ${data.deliveryAgents.length} delivery agents`);
-}
-
-if(data.orders?.length){
-await Order.insertMany(data.orders);
-console.log(`📦 Inserted ${data.orders.length} orders`);
-}
-
-if(data.carts?.length){
-await Cart.insertMany(data.carts);
-console.log(`🛒 Inserted ${data.carts.length} carts`);
-}
-
-console.log('\n🎉 DATABASE SEEDED SUCCESSFULLY');
-
-process.exit(0);
-}catch(error){
-console.error('❌ Seeding error:',error.message);
-process.exit(1);
-}
-}
-
-// RUN
-seedData();
