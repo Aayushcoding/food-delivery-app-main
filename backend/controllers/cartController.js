@@ -1,40 +1,40 @@
-﻿///cartController.js
+///cartController.js
 const db = require('../utils/dbManager');
 
 const calcTotal = (items) =>
   items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
 // GET ALL CARTS
-const getCarts = async(req, res) => {
+const getCarts = async (req, res) => {
   try {
     const { userId, restaurantId } = req.query;
     let carts = db.getAllCarts();
     if (userId) carts = carts.filter(c => c.userId === userId);
     if (restaurantId) carts = carts.filter(c => c.restaurantId === restaurantId);
     res.json({ success: true, data: carts });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // GET CART BY ID
-const getCart = async(req, res) => {
+const getCart = async (req, res) => {
   try {
     const cart = db.getCart(req.params.id);
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, data: cart });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // GET CART BY USER
-const getCartByUser = async(req, res) => {
+const getCartByUser = async (req, res) => {
   try {
     const cart = db.getCartByUserId(req.params.userId);
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, data: cart });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -43,7 +43,7 @@ const getCartByUser = async(req, res) => {
 // POST /api/cart/add-item
 // Body: { userId, itemId, quantity }
 // Price and name are ALWAYS taken from DB — never trusted from client.
-const addItemToCart = async(req, res) => {
+const addItemToCart = async (req, res) => {
   try {
     const { userId, itemId, quantity } = req.body;
 
@@ -95,7 +95,7 @@ const addItemToCart = async(req, res) => {
     cart.totalAmount = calcTotal(cart.items);
     const updated = db.updateCart(cart.id, cart);
     res.json({ success: true, message: 'Item added to cart', data: updated });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -103,7 +103,7 @@ const addItemToCart = async(req, res) => {
 // UPDATE ITEM QUANTITY
 // PUT /api/cart/update-quantity
 // Body: { cartId, itemId, quantity }
-const updateItemQuantity = async(req, res) => {
+const updateItemQuantity = async (req, res) => {
   try {
     const { cartId, itemId, quantity } = req.body;
     if (!cartId || !itemId || quantity === undefined) {
@@ -126,7 +126,7 @@ const updateItemQuantity = async(req, res) => {
     cart.totalAmount = calcTotal(cart.items);
     const updated = db.updateCart(cart.id, cart);
     res.json({ success: true, message: 'Cart updated', data: updated });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -134,7 +134,7 @@ const updateItemQuantity = async(req, res) => {
 // REMOVE ITEM FROM CART
 // POST /api/cart/remove-item
 // Body: { cartId, itemId }
-const removeItemFromCart = async(req, res) => {
+const removeItemFromCart = async (req, res) => {
   try {
     const { cartId, itemId } = req.body;
     if (!cartId || !itemId) {
@@ -148,18 +148,18 @@ const removeItemFromCart = async(req, res) => {
     cart.totalAmount = calcTotal(cart.items);
     const updated = db.updateCart(cart.id, cart);
     res.json({ success: true, message: 'Item removed from cart', data: updated });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // DELETE CART
-const deleteCart = async(req, res) => {
+const deleteCart = async (req, res) => {
   try {
     const deleted = db.deleteCart(req.params.id);
     if (!deleted) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, message: 'Cart cleared' });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
