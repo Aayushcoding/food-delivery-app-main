@@ -1,30 +1,53 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
-import { HttpClientModule, HTTP_INTERCEPTORS } from '@angular/common/http';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormsModule,ReactiveFormsModule } from '@angular/forms';
+import { HttpClientModule } from '@angular/common/http';
 
-import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { NavbarComponent } from './shared/components/navbar/navbar.component';
-import { FooterComponent } from './shared/components/footer/footer.component';
-import { AuthInterceptor } from './core/interceptors/auth.interceptor';
+import { AppRoutingModule } from './app-routing.module';
+
+// AUTH
+import { LoginComponent } from './auth/login/login.component';
+import { SignupComponent } from './auth/signup/signup.component';
+
+// CUSTOMER
+import { CustomerHomeComponent } from './customer/customer-home/customer-home.component';
+import { CustomerCartComponent } from './customer/customer-cart/customer-cart.component';
+import { CustomerOrdersComponent } from './customer/customer-orders/customer-orders.component';
+import { CustomerProfileComponent } from './customer/customer-profile/customer-profile.component';
+import { ItemCardComponent } from './customer/item-card/item-card.component';
+import { SuccessComponent } from './customer/success/success.component';
+import { CustomerMenuComponent } from './customer/customer-menu/customer-menu.component';
+
+// OWNER
+import { HomePageComponent } from './RestaurantOwner/home-page/home-page.component';
+import { MenuComponent } from './RestaurantOwner/menu/menu.component';
+import { OrdersComponent } from './RestaurantOwner/orders/orders.component';
 
 @NgModule({
-  declarations: [
-    AppComponent,
-    NavbarComponent,
-    FooterComponent
-  ],
-  imports: [
-    BrowserModule,
-    AppRoutingModule,
-    HttpClientModule,
-    FormsModule,
-    ReactiveFormsModule
-  ],
-  providers: [
-    { provide: HTTP_INTERCEPTORS, useClass: AuthInterceptor, multi: true }
-  ],
-  bootstrap: [AppComponent]
+declarations:[
+AppComponent,
+LoginComponent,
+SignupComponent,
+CustomerHomeComponent,
+CustomerCartComponent,
+CustomerOrdersComponent,
+CustomerProfileComponent,
+ItemCardComponent,
+SuccessComponent,
+CustomerMenuComponent,
+HomePageComponent,
+MenuComponent,
+OrdersComponent
+],
+imports:[
+BrowserModule,
+AppRoutingModule,
+FormsModule,
+ReactiveFormsModule,
+HttpClientModule
+],
+providers:[],
+bootstrap:[AppComponent]
 })
-export class AppModule { }
+export class AppModule{}

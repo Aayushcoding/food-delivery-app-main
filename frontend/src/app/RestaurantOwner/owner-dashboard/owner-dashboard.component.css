@@ -1,0 +1,15 @@
+.dashboard-container{
+padding:20px;
+}
+
+.stats{
+display:flex;
+gap:20px;
+}
+
+.card{
+border:1px solid #ccc;
+padding:15px;
+width:150px;
+text-align:center;
+}

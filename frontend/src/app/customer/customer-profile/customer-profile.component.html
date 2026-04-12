@@ -1,0 +1,37 @@
+<div class="profile-container">
+
+<h2>My Profile</h2>
+
+<div *ngIf="!editing">
+
+<p><strong>Name:</strong> {{user.username}}</p>
+<p><strong>Email:</strong> {{user.email}}</p>
+<p><strong>Phone:</strong> {{user.phone}}</p>
+<p><strong>Address:</strong> {{user.address.street}}, {{user.address.city}}</p>
+
+<button (click)="toggleEdit()">Edit</button>
+
+</div>
+
+<div *ngIf="editing">
+
+<label>Name</label>
+<input [(ngModel)]="user.username">
+
+<label>Email</label>
+<input [(ngModel)]="user.email">
+
+<label>Phone</label>
+<input [(ngModel)]="user.phone">
+
+<label>Street</label>
+<input [(ngModel)]="user.address.street">
+
+<label>City</label>
+<input [(ngModel)]="user.address.city">
+
+<button (click)="save()">Save</button>
+
+</div>
+
+</div>

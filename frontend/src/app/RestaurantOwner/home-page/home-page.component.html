@@ -1,0 +1,69 @@
+<div class="owner-page">
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="loading-screen">
+    <p>⏳ Loading dashboard...</p>
+  </div>
+
+  <!-- ERROR -->
+  <div *ngIf="!loading && errorMessage" class="error-screen">
+    <p>{{ errorMessage }}</p>
+    <button (click)="logout()" class="btn-logout">← Back to Login</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div *ngIf="!loading && restaurant" class="dashboard">
+
+    <!-- HEADER -->
+    <div class="dash-header">
+      <div>
+        <h1 class="restaurant-name">🍽 {{ restaurant.restaurantName }}</h1>
+        <p class="owner-name">Welcome back, <strong>{{ owner.username }}</strong></p>
+        <p class="cuisine-tag">{{ restaurant.cuisine?.join(', ') || restaurant.cuisine }}</p>
+      </div>
+      <button (click)="logout()" class="btn-logout">Logout</button>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📦</div>
+        <div class="stat-value">{{ totalOrders }}</div>
+        <div class="stat-label">Total Orders</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-value">{{ pendingOrders }}</div>
+        <div class="stat-label">Pending Orders</div>
+      </div>
+      <div class="stat-card earnings">
+        <div class="stat-icon">💰</div>
+        <div class="stat-value">₹{{ totalEarnings | number:'1.0-0' }}</div>
+        <div class="stat-label">Total Earnings</div>
+      </div>
+    </div>
+
+    <!-- QUICK ACTIONS -->
+    <div class="actions-row">
+      <button class="action-btn primary" (click)="goToMenu()">🍴 Manage Menu</button>
+      <button class="action-btn secondary" (click)="goToOrders()">📋 View Orders</button>
+    </div>
+
+    <!-- RECENT ORDERS PREVIEW -->
+    <div class="recent-orders" *ngIf="orders.length > 0">
+      <h2>Recent Orders</h2>
+      <div class="order-preview" *ngFor="let order of orders.slice(0, 5)">
+        <div class="order-preview-left">
+          <span class="order-id"># {{ order.id }}</span>
+          <span class="order-items">{{ order.items?.length || 0 }} item(s)</span>
+        </div>
+        <div class="order-preview-right">
+          <span class="order-amount">₹{{ order.totalAmount | number:'1.0-0' }}</span>
+          <span class="status-pill" [class]="order.status">{{ order.status }}</span>
+        </div>
+      </div>
+      <button class="view-all-btn" (click)="goToOrders()">See all orders →</button>
+    </div>
+
+  </div>
+</div>

@@ -1,288 +1,327 @@
-const Cart = require('../models/Cart');
+///cartController.js
+const db = require('../utils/dbManager');
 
-// ── HELPER: Recalculate totalAmount ───────────────────────────────────────────
 const calcTotal = (items) =>
-  items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
+  items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
 // ── GET ALL CARTS ──────────────────────────────────────────────────────────────
-// GET /api/cart?userId=usr_001&restaurantId=rest_001
-const getCarts = async (req, res) => {
+const getCarts = async(req, res) => {
   try {
     const { userId, restaurantId } = req.query;
+    let carts = db.getAllCarts();
     
-    let query = {};
-
-    if (userId) {
-      query.userId = userId;
-    }
-
-    if (restaurantId) {
-      query.restaurantId = restaurantId;
-    }
-
-    const carts = await Cart.find(query);
-
-    res.status(200).json({ success: true, total: carts.length, data: carts });
-  } catch (error) {
-    console.error('Error in getCarts:', error);
+    if (userId) carts = carts.filter(c => c.userId === userId);
+    if (restaurantId) carts = carts.filter(c => c.restaurantId === restaurantId);
+    
+    res.json({ success: true, data: carts });
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── GET SINGLE CART ────────────────────────────────────────────────────────────
-// GET /api/cart/:id
-const getCart = async (req, res) => {
+// ── GET CART BY ID ──────────────────────────────────────────────────────────────
+const getCart = async(req, res) => {
   try {
-    const cart = await Cart.findById(req.params.id);
-    
+    const cart = db.getCart(req.params.id);
     if (!cart) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
-    res.status(200).json({ success: true, data: cart });
-  } catch (error) {
-    console.error('Error in getCart:', error);
+    res.json({ success: true, data: cart });
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── GET CART BY USER ───────────────────────────────────────────────────────────
-// GET /api/cart/user/:userId
-const getCartByUser = async (req, res) => {
+const getCartByUser = async(req, res) => {
   try {
-    const carts = await Cart.find({ userId: req.params.userId });
-    res.status(200).json({ success: true, data: carts });
-  } catch (error) {
-    console.error('Error in getCartByUser:', error);
+    const cart = db.getCartByUserId(req.params.userId);
+    if (!cart) {
+      return res.status(404).json({ success: false, message: 'Cart not found' });
+    }
+    res.json({ success: true, data: cart });
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ── CREATE CART ────────────────────────────────────────────────────────────────
+// ── CREATE/MERGE CART ──────────────────────────────────────────────────────────
 // POST /api/cart
-const createCart = async (req, res) => {
+// Body: { userId, restaurantId, items[{itemId, quantity, price}] }
+const createCart = async(req, res) => {
   try {
     const { userId, restaurantId, items } = req.body;
 
-    if (!userId || !restaurantId || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'userId, restaurantId and items[] are required' });
+    // Validation
+    if (!userId || userId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'userId is required' });
+    }
+    
+    if (!restaurantId || restaurantId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: 'restaurantId is required' });
+    }
+    
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'items array must not be empty' });
+    }
+
+    // Verify user exists
+    const user = db.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: `User '${userId}' not found` });
+    }
+
+    // Verify restaurant exists
+    const restaurant = db.getRestaurant(restaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: `Restaurant '${restaurantId}' not found` });
+    }
+
+    // Check if user has cart with different restaurant
+    const allCarts = db.getAllCarts();
+    const differentRestCart = allCarts.find(c => c.userId === userId && c.restaurantId !== restaurantId);
+    if (differentRestCart) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You can only add items from one restaurant at a time. Clear your cart first.' 
+      });
     }
 
     // Check if cart already exists for this user and restaurant
-    let cart = await Cart.findOne({ userId, restaurantId });
+    let cart = db.getCartByUserId(userId);
     
-    if (cart) {
+    if (cart && cart.restaurantId === restaurantId) {
       // Merge items into existing cart
       for (const newItem of items) {
         if (!newItem.itemId || !newItem.quantity || newItem.price === undefined) {
-          return res.status(400).json({ success: false, message: 'Each item must have itemId, quantity and price' });
+          return res.status(400).json({ 
+            success: false, 
+            message: 'Each item must have menuId, quantity and price' 
+          });
         }
-
-        const existingIndex = cart.items.findIndex(i => String(i.itemId) === String(newItem.itemId));
+        
+        const existingIndex = cart.items.findIndex(i => i.itemId === newItem.itemId);
         if (existingIndex !== -1) {
           cart.items[existingIndex].quantity += newItem.quantity;
         } else {
           cart.items.push({ itemId: newItem.itemId, quantity: newItem.quantity, price: newItem.price });
         }
       }
+      
       cart.totalAmount = calcTotal(cart.items);
-      await cart.save();
+      const updated = db.updateCart(cart.id, cart);
       
       return res.status(200).json({
         success: true,
         message: 'Items added to existing cart',
-        data: cart,
-        summary: { itemCount: cart.items.length, totalItems: cart.items.reduce((sum, item) => sum + item.quantity, 0) }
+        data: updated
       });
     }
 
-    // Validate every item
+    // Validate all items
     for (const item of items) {
       if (!item.itemId || !item.quantity || item.price === undefined) {
-        return res.status(400).json({ success: false, message: 'Each item must have itemId, quantity and price' });
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Each item must have itemId, quantity and price' 
+        });
       }
     }
 
+    // Create new cart
     const totalAmount = calcTotal(items);
-
-    const newCart = new Cart({
+    cart = db.createCart({
       userId,
       restaurantId,
       items,
       totalAmount
     });
 
-    await newCart.save();
-
     res.status(201).json({
       success: true,
-      data: newCart,
-      summary: { itemCount: newCart.items.length, totalItems: newCart.items.reduce((sum, item) => sum + item.quantity, 0) }
+      data: cart
     });
-  } catch (error) {
-    console.error('Error in createCart:', error);
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── UPDATE CART ────────────────────────────────────────────────────────────────
-// PUT /api/cart/:id
-const updateCart = async (req, res) => {
+const updateCart = async(req, res) => {
   try {
     const updates = { ...req.body };
-    delete updates._id;
+    delete updates.id;
 
     if (Array.isArray(updates.items)) {
       updates.totalAmount = calcTotal(updates.items);
     }
 
-    const updated = await Cart.findByIdAndUpdate(req.params.id, updates, { new: true });
+    const updated = db.updateCart(req.params.id, updates);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
-
-    res.status(200).json({ success: true, data: updated });
-  } catch (error) {
-    console.error('Error in updateCart:', error);
+    
+    res.json({ success: true, data: updated });
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── ADD ITEM TO CART ───────────────────────────────────────────────────────────
-// POST /api/cart/add-item
-const addItemToCart = async (req, res) => {
+const addItemToCart = async(req, res) => {
   try {
-    const { cartId, itemId, quantity, price } = req.body;
+    const { userId, itemId, quantity, price } = req.body;
 
-    if (!cartId || !itemId || !quantity) {
-      return res.status(400).json({ success: false, message: 'cartId, itemId and quantity are required' });
+    if (!userId || !itemId || !quantity || price === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'userId, itemId, quantity and price are required' 
+      });
     }
 
-    let cart = await Cart.findById(cartId);
+    // Verify user exists
+    const user = db.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: `User '${userId}' not found` });
+    }
+
+    // Verify menu item exists
+    const menuItem = db.getMenuItem(itemId);
+    if (!menuItem) {
+      return res.status(404).json({ success: false, message: `Item '${itemId}' not found` });
+    }
+
+    if (!menuItem.isAvailable) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Item '${menuItem.itemName}' is currently unavailable` 
+      });
+    }
+
+    const restaurantId = menuItem.restaurantId;
+
+    // Get or create cart for this user and restaurant
+    let cart = db.getCartByUserId(userId);
     
     if (!cart) {
-      return res.status(404).json({ success: false, message: 'Cart not found' });
+      // Create new cart
+      cart = db.createCart({
+        userId,
+        restaurantId,
+        items: [],
+        totalAmount: 0
+      });
+    } else if (cart.restaurantId !== restaurantId) {
+      // User has cart with different restaurant
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You can only add items from one restaurant at a time. Clear your cart first.' 
+      });
     }
 
-    const existingIndex = cart.items.findIndex(i => String(i.itemId) === String(itemId));
+    // Add or update item
+    const existingIndex = cart.items.findIndex(i => i.itemId === itemId);
     if (existingIndex !== -1) {
       cart.items[existingIndex].quantity += parseInt(quantity);
     } else {
-      cart.items.push({ itemId, quantity: parseInt(quantity), price: price || 0 });
+      cart.items.push({ itemId, quantity: parseInt(quantity), price });
     }
 
     cart.totalAmount = calcTotal(cart.items);
-    await cart.save();
+    const updated = db.updateCart(cart.id, cart);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Item added to cart',
-      data: cart,
-      summary: { itemCount: cart.items.length, totalItems: cart.items.reduce((sum, item) => sum + item.quantity, 0) }
+      data: updated
     });
-  } catch (error) {
-    console.error('Error in addItemToCart:', error);
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── UPDATE ITEM QUANTITY ──────────────────────────────────────────────────────
-// PUT /api/cart/update-quantity
-const updateItemQuantity = async (req, res) => {
+const updateItemQuantity = async(req, res) => {
   try {
-    const { cartId, itemId, quantityChange } = req.body;
+    const { cartId, itemId, quantity } = req.body;
 
-    if (!cartId || !itemId || quantityChange === undefined) {
-      return res.status(400).json({ success: false, message: 'cartId, itemId and quantityChange are required' });
+    if (!cartId || !itemId || quantity === undefined) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'cartId, itemId and quantity are required' 
+      });
     }
 
-    let cart = await Cart.findById(cartId);
-    
+    let cart = db.getCart(cartId);
     if (!cart) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
-    const itemIndex = cart.items.findIndex(i => String(i.itemId) === String(itemId));
+    const itemIndex = cart.items.findIndex(i => i.itemId === itemId);
     if (itemIndex === -1) {
       return res.status(404).json({ success: false, message: `Item '${itemId}' not in cart` });
     }
 
-    cart.items[itemIndex].quantity += parseInt(quantityChange);
-
+    cart.items[itemIndex].quantity = parseInt(quantity);
+    
     if (cart.items[itemIndex].quantity <= 0) {
       cart.items.splice(itemIndex, 1);
     }
 
     cart.totalAmount = calcTotal(cart.items);
-    await cart.save();
+    const updated = db.updateCart(cart.id, cart);
 
-    res.status(200).json({
+    res.json({
       success: true,
       message: 'Item quantity updated',
-      data: cart,
-      summary: { itemCount: cart.items.length, totalItems: cart.items.reduce((sum, item) => sum + item.quantity, 0) }
+      data: updated
     });
-  } catch (error) {
-    console.error('Error in updateItemQuantity:', error);
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── REMOVE ITEM FROM CART ──────────────────────────────────────────────────────
-// POST /api/cart/remove-item
-const removeItemFromCart = async (req, res) => {
+const removeItemFromCart = async(req, res) => {
   try {
-    const { cartId, itemId, quantity } = req.body;
+    const { cartId, itemId } = req.body;
 
     if (!cartId || !itemId) {
-      return res.status(400).json({ success: false, message: 'cartId and itemId are required' });
+      return res.status(400).json({ 
+        success: false, 
+        message: 'cartId and itemId are required' 
+      });
     }
 
-    let cart = await Cart.findById(cartId);
-    
+    let cart = db.getCart(cartId);
     if (!cart) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
 
-    const itemIndex = cart.items.findIndex(i => String(i.itemId) === String(itemId));
-    if (itemIndex === -1) {
-      return res.status(404).json({ success: false, message: `Item '${itemId}' not in cart` });
-    }
-
-    if (quantity && quantity > 0) {
-      cart.items[itemIndex].quantity -= parseInt(quantity);
-      if (cart.items[itemIndex].quantity <= 0) {
-        cart.items.splice(itemIndex, 1);
-      }
-    } else {
-      cart.items.splice(itemIndex, 1);
-    }
-
+    cart.items = cart.items.filter(i => i.itemId !== itemId);
     cart.totalAmount = calcTotal(cart.items);
-    await cart.save();
+    
+    const updated = db.updateCart(cart.id, cart);
 
-    res.status(200).json({
+    res.json({
       success: true,
-      message: quantity ? 'Item quantity reduced' : 'Item removed from cart',
-      data: cart,
-      summary: { itemCount: cart.items.length, totalItems: cart.items.reduce((sum, item) => sum + item.quantity, 0) }
+      message: 'Item removed from cart',
+      data: updated
     });
-  } catch (error) {
-    console.error('Error in removeItemFromCart:', error);
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 // ── DELETE CART ────────────────────────────────────────────────────────────────
-// DELETE /api/cart/:id
-const deleteCart = async (req, res) => {
+const deleteCart = async(req, res) => {
   try {
-    const deleted = await Cart.findByIdAndDelete(req.params.id);
+    const deleted = db.deleteCart(req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Cart not found' });
     }
-    res.status(200).json({ success: true, message: 'Cart deleted' });
-  } catch (error) {
-    console.error('Error in deleteCart:', error);
+    res.json({ success: true, message: 'Cart deleted' });
+  } catch(error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };

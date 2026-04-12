@@ -5,7 +5,7 @@
       "username": "rohit_agarwal",
       "email": "rohit.agarwal1@example.com",
       "phoneNo": "+919037303731",
-      "password": "password123",
+      "password": "$2a$10$C9O79msCfWXkLshc.jyHWOirrd.sOQqduZS7Angbek0mwlVRRck9e",
       "address": [
         {
           "street": "374 Koramangala",
@@ -20,7 +20,7 @@
       "username": "arjun_naik",
       "email": "arjun.naik2@example.com",
       "phoneNo": "+919485570608",
-      "password": "password123",
+      "password": "$2a$10$E.22ExvF4yXYNi0vzH.PWeAwQB6bx6iO6RbgYKbv/f/PO/4UcdA46",
       "address": [
         {
           "street": "178 Koramangala",
@@ -35,7 +35,7 @@
       "username": "aayush_joshi",
       "email": "aayush.joshi3@example.com",
       "phoneNo": "+919794720530",
-      "password": "password123",
+      "password": "$2a$10$QSseKHqe/opte6faMD4BmOtafAsqlW6IxnLg3ScuvV01HT0TnpURm",
       "address": [
         {
           "street": "512 Bandra West",
@@ -50,7 +50,7 @@
       "username": "amit_kumar",
       "email": "amit.kumar4@example.com",
       "phoneNo": "+919423683778",
-      "password": "password123",
+      "password": "$2a$10$OZXB2ENFpmpF.g6j25qHn.P/2uXwSOLcCTJcEwtszQZnlL6ChDm8W",
       "address": [
         {
           "street": "604 Indiranagar",
@@ -65,7 +65,7 @@
       "username": "karan_rao",
       "email": "karan.rao5@example.com",
       "phoneNo": "+919551245954",
-      "password": "password123",
+      "password": "$2a$10$grX9TUjXnYvm78//V55OI.jg.Qn6YOAt/FYIvtGsPkaHjcEKF146C",
       "address": [
         {
           "street": "422 MG Road",
@@ -80,7 +80,7 @@
       "username": "neha_patel",
       "email": "neha.patel6@example.com",
       "phoneNo": "+919048499168",
-      "password": "password123",
+      "password": "$2a$10$c3bbcJQIhAtfixi3h5OfQOlQJKnRabqsb.0MIIKGFj2iFFwZEMY.u",
       "address": [
         {
           "street": "612 Colaba Causeway",
@@ -95,7 +95,7 @@
       "username": "kavya_nambiar",
       "email": "kavya.nambiar7@example.com",
       "phoneNo": "+919842694746",
-      "password": "password123",
+      "password": "$2a$10$sLSjDsWhVydKiz/GZfEDMuOAN1l43UiNYkKT6GUEPKqTsxU5gqMRa",
       "address": [
         {
           "street": "243 Church Street",
@@ -110,7 +110,7 @@
       "username": "vishal_nambiar",
       "email": "vishal.nambiar8@example.com",
       "phoneNo": "+919111340734",
-      "password": "password123",
+      "password": "$2a$10$G5KBKH7DAX1ydBDLRdsWyOWx8r5nLvl.udAs23/K/NqfEB8FwDNam",
       "address": [
         {
           "street": "209 Koramangala",
@@ -125,7 +125,7 @@
       "username": "tanya_chopra",
       "email": "tanya.chopra9@example.com",
       "phoneNo": "+919868045601",
-      "password": "password123",
+      "password": "$2a$10$r9.XjnoO4gaXbkp68Fc9m.sky9TBeXFBms74Rvv4uD/eFf80xVmQ2",
       "address": [
         {
           "street": "218 Bandra West",
@@ -140,7 +140,7 @@
       "username": "sahil_desai",
       "email": "sahil.desai10@example.com",
       "phoneNo": "+919774849547",
-      "password": "password123",
+      "password": "$2a$10$9kDSzIr8JCA1NqUPs9xT6uYc5k6CTNfzW4HBmK5JXlw5DgbjrX8qC",
       "address": [
         {
           "street": "361 Bandra West",
@@ -155,7 +155,7 @@
       "username": "ishita_kumar",
       "email": "ishita.kumar11@example.com",
       "phoneNo": "+919780384238",
-      "password": "password123",
+      "password": "$2a$10$uNuHZIVdmg55vGsCOmPuB.EYiDhe3xETjO00Y4qaYz4IqqtMX0RYK",
       "address": [
         {
           "street": "224 Juhu Beach Road",
@@ -170,7 +170,7 @@
       "username": "arjun_reddy",
       "email": "arjun.reddy12@example.com",
       "phoneNo": "+919994373188",
-      "password": "password123",
+      "password": "$2a$10$rhceQ4NWkwEV/2g.dOsqdOyso.ejkMSH9i5VI1EdE1WIzOc2WU0cy",
       "address": [
         {
           "street": "963 Salt Lake",
@@ -185,7 +185,7 @@
       "username": "ishita_nambiar",
       "email": "ishita.nambiar13@example.com",
       "phoneNo": "+919102231546",
-      "password": "password123",
+      "password": "$2a$10$NzKyqPW8cnBdSEsukfh6k.wl2c4BbqFeQUf70h.Kl2T8pLtoE0.B2",
       "address": [
         {
           "street": "36 Bandra West",
@@ -200,7 +200,7 @@
       "username": "amit_joshi",
       "email": "amit.joshi14@example.com",
       "phoneNo": "+919322059625",
-      "password": "password123",
+      "password": "$2a$10$/WgB0YMUCv66RyFcYIRQb.eSrnFoJojvOWpXQCwfbJuCSxvtpabsy",
       "address": [
         {
           "street": "493 Colaba Causeway",
@@ -215,7 +215,7 @@
       "username": "nisha_sharma",
       "email": "nisha.sharma15@example.com",
       "phoneNo": "+919629461274",
-      "password": "password123",
+      "password": "$2a$10$wTZfTxfdNMhRbW5hQ5rwWOgqrRGdEpCVUkv44Uuz7E5bwGC.js/I.",
       "address": [
         {
           "street": "593 Salt Lake",
@@ -230,7 +230,7 @@
       "username": "neha_agarwal",
       "email": "neha.agarwal16@example.com",
       "phoneNo": "+919297372104",
-      "password": "password123",
+      "password": "$2a$10$ZeEx457DEWIs11HMB2htxO9rIGDCvM1NFMpsL.bkY/i87OvSQuWSa",
       "address": [
         {
           "street": "293 Indiranagar",
@@ -245,7 +245,7 @@
       "username": "sara_agarwal",
       "email": "sara.agarwal17@example.com",
       "phoneNo": "+919646721527",
-      "password": "password123",
+      "password": "$2a$10$bnKK2L507wBs7Xmi6cL.NOxd4CFRTSVzaIxH16S29m6oOjbedhCNi",
       "address": [
         {
           "street": "195 Colaba Causeway",
@@ -260,7 +260,7 @@
       "username": "sahil_singh",
       "email": "sahil.singh18@example.com",
       "phoneNo": "+919879764398",
-      "password": "password123",
+      "password": "$2a$10$8yj7DbQ.YDsJNkiQ14FrQuriISigSzQsCCkpxX2U6qlOGaYLyJIyu",
       "address": [
         {
           "street": "248 Koramangala",
@@ -275,7 +275,7 @@
       "username": "priya_nambiar",
       "email": "priya.nambiar19@example.com",
       "phoneNo": "+919552294190",
-      "password": "password123",
+      "password": "$2a$10$RL5MhkG2L.TuufK3HoycgOzFj0dm2iiezJ3/9u1rem01QaPJVfpDq",
       "address": [
         {
           "street": "146 Colaba Causeway",
@@ -290,7 +290,7 @@
       "username": "sanya_rao",
       "email": "sanya.rao20@example.com",
       "phoneNo": "+919749732400",
-      "password": "password123",
+      "password": "$2a$10$hXJEr6RwoKbPlx2f0w/3De8nW6IkXF8DvVSTn/cnVtLcfM2aG/4OC",
       "address": [
         {
           "street": "176 Koramangala",
@@ -305,7 +305,7 @@
       "username": "nikhil_nambiar",
       "email": "nikhil.nambiar21@example.com",
       "phoneNo": "+919578966861",
-      "password": "password123",
+      "password": "$2a$10$BEtGDEm1zYws9ftcYqdlSuA68.CRMsbX/OwHDtD1Wn52kLVUjErpm",
       "address": [
         {
           "street": "30 MG Road",
@@ -320,7 +320,7 @@
       "username": "karan_mehta",
       "email": "karan.mehta22@example.com",
       "phoneNo": "+919943181071",
-      "password": "password123",
+      "password": "$2a$10$7F.GHBwZWGB6qegos4RZf.Rm7pkkaAaQFIaLCoDG0Ba.JrxHLEmLm",
       "address": [
         {
           "street": "677 Juhu Beach Road",
@@ -335,7 +335,7 @@
       "username": "rohan_mehta",
       "email": "rohan.mehta23@example.com",
       "phoneNo": "+919855021867",
-      "password": "password123",
+      "password": "$2a$10$THsectkxbZNUvCk1VCrRzO0a1vsGuHaNbADTq8cFbYghmD9NdIJO2",
       "address": [
         {
           "street": "988 Salt Lake",
@@ -350,7 +350,7 @@
       "username": "manish_nambiar",
       "email": "manish.nambiar24@example.com",
       "phoneNo": "+919878628736",
-      "password": "password123",
+      "password": "$2a$10$.zPx7LtBy5gDtqXTzdjL5uhq4f/92Bho8OGFtBb61oZynJTPngzxG",
       "address": [
         {
           "street": "810 Indiranagar",
@@ -365,7 +365,7 @@
       "username": "neha_sharma",
       "email": "neha.sharma25@example.com",
       "phoneNo": "+919961710438",
-      "password": "password123",
+      "password": "$2a$10$tK32jtmGqBSmzUiQHaZ4o.982wCKoukZD6sImCK95vKZjeraQLbd6",
       "address": [
         {
           "street": "719 Juhu Beach Road",
@@ -380,7 +380,7 @@
       "username": "aayush_reddy",
       "email": "aayush.reddy26@example.com",
       "phoneNo": "+919177174073",
-      "password": "password123",
+      "password": "$2a$10$m3kJu9/x1Mm5YwrLqJs9CO5IsLUe0biFFha0ELlhZpGH/QQsLCbe6",
       "address": [
         {
           "street": "176 Koramangala",
@@ -395,7 +395,7 @@
       "username": "amit_desai",
       "email": "amit.desai27@example.com",
       "phoneNo": "+919268003284",
-      "password": "password123",
+      "password": "$2a$10$eqkHI0AOSdBt1LCyi/ETluSWUwtZBCurtacfpdciOFMthetmOr/pG",
       "address": [
         {
           "street": "273 Banjara Hills",
@@ -410,7 +410,7 @@
       "username": "sanya_patel",
       "email": "sanya.patel28@example.com",
       "phoneNo": "+919440249702",
-      "password": "password123",
+      "password": "$2a$10$kpjgTRJfsgZWb2/J2go2x.bJxCNCMEbR0zOVFjoNDbu0hOJV5FIxO",
       "address": [
         {
           "street": "97 Juhu Beach Road",
@@ -425,7 +425,7 @@
       "username": "arjun_reddy",
       "email": "arjun.reddy29@example.com",
       "phoneNo": "+919419465366",
-      "password": "password123",
+      "password": "$2a$10$aCU3tx/tgANyylUTGWuDreZMEN7U6e3gVVxN08J1tXpxLw.ZrPreq",
       "address": [
         {
           "street": "464 Banjara Hills",
@@ -440,7 +440,7 @@
       "username": "divya_kumar",
       "email": "divya.kumar30@example.com",
       "phoneNo": "+919400513622",
-      "password": "password123",
+      "password": "$2a$10$WfAAffmSX8tQSB7apW.VPOQ/ZeR9keAiusii9.aQDo0236tdYa432",
       "address": [
         {
           "street": "577 MG Road",
@@ -455,7 +455,7 @@
       "username": "nikhil_rao",
       "email": "nikhil.rao31@example.com",
       "phoneNo": "+919324056502",
-      "password": "password123",
+      "password": "$2a$10$E7V7xyX7T6Y5bZS9yOwYa.jxTbl3oq///X3x6jkBazxmjsh3lVXfW",
       "address": [
         {
           "street": "860 Koramangala",
@@ -470,7 +470,7 @@
       "username": "riya_joshi",
       "email": "riya.joshi32@example.com",
       "phoneNo": "+919239273157",
-      "password": "password123",
+      "password": "$2a$10$iLhSCG5H1Mfu/P4BN6O9Ne/Nv.MZjLYXX.DVAEDWs23MwxvCmmgWO",
       "address": [
         {
           "street": "689 Koramangala",
@@ -485,7 +485,7 @@
       "username": "nikhil_sharma",
       "email": "nikhil.sharma33@example.com",
       "phoneNo": "+919223734463",
-      "password": "password123",
+      "password": "$2a$10$adPef6blKVQXttX59tIZBu4zhZCwFibttpD.6UeIYECNErNBICyCK",
       "address": [
         {
           "street": "544 Church Street",
@@ -500,7 +500,7 @@
       "username": "sanya_patel",
       "email": "sanya.patel34@example.com",
       "phoneNo": "+919033839231",
-      "password": "password123",
+      "password": "$2a$10$TD5eXgu3Qj9g/X3lLt3j9ei7v7gvVc5gHJQoa2y3rTlHh9WNmNjyu",
       "address": [
         {
           "street": "750 Banjara Hills",
@@ -515,7 +515,7 @@
       "username": "arjun_mehta",
       "email": "arjun.mehta35@example.com",
       "phoneNo": "+919654710335",
-      "password": "password123",
+      "password": "$2a$10$hsv/DLJvNqqzOnVvuadoj.hTDMzaDrSh/08cIBDsrSsIdwZSDkRGi",
       "address": [
         {
           "street": "338 Salt Lake",
@@ -530,7 +530,7 @@
       "username": "pooja_chopra",
       "email": "pooja.chopra36@example.com",
       "phoneNo": "+919326921138",
-      "password": "password123",
+      "password": "$2a$10$EJMYBABIlKYxE8/MvGVu0uCRLmnE5BuG79A4zJhoZYYvjiee6AfbW",
       "address": [
         {
           "street": "950 Salt Lake",
@@ -545,7 +545,7 @@
       "username": "karan_khan",
       "email": "karan.khan37@example.com",
       "phoneNo": "+919298466275",
-      "password": "password123",
+      "password": "$2a$10$xI1Kv5k7zvVavj6q3Bij7OiX12FL3UGyur6yN0FpQCT7HuijAaisa",
       "address": [
         {
           "street": "657 Juhu Beach Road",
@@ -560,7 +560,7 @@
       "username": "meera_bose",
       "email": "meera.bose38@example.com",
       "phoneNo": "+919540184124",
-      "password": "password123",
+      "password": "$2a$10$IUaGYkuMYSfANig382j/XOv9MmzjTfbMWWNMrt51pLFhyXnL.FJoK",
       "address": [
         {
           "street": "76 Brigade Road",
@@ -575,7 +575,7 @@
       "username": "arjun_gupta",
       "email": "arjun.gupta39@example.com",
       "phoneNo": "+919322725857",
-      "password": "password123",
+      "password": "$2a$10$QGgbrCCDGJc8us7frEnYV.WmLkhwtXER6UoAm9az0IhawVkF6O06W",
       "address": [
         {
           "street": "38 Juhu Beach Road",
@@ -590,7 +590,7 @@
       "username": "rohit_gupta",
       "email": "rohit.gupta40@example.com",
       "phoneNo": "+919283406298",
-      "password": "password123",
+      "password": "$2a$10$Z8lVrdPedMUDm90PA2bO4e7eUM7sEiOATWPNT9okFNrynGf56XPG6",
       "address": [
         {
           "street": "28 Indiranagar",
@@ -605,7 +605,7 @@
       "username": "meera_rao",
       "email": "meera.rao41@example.com",
       "phoneNo": "+919630596441",
-      "password": "password123",
+      "password": "$2a$10$oOvVqevb61gTHFUITIzusesKC3C.xzDZdftVCn8YntOQ9i7435DyS",
       "address": [
         {
           "street": "730 Juhu Beach Road",
@@ -620,7 +620,7 @@
       "username": "karan_joshi",
       "email": "karan.joshi42@example.com",
       "phoneNo": "+919190152709",
-      "password": "password123",
+      "password": "$2a$10$s.Vx5dyorTfg2RkoFvo/QOWx.xzOjI4ktG2Z9C7mMbcY4o47cL/ta",
       "address": [
         {
           "street": "97 Banjara Hills",
@@ -635,7 +635,7 @@
       "username": "rahul_patel",
       "email": "rahul.patel43@example.com",
       "phoneNo": "+919280716066",
-      "password": "password123",
+      "password": "$2a$10$pPuPDhXsz3rnh5EgGy992ev0Ftojv8Zw9Am5MYouieiTOBVkVOw1u",
       "address": [
         {
           "street": "569 MG Road",
@@ -650,7 +650,7 @@
       "username": "amit_gupta",
       "email": "amit.gupta44@example.com",
       "phoneNo": "+919799777566",
-      "password": "password123",
+      "password": "$2a$10$TM/pb2Pi5IlN5USFxo4D9./4EuVIk2eWzSfsCPYLc47svFxCJv.yq",
       "address": [
         {
           "street": "182 MG Road",
@@ -665,7 +665,7 @@
       "username": "vikram_patel",
       "email": "vikram.patel45@example.com",
       "phoneNo": "+919799576137",
-      "password": "password123",
+      "password": "$2a$10$fo0hZ2NsTNHsDzczImqXpe4khtFEZP/S6ik0d66LB2y/PHeRVVgfW",
       "address": [
         {
           "street": "802 Brigade Road",
@@ -680,7 +680,7 @@
       "username": "nikhil_mehta",
       "email": "nikhil.mehta46@example.com",
       "phoneNo": "+919180825277",
-      "password": "password123",
+      "password": "$2a$10$jh2lzuMRywuuioybOfzy0.x9np4R/T3ueKCxrDNeVWP672.3rPVAi",
       "address": [
         {
           "street": "566 Indiranagar",
@@ -695,7 +695,7 @@
       "username": "karan_mehta",
       "email": "karan.mehta47@example.com",
       "phoneNo": "+919561858634",
-      "password": "password123",
+      "password": "$2a$10$Url8B1uBxxNKd4Be5wJwKOGljbtV3Un.l/NCjjUhS3f7eYamT7dk2",
       "address": [
         {
           "street": "457 Salt Lake",
@@ -710,7 +710,7 @@
       "username": "rohit_desai",
       "email": "rohit.desai48@example.com",
       "phoneNo": "+919013509471",
-      "password": "password123",
+      "password": "$2a$10$OAlNKAaufI1isPkK2iV6oObi.1TSBY7wNrPbpc5OoA9F/L7XJGXZq",
       "address": [
         {
           "street": "580 Bandra West",
@@ -725,7 +725,7 @@
       "username": "karan_reddy",
       "email": "karan.reddy49@example.com",
       "phoneNo": "+919330492567",
-      "password": "password123",
+      "password": "$2a$10$1fY9imw5iC9mDlV0.wwRjeH397teHzOBZ.xX4fbyG9OvYN7gDLAM2",
       "address": [
         {
           "street": "554 Indiranagar",
@@ -740,7 +740,7 @@
       "username": "tanya_agarwal",
       "email": "tanya.agarwal50@example.com",
       "phoneNo": "+919606866039",
-      "password": "password123",
+      "password": "$2a$10$8VcVVau5AM2xnc6v8bPBy.m6NNEFHRG2ZWXVWtVWhfWRu3O76RXaK",
       "address": [
         {
           "street": "241 Banjara Hills",
@@ -755,7 +755,7 @@
       "username": "nrupal_wakode",
       "email": "nrupal.wakode4@example.com",
       "phoneNo": "919423680078",
-      "password": "nrupal@123",
+      "password": "$2a$10$jtXWKelM6Yjws4dM6VU0Fea3jgz4JnQp/OibCwdAfUzUx6pSdHbYy",
       "address": [
         {
           "street": "604 Indiranagar",
@@ -770,7 +770,7 @@
       "username": "nrupal",
       "email": "nrupalwakode710@gmail.com",
       "phoneNo": "8767977304",
-      "password": "nrupal123",
+      "password": "$2a$10$19mJtd2fti0M5FVUfPfNZO9e2Ef4X2NvG8JXKxVl3Gi5P9VA7fnz2",
       "address": [],
       "role": "Customer",
       "createdAt": "2026-04-10T02:55:01.363Z"
@@ -780,10 +780,90 @@
       "username": "nrupal_567",
       "email": "nrupalwakode777@gmail.com",
       "phoneNo": "7436894568",
-      "password": "nrupal123",
+      "password": "$2a$10$MkCzY6LVuq.VNwqDXWO39O/urqrEgmiDic.3606jgwbzbpCi3t0pW",
       "address": [],
       "role": "Customer",
       "createdAt": "2026-04-10T02:56:13.587Z"
+    },
+    {
+      "id": "usr_054",
+      "username": "test",
+      "email": "test@gmail.com",
+      "password": "$2a$10$KNzUGy8N.AeBiqgest.ewOGWnO3CONI1sl.hhokbVb8nxJ9iQiViO",
+      "phoneNo": "9876543210",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-11T17:23:13.833Z"
+    },
+    {
+      "id": "usr_055",
+      "username": "testuser_1775930651639",
+      "email": "test_1775930651639@example.com",
+      "password": "$2a$10$wPZ5SEcuz2Y.SZJDXtFD4uSiNQrVu2BHaW0AD7GIrs25L4B167f5G",
+      "phoneNo": "9876543210",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-11T18:04:11.733Z"
+    },
+    {
+      "id": "usr_056",
+      "username": "testuser_1775930843368",
+      "email": "test_1775930843368@example.com",
+      "password": "$2a$10$GApQ1ZO7KPpS3GgLyIoZm.GQ5mHswUTgW1eA5x2kxFU8UK2AqD6YW",
+      "phoneNo": "9876543210",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-11T18:07:23.478Z"
+    },
+    {
+      "id": "usr_057",
+      "username": "testuser_1775930855264",
+      "email": "test_1775930855264@example.com",
+      "password": "$2a$10$9kXnJC2EURFmLdnpZ.8QS.G8u/4KHg3rlhJUMLJBlZWAqZNJB0yKS",
+      "phoneNo": "9876543210",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-11T18:07:35.348Z"
+    },
+    {
+      "id": "usr_058",
+      "username": "nrupalwakode",
+      "email": "nrupalwakode700@gmail.com",
+      "password": "$2a$10$cVtcE4J/3wpjjbefCOWJwOeirxPPxaTy5n49YO.yD/arWg6S8RcBy",
+      "phoneNo": "8767975203",
+      "address": [],
+      "role": "Owner",
+      "createdAt": "2026-04-12T05:31:46.989Z"
+    },
+    {
+      "id": "usr_059",
+      "username": "testuser",
+      "email": "test99@gmail.com",
+      "password": "$2a$10$wBMK16txW93erpgoLiyJAuXdiDFN7SGffJfPCN7iNJL/swK5FfEDy",
+      "phoneNo": "1234567890",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-12T06:00:43.257Z"
+    },
+    {
+      "id": "usr_060",
+      "username": "testlogin",
+      "email": "testlogin@test.com",
+      "password": "$2a$10$N94Pa.5BuUWN6tuaTZfS3.LMfG.IqRTtZAfrh2B4SK8WFn26lK4Ge",
+      "phoneNo": "9999999999",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-12T06:06:01.845Z"
+    },
+    {
+      "id": "usr_061",
+      "username": "testuser99",
+      "email": "testuser99@test.com",
+      "password": "$2a$10$bIUi5zmqxyAZVqbmAB/sz.e8O5Zj.eCPCsSXbbOpk4ZE5boCn2JIW",
+      "phoneNo": "9999",
+      "address": [],
+      "role": "Customer",
+      "createdAt": "2026-04-12T06:09:03.212Z"
     }
   ],
   "restaurants": [
@@ -1106,6 +1186,19 @@
       "rating": 4.3,
       "gstinNo": "27ABCDE4091Z5F1",
       "imageUrl": "https://source.unsplash.com/featured/?restaurant,skyline"
+    },
+    {
+      "restaurantId": "rest_021",
+      "ownerId": "usr_058",
+      "restaurantName": "Arabian Bites",
+      "address": "",
+      "restaurantContactNo": "8767975203",
+      "email": "nrupalwakode700@gmail.com",
+      "gstinNo": "",
+      "cuisine": [],
+      "isVeg": false,
+      "rating": 0,
+      "createdAt": "2026-04-12T05:31:46.994Z"
     }
   ],
   "menus": [
@@ -7437,6 +7530,118 @@
       "status": "Preparing",
       "date": "2025-04-07T12:00:00.000Z",
       "deliveryAgentId": "agent_046"
+    },
+    {
+      "id": "order_101",
+      "userId": "usr_011",
+      "restaurantId": "rest_007",
+      "items": [
+        {
+          "itemId": "menu_085",
+          "quantity": 1,
+          "price": 351.63
+        },
+        {
+          "itemId": "menu_075",
+          "quantity": 1,
+          "price": 523.5
+        }
+      ],
+      "totalAmount": 875.13,
+      "deliveryAddress": "224 Juhu Beach Road, Hyderabad",
+      "status": "pending",
+      "createdAt": "2026-04-12T05:30:35.702Z",
+      "updatedAt": "2026-04-12T05:30:35.702Z"
+    },
+    {
+      "id": "order_102",
+      "userId": "usr_061",
+      "restaurantId": "rest_012",
+      "items": [
+        {
+          "itemId": "menu_001",
+          "quantity": 2,
+          "price": 199
+        }
+      ],
+      "totalAmount": 398,
+      "deliveryAddress": "Default Delivery Address",
+      "status": "pending",
+      "createdAt": "2026-04-12T06:14:47.803Z",
+      "updatedAt": "2026-04-12T06:14:47.804Z"
+    },
+    {
+      "id": "order_103",
+      "userId": "usr_061",
+      "restaurantId": "rest_001",
+      "items": [
+        {
+          "itemId": "menu_035",
+          "quantity": 1,
+          "price": 300.59
+        },
+        {
+          "itemId": "menu_049",
+          "quantity": 1,
+          "price": 547.5
+        }
+      ],
+      "totalAmount": 848.0899999999999,
+      "deliveryAddress": "Default Delivery Address",
+      "status": "pending",
+      "createdAt": "2026-04-12T06:23:45.995Z",
+      "updatedAt": "2026-04-12T06:23:45.995Z"
+    },
+    {
+      "id": "order_104",
+      "userId": "usr_061",
+      "restaurantId": "rest_002",
+      "items": [
+        {
+          "itemId": "menu_009",
+          "quantity": 1,
+          "price": 261.24
+        }
+      ],
+      "totalAmount": 261.24,
+      "deliveryAddress": "Default Delivery Address",
+      "status": "pending",
+      "createdAt": "2026-04-12T08:09:41.477Z",
+      "updatedAt": "2026-04-12T08:09:41.477Z"
+    },
+    {
+      "id": "order_105",
+      "userId": "usr_061",
+      "restaurantId": "rest_005",
+      "items": [
+        {
+          "itemId": "menu_116",
+          "quantity": 1,
+          "price": 637.56
+        }
+      ],
+      "totalAmount": 637.56,
+      "deliveryAddress": "Default Delivery Address",
+      "status": "pending",
+      "createdAt": "2026-04-12T08:09:56.795Z",
+      "updatedAt": "2026-04-12T08:09:56.795Z"
+    },
+    {
+      "id": "order_106",
+      "userId": "usr_061",
+      "restaurantId": "rest_002",
+      "items": [
+        {
+          "itemId": "menu_009",
+          "quantity": 4,
+          "price": 261.24
+        }
+      ],
+      "totalAmount": 1044.96,
+      "deliveryAddress": "Default Delivery Address",
+      "status": "pending",
+      "createdAt": "2026-04-12T08:19:41.282Z",
+      "updatedAt": "2026-04-12T08:19:41.282Z"
     }
   ],
   "carts": [
@@ -7447,7 +7652,7 @@
       "items": [
         {
           "itemId": "menu_130",
-          "quantity": 1,
+          "quantity": 13,
           "price": 352.99
         },
         {
@@ -7466,7 +7671,7 @@
           "price": 353.86
         }
       ],
-      "totalAmount": 2202.16
+      "totalAmount": 6438.04
     },
     {
       "id": "cart_002",
@@ -8839,6 +9044,28 @@
         }
       ],
       "totalAmount": 4035.12
+    },
+    {
+      "id": "cart_051",
+      "userId": "usr_011",
+      "restaurantId": "rest_007",
+      "items": [],
+      "totalAmount": 0,
+      "createdAt": "2026-04-12T05:30:29.285Z"
+    },
+    {
+      "id": "cart_052",
+      "userId": "usr_061",
+      "restaurantId": "rest_020",
+      "items": [
+        {
+          "itemId": "menu_025",
+          "quantity": 1,
+          "price": 744.47
+        }
+      ],
+      "totalAmount": 744.47,
+      "createdAt": "2026-04-12T08:20:09.476Z"
     }
   ]
 }

@@ -1,0 +1,201 @@
+/* ===== OWNER DASHBOARD ===== */
+:host {
+  --primary: #ff6b35;
+  --primary-dark: #e55a2a;
+  --bg: #f5f6fa;
+  --card-bg: #ffffff;
+  --text: #2c3e50;
+  --text-light: #7f8c8d;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.owner-page {
+  min-height: 100vh;
+  background: var(--bg);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* LOADING / ERROR */
+.loading-screen, .error-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  gap: 16px;
+  color: var(--text-light);
+  font-size: 18px;
+}
+
+/* DASHBOARD */
+.dashboard {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 30px 20px;
+}
+
+/* HEADER */
+.dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  margin-bottom: 24px;
+}
+
+.restaurant-name {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+
+.owner-name {
+  font-size: 14px;
+  color: var(--text-light);
+  margin-bottom: 4px;
+}
+
+.cuisine-tag {
+  font-size: 13px;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* STATS */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--card-bg);
+  border-radius: 14px;
+  padding: 24px 20px;
+  text-align: center;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border-top: 4px solid var(--primary);
+}
+
+.stat-card.pending { border-color: #f39c12; }
+.stat-card.earnings { border-color: #27ae60; }
+
+.stat-icon { font-size: 28px; margin-bottom: 8px; }
+.stat-value { font-size: 28px; font-weight: 800; color: var(--text); }
+.stat-label { font-size: 13px; color: var(--text-light); margin-top: 4px; font-weight: 600; }
+
+/* ACTIONS */
+.actions-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 16px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.action-btn.primary { background: var(--primary); color: white; }
+.action-btn.secondary { background: #2c3e50; color: white; }
+.action-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.15); }
+
+/* RECENT ORDERS */
+.recent-orders {
+  background: var(--card-bg);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.recent-orders h2 {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.order-preview {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.order-preview:last-of-type { border-bottom: none; }
+
+.order-id {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 12px;
+}
+
+.order-items { font-size: 12px; color: var(--text-light); }
+
+.order-amount {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-right: 12px;
+}
+
+/* Status pills */
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.status-pill.pending, .status-pill.Pending { background: #fff3e0; color: #e65100; }
+.status-pill.confirmed { background: #e3f2fd; color: #1565c0; }
+.status-pill.preparing { background: #f3e5f5; color: #6a1b9a; }
+.status-pill.out_for_delivery { background: #e1f5fe; color: #0277bd; }
+.status-pill.delivered, .status-pill.Delivered { background: #e8f5e9; color: #1b5e20; }
+.status-pill.cancelled { background: #ffebee; color: #b71c1c; }
+
+.view-all-btn {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* LOGOUT BTN */
+.btn-logout {
+  padding: 10px 20px;
+  background: #ffebee;
+  color: #c62828;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.btn-logout:hover { background: #ffcdd2; }
+
+@media (max-width: 600px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .dash-header { flex-direction: column; gap: 16px; }
+  .actions-row { flex-direction: column; }
+}

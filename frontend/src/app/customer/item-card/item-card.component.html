@@ -1,0 +1,25 @@
+<div class="item-card">
+  <div class="item-image">
+    <img
+      [src]="item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=200&fit=crop'"
+      [alt]="item.itemName"
+      onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=200&fit=crop'"
+    >
+    <span class="veg-badge" *ngIf="item.isVeg">🟢 Veg</span>
+    <span class="nonveg-badge" *ngIf="!item.isVeg">🔴 Non-Veg</span>
+  </div>
+
+  <div class="item-info">
+    <h3 class="item-name">{{ item.itemName }}</h3>
+    <p class="item-category">{{ item.category }}</p>
+    <p class="item-description">{{ item.description }}</p>
+
+    <div class="item-footer">
+      <div class="item-price-rating">
+        <span class="price">₹{{ item.price }}</span>
+        <span class="rating" *ngIf="item.rating">⭐ {{ item.rating }}</span>
+      </div>
+      <button class="btn-add" (click)="addToCart()">+ Add</button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,80 @@
+<div class="orders-container">
+
+<h1 class="page-title">📦 My Orders</h1>
+<p class="page-subtitle">Your complete order history</p>
+
+<!-- LOADING -->
+<div *ngIf="loading" class="state-box">
+  <div class="state-icon">⏳</div>
+  <h3>Loading your orders...</h3>
+  <p>Just a moment</p>
+</div>
+
+<!-- ERROR -->
+<div *ngIf="!loading && errorMessage" class="state-box">
+  <div class="state-icon">❌</div>
+  <h3>Something went wrong</h3>
+  <p>{{ errorMessage }}</p>
+  <button class="btn-browse" (click)="loadOrders()">Try Again</button>
+</div>
+
+<!-- NO ORDERS -->
+<div *ngIf="!loading && !errorMessage && orders.length === 0" class="state-box">
+  <div class="state-icon">🛒</div>
+  <h3>No orders yet</h3>
+  <p>Looks like you haven't placed an order yet.</p>
+  <button class="btn-browse" (click)="goHome()">Browse Restaurants</button>
+</div>
+
+<!-- ORDER CARDS -->
+<div class="orders-list" *ngIf="!loading && orders.length > 0">
+  <div class="order-card" *ngFor="let order of orders">
+
+    <!-- HEADER -->
+    <div class="order-card-header">
+      <div>
+        <div class="order-id"># {{ order.id }}</div>
+        <div class="order-date">{{ order.createdAt | date:'MMM d, y, h:mm a' }}</div>
+      </div>
+      <span class="status-badge" [class]="order.status || 'default'">
+        {{ order.status || 'pending' }}
+      </span>
+    </div>
+
+    <!-- BODY -->
+    <div class="order-card-body">
+      <div class="order-meta">
+        <div class="order-meta-item">
+          <span class="meta-label">Restaurant</span>
+          <span class="meta-value">{{ order.restaurantId }}</span>
+        </div>
+        <div class="order-meta-item">
+          <span class="meta-label">Total Amount</span>
+          <span class="meta-value price">₹{{ order.totalAmount | number:'1.0-2' }}</span>
+        </div>
+        <div class="order-meta-item">
+          <span class="meta-label">Delivery To</span>
+          <span class="meta-value">{{ order.deliveryAddress || 'N/A' }}</span>
+        </div>
+      </div>
+
+      <!-- ITEMS -->
+      <p class="order-items-title">Items ordered</p>
+      <ul class="order-items-list">
+        <li class="order-item-row" *ngFor="let item of order.items">
+          <span class="item-name">{{ item.itemId }}</span>
+          <span class="item-qty">× {{ item.quantity }}</span>
+          <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="order-card-footer">
+      <button class="btn-reorder" (click)="goHome()">🔁 Order Again</button>
+    </div>
+
+  </div>
+</div>
+
+</div>

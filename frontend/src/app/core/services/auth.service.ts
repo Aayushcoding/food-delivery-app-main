@@ -1,122 +1,59 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
-import { ApiService } from './api.service';
-import { User } from '../../shared/models/index';
-import { Router } from '@angular/router';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Observable } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root'
+providedIn:'root'
 })
-export class AuthService {
+export class AuthService{
 
-  private isLoggedIn = new BehaviorSubject<boolean>(this.hasUser());
-  private currentUser = new BehaviorSubject<User | null>(this.getStoredUser());
+private baseUrl='http://localhost:5000/api/auth';
 
-  constructor(private apiService: ApiService, private router: Router) {
-    // Sync subjects on service init to ensure they match localStorage
-    const storedUser = this.getStoredUser();
-    if (storedUser) {
-      console.log('[AuthService] Initializing from localStorage:', storedUser.username);
-      this.isLoggedIn.next(true);
-      this.currentUser.next(storedUser);
-    } else {
-      console.log('[AuthService] No user in localStorage on init');
-      this.isLoggedIn.next(false);
-      this.currentUser.next(null);
-    }
-  }
+constructor(private http:HttpClient){}
 
-  // ✅ LOGIN - Backend returns { success: true, user: {...} }
-  login(email: string, password: string, role: string): Observable<User> {
-    return this.apiService.loginUser(email, password, role).pipe(
-      map((response: any) => {
-        console.log('[AuthService] Login response:', response);
-        // Extract user from response
-        const user = response.user || response.data;
-        if (!user) {
-          throw new Error('No user in response');
-        }
-        // Store user in localStorage (no token needed)
-        localStorage.setItem('user', JSON.stringify(user));
-        console.log('[AuthService] User stored in localStorage:', user.username);
-        this.isLoggedIn.next(true);
-        this.currentUser.next(user);
-        console.log('[AuthService] BehaviorSubjects updated. isLoggedIn:', true, 'currentUser:', user.username);
-        return user;
-      }),
-      catchError(err => {
-        console.error('[AuthService] Login error:', err);
-        return throwError(() => err);
-      })
-    );
-  }
+login(data:any):Observable<any>{
+return this.http.post(`${this.baseUrl}/login`,data);
+}
 
-  // ✅ REGISTER - Backend returns { success: true, data: user, message: '...' }
-  register(userData: {
-    username: string;
-    email: string;
-    phoneNo: string;
-    password: string;
-    role: 'Customer' | 'Owner';
-  }): Observable<User> {
-    return this.apiService.createUser(userData).pipe(
-      map((response: any) => {
-        console.log('Register response:', response);
-        // Extract user from response - backend returns data field
-        const user = response.data as User;
-        if (!user) {
-          throw new Error('No user in registration response');
-        }
-        return user;
-      }),
-      catchError(err => {
-        console.error('Register error:', err);
-        return throwError(() => err);
-      })
-    );
-  }
+// Routes to the correct endpoint based on the role field
+register(data:any):Observable<any>{
+const endpoint = data.role === 'Owner' ? 'register/owner' : 'register/customer';
+return this.http.post(`${this.baseUrl}/${endpoint}`,data);
+}
 
-  // ✅ LOGOUT - Clear localStorage and redirect
-  logout(): void {
-    console.log('[AuthService] Logging out...');
-    // Remove user from localStorage
-    localStorage.removeItem('user');
-    this.isLoggedIn.next(false);
-    this.currentUser.next(null);
-    console.log('[AuthService] User cleared from localStorage and BehaviorSubjects');
-    // Redirect to login
-    this.router.navigate(['/auth/login']);
-  }
+// ✅ Check if user is logged in
+isLoggedIn():boolean{
+const user=localStorage.getItem('user');
+const token=localStorage.getItem('token');
+return!!(user&&token);
+}
 
-  isAuthenticated(): Observable<boolean> {
-    return this.isLoggedIn.asObservable();
-  }
+// ✅ Get current user from localStorage
+getUser():any{
+const user=localStorage.getItem('user');
+return user?JSON.parse(user):null;
+}
 
-  isAuthenticatedValue(): boolean {
-    return this.isLoggedIn.value;
-  }
+// ✅ Get token from localStorage
+getToken():string|null{
+return localStorage.getItem('token');
+}
 
-  getCurrentUser(): Observable<User | null> {
-    return this.currentUser.asObservable();
-  }
+// ✅ Returns HttpHeaders with Authorization token attached
+getAuthHeaders():HttpHeaders{
+const token = this.getToken() || '';
+return new HttpHeaders({ 'x-auth-token': token });
+}
 
-  getCurrentUserValue(): User | null {
-    return this.currentUser.value;
-  }
+// ✅ Logout user — removes BOTH user and token
+logout():void{
+localStorage.removeItem('user');
+localStorage.removeItem('token');
+}
 
-  // Update current user in memory and storage
-  updateCurrentUser(user: User): void {
-    localStorage.setItem('user', JSON.stringify(user));
-    this.currentUser.next(user);
-  }
-
-  private hasUser(): boolean {
-    return !!localStorage.getItem('user');
-  }
-
-  private getStoredUser(): User | null {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
-  }
+// ✅ Save user and token (called after successful login)
+saveUserAndToken(user:any,token:string):void{
+localStorage.setItem('user',JSON.stringify(user));
+localStorage.setItem('token',token);
+}
 }

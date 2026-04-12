@@ -1,0 +1,125 @@
+/* FULL PAGE */
+body{
+overflow:hidden;
+}
+
+.main-container{
+height:100vh;
+}
+
+/* LEFT IMAGE */
+.left-image{
+background:url('/assets/burger_background.png') center/cover no-repeat;
+position:relative;
+}
+
+/* DARK OVERLAY */
+.overlay{
+height:100%;
+background:rgba(0,0,0,0.5);
+color:white;
+display:flex;
+flex-direction:column;
+justify-content:flex-start;
+padding:60px;
+}
+
+.brand{
+color:#ff8c42;
+font-size:60px;
+font-weight:bold;
+}
+
+.tagline{
+font-size:35px;
+opacity:0.8;
+}
+
+/* RIGHT PANEL */
+.right-panel{
+background:linear-gradient(135deg,#0f172a,#020617);
+}
+
+/* CARD */
+.form-card{
+width:650px;
+padding:30px;
+border-radius:15px;
+background:rgba(255,255,255,0.05);
+backdrop-filter:blur(10px);
+border:1px solid rgba(255,255,255,0.1);
+color:white;
+max-height:90vh;
+overflow-y:auto;
+padding-right:10px;
+}
+
+/* INPUT */
+.custom-input{
+background:#1e293b;
+border:none;
+color:white;
+border-radius:10px;
+padding:10px;
+}
+
+.custom-input:focus{
+outline:none;
+border:1px solid #ff8c42;
+box-shadow:0 0 5px #ff8c42;
+}
+
+/* BUTTON */
+.signup-btn{
+background:linear-gradient(90deg,#ff8c42,#ff6b00);
+color:white;
+border-radius:10px;
+font-weight:bold;
+transition:0.3s;
+}
+
+.signup-btn:hover{
+transform:scale(1.05);
+}
+
+/* ROLE BUTTON */
+.role-btn{
+margin:5px;
+padding:8px 15px;
+border-radius:8px;
+background:rgba(255,255,255,0.1);
+color:white;
+border:none;
+transition:0.3s;
+}
+
+.role-btn.active{
+background:#ff8c42;
+font-weight:bold;
+}
+
+.role-btn:hover{
+opacity:0.8;
+transform:scale(1.05);
+font-weight:bold;
+}
+
+/* LINK */
+a{
+color:#ff8c42;
+text-decoration:none;
+}
+
+.custom-input{
+background-color:#1e293b;
+color:white;
+}
+
+.custom-input:focus{
+color:white;
+}
+
+.custom-input::placeholder{
+color:rgba(255,255,255,0.5);
+font-size:14px;
+}

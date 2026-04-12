@@ -1,0 +1,112 @@
+<div class="main-container">
+<div class="container-fluid h-100 p-0">
+<div class="row h-100 m-0 g-0">
+
+<!-- LEFT -->
+<div class="col-md-6 p-0 left-image">
+<div class="overlay">
+<h1 class="brand">ByteBites</h1>
+<p class="tagline">Crave it. Click it. Get it.</p>
+</div>
+</div>
+
+<!-- RIGHT -->
+<div class="col-md-6 p-0 right-panel d-flex justify-content-center align-items-start pt-5">
+<div class="form-card">
+
+<h3 class="mb-4">Create Account</h3>
+
+<form [formGroup]="signupForm"(ngSubmit)="onSubmit()">
+
+<!-- ROLE -->
+<div class="mb-3 text-center">
+<button type="button"class="role-btn"[class.active]="role==='customer'"(click)="selectRole('customer')">Customer</button>
+<button type="button"class="role-btn"[class.active]="role==='owner'"(click)="selectRole('owner')">Restaurant Owner</button>
+</div>
+
+<!-- USERNAME -->
+<label>Username</label>
+<input type="text"class="form-control custom-input"formControlName="username"placeholder="Enter username">
+
+<div *ngIf="signupForm.get('username')?.dirty&&signupForm.get('username')?.invalid">
+<span *ngIf="signupForm.get('username')?.errors?.['required']">UserName is required</span>
+<span *ngIf="signupForm.get('username')?.errors?.['pattern']">UserName should include a-z, 0-9, ., _</span>
+</div>
+
+<!-- RESTAURANT -->
+<div *ngIf="role==='owner'"class="mt-2">
+<label>Restaurant Name</label>
+<input type="text"class="form-control custom-input"formControlName="restaurantName"placeholder="Restaurant name">
+</div>
+
+<div *ngIf="signupForm.get('restaurantName')?.dirty&&signupForm.get('restaurantName')?.invalid">
+<span *ngIf="signupForm.get('restaurantName')?.errors?.['required']">Restaurant Name is required</span>
+</div>
+
+<!-- EMAIL -->
+<label class="mt-3">Email</label>
+<input type="email"class="form-control custom-input"formControlName="email"placeholder="Enter email">
+
+<div *ngIf="signupForm.get('email')?.dirty&&signupForm.get('email')?.invalid">
+<span *ngIf="signupForm.get('email')?.errors?.['required']">Email Id is required</span>
+<span *ngIf="signupForm.get('email')?.errors?.['email']">Email is not in the required pattern</span>
+</div>
+
+<!-- PASSWORD -->
+<label class="mt-3">Password</label>
+<input type="password"class="form-control custom-input"formControlName="password"placeholder="Enter password">
+
+<div *ngIf="signupForm.get('password')?.dirty&&signupForm.get('password')?.invalid">
+<span *ngIf="signupForm.get('password')?.errors?.['required']">Password Required</span>
+<span *ngIf="signupForm.get('password')?.errors?.['minlength']">Password should have minimum length of 6 characters</span>
+<span *ngIf="signupForm.get('password')?.errors?.['maxlength']">Password should have maximum length 0f 16 characters</span>
+</div>
+
+<!-- CONTACT -->
+<label class="mt-3">Contact</label>
+<input type="text"class="form-control custom-input"formControlName="contact"placeholder="Enter number">
+
+<div *ngIf="signupForm.get('contact')?.dirty&&signupForm.get('contact')?.invalid">
+<span *ngIf="signupForm.get('contact')?.errors?.['required']">Contact No is required</span>
+<span *ngIf="signupForm.get('contact')?.errors?.['pattern']">Contact No should correct Indian Number starting from 6-9</span>
+</div>
+
+<!-- ADDRESS -->
+<label class="mt-3">Address</label>
+
+<div formGroupName="address">
+<input type="text"class="form-control custom-input mb-2"formControlName="street"placeholder="Street">
+
+<div *ngIf="signupForm.get('address.street')?.dirty&&signupForm.get('address.street')?.invalid">
+<span *ngIf="signupForm.get('address.street')?.errors?.['required']">Address is required</span>
+</div>
+
+<input type="text"class="form-control custom-input"formControlName="city"placeholder="City">
+
+<div *ngIf="signupForm.get('address.city')?.dirty&&signupForm.get('address.city')?.invalid">
+<span *ngIf="signupForm.get('address.city')?.errors?.['required']">Address is required</span>
+</div>
+</div>
+
+<!-- MESSAGES -->
+<div *ngIf="errorMessage" class="alert alert-danger mt-2">{{errorMessage}}</div>
+<div *ngIf="successMessage" class="alert alert-success mt-2">{{successMessage}}</div>
+
+<!-- BUTTON -->
+<button class="btn signup-btn w-100 mt-4" [disabled]="isLoading">
+  {{ isLoading ? 'Creating Account...' : 'Sign Up' }}
+</button>
+
+</form>
+
+<p class="mt-3 text-center">
+Already have an account?
+<a routerLink="/login">Login</a>
+</p>
+
+</div>
+</div>
+
+</div>
+</div>
+</div>

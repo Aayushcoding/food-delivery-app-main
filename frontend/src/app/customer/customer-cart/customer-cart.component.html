@@ -1,0 +1,79 @@
+<div class="cart-container">
+  <!-- HEADER -->
+  <div class="cart-header">
+    <button class="back-btn" (click)="continueShoppingOldStyle()">← Back</button>
+    <h1>🛒 Your Cart <span *ngIf="restaurantName" class="restaurant-tag">{{ restaurantName }}</span></h1>
+  </div>
+
+  <!-- ERROR MESSAGE -->
+  <div *ngIf="errorMessage" class="error-banner">
+    ⚠️ {{ errorMessage }}
+  </div>
+
+  <!-- LOADING -->
+  <div *ngIf="cartLoading" class="empty-cart">
+    <div class="loading-spinner">⏳</div>
+    <p>Loading your cart...</p>
+  </div>
+
+  <!-- EMPTY CART -->
+  <div *ngIf="!cartLoading && cartItems.length === 0 && !errorMessage" class="empty-cart">
+    <div class="empty-icon">🛒</div>
+    <p>Your cart is empty</p>
+    <button class="btn-primary" (click)="continueShoppingOldStyle()">Browse Restaurants</button>
+  </div>
+
+  <!-- CART ITEMS -->
+  <div *ngIf="!cartLoading && cartItems.length > 0" class="cart-content">
+    <!-- ITEMS LIST -->
+    <div class="items-list">
+      <div *ngFor="let item of cartItems; let i = index" class="cart-item">
+        <div class="item-details">
+          <h3>{{ item.itemName }}</h3>
+          <div class="item-qty-row">
+            <span class="qty-badge">× {{ item.quantity }}</span>
+            <span class="unit-price">₹{{ item.price }} each</span>
+          </div>
+          <p class="item-price">₹{{ item.price * item.quantity | number:'1.0-0' }}</p>
+        </div>
+        <button class="remove-btn" (click)="remove(i)">✕</button>
+      </div>
+    </div>
+
+    <!-- CHECKOUT SECTION -->
+    <div class="checkout-section">
+      <h3 class="summary-title">Order Summary</h3>
+      <div class="summary">
+        <div class="summary-line">
+          <span>Items:</span>
+          <span class="value">{{ itemCount }}</span>
+        </div>
+        <div class="summary-line">
+          <span>Subtotal:</span>
+          <span class="value">₹{{ total | number:'1.0-0' }}</span>
+        </div>
+        <div class="summary-line">
+          <span>Delivery:</span>
+          <span class="value free">FREE</span>
+        </div>
+        <div class="summary-line total">
+          <span>Total:</span>
+          <span class="value">₹{{ total | number:'1.0-0' }}</span>
+        </div>
+      </div>
+
+      <button
+        class="btn-checkout"
+        (click)="placeOrder()"
+        [disabled]="loading || cartItems.length === 0">
+        {{ loading ? '⏳ Processing...' : '🚀 Place Order' }}
+      </button>
+
+      <button
+        class="btn-continue"
+        (click)="continueShoppingOldStyle()">
+        ← Continue Shopping
+      </button>
+    </div>
+  </div>
+</div>

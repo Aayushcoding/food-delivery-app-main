@@ -1,0 +1,27 @@
+<div class="success-page">
+  <div class="success-card">
+
+    <div class="success-icon">🎉</div>
+
+    <h1 class="success-title">Order Placed!</h1>
+    <p class="success-subtitle">
+      Your order has been confirmed and is being prepared.<br>
+      Sit back and relax!
+    </p>
+
+    <div class="order-id-box" *ngIf="orderId">
+      <span class="order-id-label">Order ID</span>
+      <span class="order-id-value">{{ orderId }}</span>
+    </div>
+
+    <div class="success-actions">
+      <button class="btn-orders" (click)="goOrders()">📦 View My Orders</button>
+      <button class="btn-home" (click)="goHome()">🏠 Back to Home</button>
+    </div>
+
+    <div class="success-eta">
+      🚀 Estimated delivery: 30-45 minutes
+    </div>
+
+  </div>
+</div>

@@ -1,0 +1,75 @@
+<div class="menu-page">
+
+  <!-- TOAST -->
+  <div *ngIf="toastMessage" class="toast" [class.toast-error]="toastError">{{ toastMessage }}</div>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <button class="back-btn" (click)="goBack()">← Dashboard</button>
+    <h1>🍴 Menu Management</h1>
+    <button class="btn-add-toggle" (click)="toggleAddForm()">
+      {{ showAddForm ? '✕ Cancel' : '+ Add Item' }}
+    </button>
+  </div>
+
+  <!-- RESTAURANT NAME -->
+  <p class="restaurant-label" *ngIf="restaurant">{{ restaurant.restaurantName }}</p>
+
+  <!-- LOADING -->
+  <div *ngIf="loading" class="state-box"><p>⏳ Loading menu...</p></div>
+
+  <!-- ADD ITEM FORM -->
+  <div *ngIf="showAddForm && !loading" class="add-form-card">
+    <h3>Add New Menu Item</h3>
+    <div class="form-grid">
+      <input [(ngModel)]="newItem.itemName" placeholder="Item Name *" class="form-input">
+      <input [(ngModel)]="newItem.price" type="number" placeholder="Price (₹) *" class="form-input">
+      <input [(ngModel)]="newItem.category" placeholder="Category (e.g. Indian, Pizza)" class="form-input">
+      <select [(ngModel)]="newItem.isVeg" class="form-input">
+        <option [ngValue]="true">🟢 Vegetarian</option>
+        <option [ngValue]="false">🔴 Non-Vegetarian</option>
+      </select>
+    </div>
+    <input [(ngModel)]="newItem.description" placeholder="Description (optional)" class="form-input full-width">
+    <button (click)="addItem()" [disabled]="saving" class="btn-save">
+      {{ saving ? 'Saving...' : 'Save Item' }}
+    </button>
+  </div>
+
+  <!-- MENU ITEMS COUNT -->
+  <p class="count-label" *ngIf="!loading">{{ menuItems.length }} item(s) on your menu</p>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && menuItems.length === 0" class="state-box">
+    <p>No items yet. Click "+ Add Item" to get started.</p>
+  </div>
+
+  <!-- MENU ITEMS LIST -->
+  <div class="menu-list" *ngIf="!loading && menuItems.length > 0">
+    <div *ngFor="let item of menuItems" class="menu-card">
+
+      <!-- VEG BADGE -->
+      <span class="veg-dot" [class.nonveg]="!item.isVeg">{{ item.isVeg ? '🟢' : '🔴' }}</span>
+
+      <div class="menu-card-body">
+        <h3 class="item-name">{{ item.itemName }}</h3>
+        <p class="item-category">{{ item.category }}</p>
+        <p class="item-desc" *ngIf="item.description">{{ item.description }}</p>
+
+        <!-- PRICE DISPLAY / EDIT -->
+        <div class="price-row" *ngIf="editingId !== item.menuId">
+          <span class="item-price">₹{{ item.price }}</span>
+          <button class="btn-edit" (click)="startEdit(item)">✏️ Edit Price</button>
+        </div>
+        <div class="price-row" *ngIf="editingId === item.menuId">
+          <input [(ngModel)]="editPrice" type="number" class="price-input">
+          <button class="btn-save-small" (click)="saveEdit(item)">Save</button>
+          <button class="btn-cancel-small" (click)="cancelEdit()">Cancel</button>
+        </div>
+      </div>
+
+      <button class="btn-delete" (click)="deleteItem(item)">🗑</button>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,35 @@
+<div class="menu-container">
+  <!-- HEADER -->
+  <div class="menu-header">
+    <button class="back-btn" (click)="goHome()">← Back</button>
+    <h1>{{ restaurantName || 'Menu' }}</h1>
+    <button class="cart-btn" (click)="goToCart()">
+      🛒 Cart <span *ngIf="cartItemCount > 0" class="cart-count-badge">{{ cartItemCount }}</span>
+    </button>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div *ngIf="toastMessage" class="toast" [class.toast-error]="toastError">
+    {{ toastMessage }}
+  </div>
+
+  <!-- LOADING STATE -->
+  <div *ngIf="loading" class="loading">
+    <p>⏳ Loading menu items...</p>
+  </div>
+
+  <!-- MENU ITEMS GRID -->
+  <div *ngIf="!loading && menuItems.length > 0" class="menu-grid">
+    <app-item-card
+      *ngFor="let item of menuItems"
+      [item]="item"
+      (add)="addToCart($event)">
+    </app-item-card>
+  </div>
+
+  <!-- EMPTY STATE -->
+  <div *ngIf="!loading && menuItems.length === 0" class="empty-state">
+    <p>😕 No menu items available for this restaurant.</p>
+    <button (click)="goHome()" class="btn-primary">Back to Restaurants</button>
+  </div>
+</div>

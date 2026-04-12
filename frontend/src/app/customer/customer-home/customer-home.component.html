@@ -1,0 +1,133 @@
+<div class="home-container">
+
+<!-- Navbar -->
+<nav class="navbar">
+<div class="navbar-left">
+<h1 class="logo">🍕 ByteBites</h1>
+</div>
+
+<div class="search-bar">
+<input 
+  type="text"
+  placeholder="Search restaurants..."
+  [(ngModel)]="searchQuery"
+  (input)="onSearchInput()"
+  class="search-input"
+>
+</div>
+
+<div class="navbar-right">
+<button class="cart-btn" (click)="toggleCart()" title="Cart">
+  🛒 <span class="badge" *ngIf="cartCount>0">{{cartCount}}</span>
+</button>
+<button class="profile-btn" (click)="toggleProfileMenu()" title="Profile">👤</button>
+</div>
+</nav>
+
+<!-- Profile Menu -->
+<div *ngIf="profileOpen" class="profile-menu">
+<div class="profile-content">
+<p class="username">{{ isLoggedIn ? userName : 'Guest' }}</p>
+<p class="status">{{ isLoggedIn ? 'Logged in' : 'Not logged in' }}</p>
+<button *ngIf="isLoggedIn" (click)="logout()" class="logout-btn">Logout</button>
+<button *ngIf="!isLoggedIn" (click)="goToLogin()" class="logout-btn">Login</button>
+</div>
+</div>
+
+<!-- Cart Sidebar -->
+<div *ngIf="cartOpen" class="cart-sidebar">
+<div class="cart-header">
+<h3>🛒 Your Cart</h3>
+<button class="close-btn" (click)="toggleCart()">✕</button>
+</div>
+<div class="cart-content">
+<div *ngIf="cartItems.length===0" class="empty-cart">
+  <p>🛒 Your cart is empty</p>
+  <p class="empty-hint">Browse restaurants and add items</p>
+</div>
+<div *ngFor="let item of cartItems; let i = index" class="cart-item">
+  <div class="cart-item-info">
+    <h4>{{ item.itemId }}</h4>
+    <span class="cart-item-qty">Qty: {{item.quantity}}</span>
+    <span class="cart-item-price">₹{{(item.price * item.quantity) | number:'1.0-0'}}</span>
+  </div>
+</div>
+</div>
+<div class="cart-footer" *ngIf="cartItems.length>0">
+<div class="cart-total">
+  Total: ₹{{ cartTotal }}
+</div>
+<button class="checkout-btn" (click)="goToCart()">View Cart & Checkout →</button>
+</div>
+<div class="cart-footer" *ngIf="cartItems.length===0">
+<button class="checkout-btn" style="opacity:0.5;cursor:default" disabled>Cart is empty</button>
+</div>
+</div>
+
+<!-- Cuisine Filter -->
+<div class="filter-section">
+<h3>Filter by Cuisine</h3>
+<div class="cuisine-tags">
+<button 
+  *ngFor="let cuisine of cuisineTags"
+  (click)="toggleCuisine(cuisine)"
+  [class.active]="selectedCuisines.has(cuisine)"
+  class="cuisine-btn"
+>
+  {{cuisine}}
+</button>
+</div>
+</div>
+
+<!-- Results Info -->
+<div class="results-info">
+<p *ngIf="!loading">Found <strong>{{filteredRestaurants.length}}</strong> restaurants</p>
+<p *ngIf="loading" class="loading-text">Loading restaurants...</p>
+</div>
+
+<!-- Restaurant List -->
+<div class="restaurants-grid">
+<div 
+  *ngFor="let restaurant of filteredRestaurants"
+  class="restaurant-card"
+>
+  <!-- Image -->
+  <div class="card-image">
+    <img 
+      [src]="restaurant.imageUrl"
+      [alt]="restaurant.restaurantName"
+      onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'"
+    >
+    <span class="veg-badge" *ngIf="restaurant.isVeg">🟢 Pure Veg</span>
+  </div>
+
+  <!-- Card Content -->
+  <div class="card-content">
+    <h3 class="restaurant-name">{{restaurant.restaurantName}}</h3>
+    
+    <p class="cuisine">🍽 {{getCuisineString(restaurant.cuisine)}}</p>
+    
+    <div class="card-meta">
+      <span class="rating">⭐ {{restaurant.rating}}</span>
+      <span class="tag">Free Delivery</span>
+    </div>
+
+    <!-- Buttons -->
+    <div class="card-actions">
+      <button 
+        (click)="viewMenu(restaurant)"
+        class="btn btn-primary"
+      >
+        📋 View Menu
+      </button>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Empty State -->
+<div *ngIf="filteredRestaurants.length===0 && !loading" class="empty-state">
+<p>😕 No restaurants found. Try adjusting your search or filters.</p>
+</div>
+
+</div>

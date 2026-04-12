@@ -1,0 +1,100 @@
+<form [formGroup]="loginForm"(ngSubmit)="onSubmit()">
+<div class="login-container">
+
+<!-- LEFT -->
+<div class="left">
+<div class="branding">
+<h1>ByteBites</h1>
+<p>Crave it. Click it. Get it.</p>
+
+<div class="role-select">
+<h3>Login As</h3>
+
+<label class="role-card">
+<input type="radio"value="Customer"formControlName="role"name="role">
+<span>👤 User</span>
+</label>
+
+<!-- <label class="role-card">
+<input type="radio"value="admin"formControlName="role"name="role">
+<span>🛠 Admin</span>
+</label> -->
+
+<label class="role-card">
+<input type="radio"value="Owner"formControlName="role"name="role">
+<span>🍴 Restaurant</span>
+</label>
+
+</div>
+</div>
+</div>
+
+<!-- RIGHT -->
+<div class="right">
+<div class="login-box">
+
+<h2>
+Logging in as
+<span class="highlight">
+{{ loginForm.value.role | titlecase }}
+</span>
+</h2>
+
+<!-- EMAIL -->
+<div class="input-group">
+<label>Email</label>
+<input type="email"formControlName="email"required placeholder="Enter your email"/>
+
+<small class="error"*ngIf="f['email'].touched&&f['email'].invalid"class="text-danger">
+<span *ngIf="f['email'].errors?.['required']"class="text-danger">
+Email is required
+</span>
+<span *ngIf="f['email'].errors?.['email']"class="text-danger">
+Invalid email
+</span>
+</small>
+</div>
+
+<!-- PASSWORD -->
+<div class="input-group">
+<label>Password</label>
+<input type="password"formControlName="password"required placeholder="Enter password"/>
+
+<small class="error"*ngIf="f['password'].touched&&f['password'].invalid"class="text-danger">
+<span *ngIf="f['password'].errors?.['required']"class="text-danger">
+Password is required
+</span>
+<span *ngIf="f['password'].errors?.['minlength']"class="text-danger">
+Min 6 characters required
+</span>
+</small>
+</div>
+
+<!-- RESTAURANT INPUT -->
+<div class="input-group"*ngIf="loginForm.value.role==='Owner'">
+<label>Enter Restaurant Name</label>
+<input type="text"formControlName="restaurantName"placeholder="Enter your restaurant name">
+
+<small class="error"*ngIf="f['restaurantName'].touched&&f['restaurantName'].invalid"class="text-danger">
+<span *ngIf="f['restaurantName'].errors?.['required']"class="text-danger">
+Restaurant Name is required
+</span>
+</small>
+</div>
+
+<!-- BUTTON -->
+<button type="submit"[disabled]="loginForm.invalid">
+Login
+</button>
+
+<!-- SIGNUP -->
+<div class="signup-text">
+Don’t have an account?
+<a href="/signup">Sign up</a>
+</div>
+
+</div>
+</div>
+
+</div>
+</form>

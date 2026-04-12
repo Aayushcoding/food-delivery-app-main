@@ -1,167 +1,257 @@
-// controllers/orderController.js
-// Using MongoDB with Mongoose ONLY
+////orderController.js
+const db = require('../utils/dbManager');
 
-const Order = require('../models/Order');
-const Cart = require('../models/Cart');
-
-// ── GET ALL ORDERS ─────────────────────────────────────────────────────────────
-// GET /api/orders?userId=usr_001&restaurantId=rest_001&status=Pending
-const getOrders = async (req, res) => {
+// ────────────────────────────────────────────────────────────────────
+// CREATE ORDER
+// ────────────────────────────────────────────────────────────────────
+const createOrder = async(req, res) => {
   try {
-    const { userId, restaurantId, status, deliveryAgentId, ownerId } = req.query;
+    const { userId, deliveryAddress } = req.body;
 
-    let query = {};
-
-    if (userId) {
-      query.userId = userId;
+    // Validation
+    if (!userId || userId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "userId is required" });
     }
 
-    if (status) {
-      query.status = status;
+    // Verify user exists
+    const user = db.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: `User '${userId}' not found` });
     }
 
-    if (restaurantId) {
-      query.restaurantId = restaurantId;
+    // Derive delivery address — use request body value, fall back to user's stored address
+    let resolvedAddress = deliveryAddress;
+    if (!resolvedAddress) {
+      const addr = user.address;
+      if (Array.isArray(addr) && addr.length > 0) {
+        resolvedAddress = `${addr[0].street || ''}, ${addr[0].city || ''}`.trim().replace(/^,\s*|,\s*$/g, '');
+      } else if (typeof addr === 'string' && addr.trim()) {
+        resolvedAddress = addr.trim();
+      } else {
+        resolvedAddress = 'Default Delivery Address';
+      }
     }
 
-    if (deliveryAgentId) {
-      query.deliveryAgentId = deliveryAgentId;
+    // Get user's cart
+    const cart = db.getCartByUserId(userId);
+    if (!cart || !cart.items || cart.items.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Cart is empty. Add items before placing an order.",
+      });
     }
 
-    const orders = await Order.find(query).sort({ createdAt: -1 });
-
-    res.status(200).json({ success: true, total: orders.length, data: orders });
-  } catch (error) {
-    console.error('Error in getOrders:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── GET SINGLE ORDER ───────────────────────────────────────────────────────────
-// GET /api/orders/:id
-const getOrder = async (req, res) => {
-  try {
-    const order = await Order.findById(req.params.id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-    res.status(200).json({ success: true, data: order });
-  } catch (error) {
-    console.error('Error in getOrder:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── CREATE ORDER (direct) ──────────────────────────────────────────────────────
-// POST /api/orders
-const createOrder = async (req, res) => {
-  try {
-    const { userId, restaurantId, items, deliveryAgentId, status } = req.body;
-
-    if (!userId || !restaurantId || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'userId, restaurantId and items[] are required' });
-    }
-
-    const totalAmount = items.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0);
-
-    const newOrder = new Order({
-      userId,
-      restaurantId,
-      items,
-      totalAmount,
-      status: status || 'Pending',
-      deliveryAgentId: deliveryAgentId || null
-    });
-
-    await newOrder.save();
-
-    res.status(201).json({ success: true, data: newOrder });
-  } catch (error) {
-    console.error('Error in createOrder:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── PLACE ORDER FROM CART ──────────────────────────────────────────────────────
-// POST /api/orders/place-from-cart
-const placeOrderFromCart = async (req, res) => {
-  try {
-    const { cartId, deliveryAgentId } = req.body;
-
-    if (!cartId) {
-      return res.status(400).json({ success: false, message: 'cartId is required' });
-    }
-
-    const cart = await Cart.findById(cartId);
-    if (!cart) {
-      return res.status(404).json({ success: false, message: 'Cart not found' });
-    }
-
-    if (cart.items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Cart is empty' });
+    // Verify all items in cart are still available
+    for (const cartItem of cart.items) {
+      const menuItem = db.getMenuItem(cartItem.itemId);
+      if (!menuItem) {
+        return res.status(400).json({
+          success: false,
+          message: `Item '${cartItem.itemId}' no longer exists`
+        });
+      }
+      if (!menuItem.isAvailable) {
+        return res.status(400).json({
+          success: false,
+          message: `Item '${menuItem.itemName}' is currently unavailable`
+        });
+      }
     }
 
     // Create order from cart
-    const totalAmount = cart.totalAmount;
-    const newOrder = new Order({
-      userId: cart.userId,
+    const order = db.createOrder({
+      userId,
       restaurantId: cart.restaurantId,
       items: cart.items,
-      totalAmount,
-      status: 'Pending',
-      deliveryAgentId: deliveryAgentId || null
+      totalAmount: cart.totalAmount,
+      deliveryAddress: resolvedAddress,
+      status: "pending"
     });
 
-    await newOrder.save();
+    // Delete the cart after order — prevents "different restaurant" errors next time
+    db.deleteCart(cart.id);
 
-    // Clear cart after order
-    await Cart.findByIdAndDelete(cartId);
-
-    res.status(201).json({ success: true, data: newOrder, message: 'Order placed successfully' });
-  } catch (error) {
-    console.error('Error in placeOrderFromCart:', error);
-    res.status(500).json({ success: false, message: error.message });
+    return res.status(201).json({
+      success: true,
+      message: "Order placed successfully",
+      data: order,
+    });
+  } catch(error) {
+    console.error("[createOrder] Error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error. Please try again later.",
+    });
   }
 };
 
-// ── UPDATE ORDER ───────────────────────────────────────────────────────────────
-// PUT /api/orders/:id
-const updateOrder = async (req, res) => {
+// ────────────────────────────────────────────────────────────────────
+// GET ORDERS FOR USER
+// ────────────────────────────────────────────────────────────────────
+const getUserOrders = async(req, res) => {
   try {
-    const { status, deliveryAgentId } = req.body;
+    const { userId } = req.params;
 
-    const updated = await Order.findByIdAndUpdate(
-      req.params.id,
-      { status, deliveryAgentId },
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
+    if (!userId || userId.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "userId is required" });
     }
 
-    res.status(200).json({ success: true, data: updated });
-  } catch (error) {
-    console.error('Error in updateOrder:', error);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
-// ── DELETE ORDER ───────────────────────────────────────────────────────────────
-// DELETE /api/orders/:id
-const deleteOrder = async (req, res) => {
-  try {
-    const deleted = await Order.findByIdAndDelete(req.params.id);
-
-    if (!deleted) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
+    // Verify user exists
+    const user = db.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: `User '${userId}' not found` });
     }
 
-    res.status(200).json({ success: true, message: 'Order deleted' });
-  } catch (error) {
-    console.error('Error in deleteOrder:', error);
-    res.status(500).json({ success: false, message: error.message });
+    const orders = db.getOrdersByUserId(userId);
+
+    return res.status(200).json({
+      success: true,
+      data: orders
+    });
+  } catch(error) {
+    console.error("[getUserOrders] Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
   }
 };
 
-module.exports = { getOrders, getOrder, createOrder, placeOrderFromCart, updateOrder, deleteOrder };
+// ────────────────────────────────────────────────────────────────────
+// GET SINGLE ORDER
+// ────────────────────────────────────────────────────────────────────
+const getOrderById = async(req, res) => {
+  try {
+    const { id } = req.params;
+    
+    if (!id || id.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
+    
+    const order = db.getOrder(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found." });
+    }
+
+    return res.status(200).json({ success: true, data: order });
+  } catch(error) {
+    console.error("[getOrderById] Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────
+// GET ALL ORDERS
+// ────────────────────────────────────────────────────────────────────
+const getAllOrders = async(req, res) => {
+  try {
+    const orders = db.getAllOrders();
+    return res.status(200).json({ success: true, data: orders });
+  } catch(error) {
+    console.error("[getAllOrders] Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────
+// GET ORDERS BY RESTAURANT (for owner panel)
+// ────────────────────────────────────────────────────────────────────
+const getOrdersByRestaurant = async(req, res) => {
+  try {
+    const { restaurantId } = req.params;
+    if (!restaurantId) {
+      return res.status(400).json({ success: false, message: 'restaurantId is required' });
+    }
+    const allOrders = db.getAllOrders();
+    const orders = allOrders.filter(o => o.restaurantId === restaurantId);
+    return res.status(200).json({ success: true, data: orders });
+  } catch(error) {
+    return res.status(500).json({ success: false, message: 'Internal server error.' });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────
+// UPDATE ORDER STATUS
+// ────────────────────────────────────────────────────────────────────
+const updateOrderStatus = async(req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!id || id.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
+
+    if (!status || status.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Status is required" });
+    }
+
+    const validStatuses = ["pending", "confirmed", "preparing", "out_for_delivery", "delivered", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Status must be one of: ${validStatuses.join(", ")}`
+      });
+    }
+
+    const order = db.updateOrder(id, { status });
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Order status updated",
+      data: order
+    });
+  } catch(error) {
+    console.error("[updateOrderStatus] Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+// ────────────────────────────────────────────────────────────────────
+// CANCEL ORDER
+// ────────────────────────────────────────────────────────────────────
+const cancelOrder = async(req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || id.trim().length === 0) {
+      return res.status(400).json({ success: false, message: "Order ID is required" });
+    }
+
+    const order = db.getOrder(id);
+
+    if (!order) {
+      return res.status(404).json({ success: false, message: "Order not found" });
+    }
+
+    if (order.status === "delivered" || order.status === "cancelled") {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel order with status: ${order.status}`
+      });
+    }
+
+    const updated = db.updateOrder(id, { status: "cancelled" });
+
+    return res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      data: updated
+    });
+  } catch(error) {
+    console.error("[cancelOrder] Error:", error);
+    return res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+module.exports = {
+  createOrder,
+  getUserOrders,
+  getOrderById,
+  getAllOrders,
+  getOrdersByRestaurant,
+  updateOrderStatus,
+  cancelOrder
+};

@@ -1,22 +1,22 @@
-const express = require('express');
-const router = express.Router();
-// Auth middleware DISABLED FOR NOW
-// const { auth, roleAuth } = require('../middleware/auth');
-const {
-  getRestaurants,
-  getRestaurant,
-  createRestaurant,
-  updateRestaurant,
-  deleteRestaurant
-} = require('../controllers/restaurantController');
+///restaurantRoutes.js
+const express=require("express");
+const router=express.Router();
+const{
+getAllRestaurants,
+getRestaurantById,
+getRestaurantMenu,
+getRestaurantByOwner,
+createRestaurant,
+updateRestaurant,
+deleteRestaurant
+}=require("../controllers/restaurantController");
 
-router.get('/', getRestaurants); // Public - customers can view
-router.get('/:id', getRestaurant); // Public - customers can view
-// Auth middleware DISABLED FOR NOW - all APIs are public
-router.post('/', createRestaurant); // All users can create
-// Auth middleware DISABLED FOR NOW - all APIs are public
-router.put('/:id', updateRestaurant); // All users can update
-// Auth middleware DISABLED FOR NOW - all APIs are public
-router.delete('/:id', deleteRestaurant); // All users can delete
+router.get("/",getAllRestaurants);
+router.post("/",createRestaurant);
+router.get("/owner/:ownerId",getRestaurantByOwner);
+router.get("/:id/menu",getRestaurantMenu);
+router.get("/:id",getRestaurantById);
+router.put("/:id",updateRestaurant);
+router.delete("/:id",deleteRestaurant);
 
-module.exports = router;
+module.exports=router;
