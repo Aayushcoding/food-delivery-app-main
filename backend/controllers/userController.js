@@ -1,86 +1,81 @@
-//userController.js
+// controllers/userController.js
 const bcrypt = require('bcryptjs');
-const db = require('../utils/dbManager');
+const User   = require('../models/User');
+const { getNextSequence } = require('../utils/counter');
 
-// ================= GET ALL USERS =================
-const getUsers = async(req, res) => {
+const PHONE_REGEX = /^\d{10}$/;
+
+// GET ALL USERS
+const getUsers = async (req, res) => {
   try {
-    const users = (await db.getAllUsers()).map(u => {
-      const safe = { ...u };
-      delete safe.password;
-      return safe;
-    });
-    res.json({ success: true, count: users.length, data: users });
-  } catch(error) {
+    const users = await User.find({}).lean();
+    const safe  = users.map(u => { const o = { ...u }; delete o._id; delete o.password; return o; });
+    res.json({ success: true, count: safe.length, data: safe });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ================= GET SINGLE USER =================
-const getUser = async(req, res) => {
+// GET SINGLE USER
+const getUser = async (req, res) => {
   try {
-    const user = await db.getUser(req.params.id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
-    const userObj = { ...user };
-    delete userObj.password;
-    res.json({ success: true, data: userObj });
-  } catch(error) {
+    const user = await User.findOne({ id: req.params.id }).lean();
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+    const { password, _id, ...safe } = user;
+    res.json({ success: true, data: safe });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ================= CREATE USER =================
-const createUser = async(req, res) => {
+// CREATE USER (admin / legacy endpoint)
+const createUser = async (req, res) => {
   try {
     const { username, email, phoneNo, password, role, address } = req.body;
 
-    if (!username || !email || !phoneNo || !password) {
-      return res.status(400).json({ success: false, message: 'username, email, phoneNo and password are required' });
+    if (!username || !username.trim()) return res.status(400).json({ success: false, message: 'username is required' });
+    if (!email    || !email.trim())    return res.status(400).json({ success: false, message: 'email is required' });
+    if (!password)                     return res.status(400).json({ success: false, message: 'password is required' });
+
+    if (phoneNo && phoneNo.trim() && !PHONE_REGEX.test(phoneNo.trim())) {
+      return res.status(400).json({ success: false, message: 'Phone must be exactly 10 digits' });
     }
 
-    // Enforce same-email multi-role: only block if same email+role combo exists
-    const existing = await db.getUserByEmailAndRole(email.toLowerCase(), role || 'Customer');
-    if (existing) {
-      return res.status(400).json({ success: false, message: 'An account with this email and role already exists' });
-    }
+    const assignedRole = role || 'Customer';
+    const existing = await User.findOne({ email: email.toLowerCase().trim(), role: assignedRole }).lean();
+    if (existing) return res.status(400).json({ success: false, message: 'An account with this email and role already exists' });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await new User({
+      id:       await getNextSequence('usr'),
+      username: username.trim(),
+      email:    email.toLowerCase().trim(),
+      phoneNo:  phoneNo ? phoneNo.trim() : '',
+      password: await bcrypt.hash(password, 10),
+      address:  address || [],
+      role:     assignedRole
+    }).save();
 
-    const user = await db.createUser({
-      username,
-      email: email.toLowerCase(),
-      phoneNo,
-      password: hashedPassword,
-      address: address || [],
-      role: role || 'Customer'
-    });
-
-    const userObj = { ...user };
-    delete userObj.password;
-
-    res.status(201).json({ success: true, data: userObj });
-  } catch(error) {
+    const { password: _, ...safe } = user.toJSON();
+    res.status(201).json({ success: true, data: safe });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ================= UPDATE USER =================
-const updateUser = async(req, res) => {
+// UPDATE USER
+const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Ownership check — users can only update their own profile
     if (req.user.id !== id) {
       return res.status(403).json({ success: false, message: 'You can only update your own profile.' });
     }
 
-    let updates = { ...req.body };
-    delete updates.id;        // prevent ID mutation
-    delete updates.role;      // prevent role escalation
-    delete updates.email;     // email cannot be changed here
-    delete updates.password;  // use dedicated endpoint
+    const updates = { ...req.body };
+    delete updates.id;
+    delete updates.role;
+    delete updates.email;
+    delete updates.password;
 
     if (updates.username !== undefined) {
       if (!updates.username || !updates.username.trim()) {
@@ -89,36 +84,34 @@ const updateUser = async(req, res) => {
       updates.username = updates.username.trim();
     }
 
-    if (updates.phoneNo !== undefined) updates.phoneNo = String(updates.phoneNo).trim();
-
-    const updated = await db.updateUser(id, updates);
-    if (!updated) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    if (updates.phoneNo !== undefined) {
+      updates.phoneNo = String(updates.phoneNo).trim();
+      if (updates.phoneNo && !PHONE_REGEX.test(updates.phoneNo)) {
+        return res.status(400).json({ success: false, message: 'Phone must be exactly 10 digits' });
+      }
     }
 
-    const userObj = { ...updated };
-    delete userObj.password;
+    const updated = await User.findOneAndUpdate({ id }, updates, { new: true }).lean();
+    if (!updated) return res.status(404).json({ success: false, message: 'User not found' });
 
-    res.json({ success: true, data: userObj });
-  } catch(error) {
+    const { password, _id, ...safe } = updated;
+    res.json({ success: true, data: safe });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ================= DELETE USER =================
-const deleteUser = async(req, res) => {
+// DELETE USER
+const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    // Users can only delete their own account
     if (req.user.id !== id) {
       return res.status(403).json({ success: false, message: 'You can only delete your own account.' });
     }
-    const user = await db.deleteUser(id);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
-    }
+    const user = await User.findOneAndDelete({ id });
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     res.json({ success: true, message: 'User deleted' });
-  } catch(error) {
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };

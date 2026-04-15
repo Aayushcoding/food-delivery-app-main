@@ -35,14 +35,20 @@
              placeholder="Cuisines (comma-separated)"
              class="form-input" id="new-rest-cuisine">
     </div>
-    <input [(ngModel)]="newRestaurant.displayImage"
-           placeholder="Display Image URL (optional)"
-           class="form-input full" id="new-rest-image">
-    <div class="img-preview" *ngIf="newRestaurant.displayImage">
-      <img [src]="newRestaurant.displayImage"
-           alt="preview"
-           onerror="this.style.display='none'">
+
+    <!-- FILE UPLOAD — any image format, optional -->
+    <div class="upload-row">
+      <label class="upload-label" for="new-rest-file">
+        📁 {{ newRestFile ? newRestFile.name : 'Choose Image (optional — JPG / PNG / SVG)' }}
+      </label>
+      <input type="file" id="new-rest-file" accept="image/*"
+             (change)="onNewRestFileSelected($event)" class="file-input-hidden">
     </div>
+    <!-- preview only shown when file is picked -->
+    <div class="img-preview" *ngIf="newRestPreview">
+      <img [src]="newRestPreview" alt="preview" class="preview-img">
+    </div>
+
     <button class="btn-save" (click)="addRestaurant()" [disabled]="saving">
       {{ saving ? 'Creating...' : '✅ Create Restaurant' }}
     </button>
@@ -67,11 +73,17 @@
              class="rest-card"
              [class.selected]="selectedRestaurant?.restaurantId === rest.restaurantId">
 
-          <!-- IMAGE -->
+          <!-- IMAGE or TEXT FALLBACK -->
           <div class="rest-card-img" (click)="selectRestaurant(rest)">
-            <img [src]="imgOf(rest)"
-                 [alt]="rest.restaurantName"
-                 onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=300&fit=crop'">
+            <ng-container *ngIf="rest.displayImage || rest.imageUrl; else restNameFallback">
+              <img [src]="rest.displayImage || rest.imageUrl"
+                   [alt]="rest.restaurantName"
+                   onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+              <div class="img-text-fallback" style="display:none">{{ rest.restaurantName }}</div>
+            </ng-container>
+            <ng-template #restNameFallback>
+              <div class="img-text-fallback">{{ rest.restaurantName }}</div>
+            </ng-template>
           </div>
 
           <!-- CARD BODY — NORMAL VIEW -->
@@ -100,10 +112,20 @@
             <input [(ngModel)]="renameCuisineValue" placeholder="Cuisines (comma-separated)" class="rename-input" id="rename-cuisine">
             <input [(ngModel)]="renameAddressValue" placeholder="Address" class="rename-input" id="rename-address">
             <input [(ngModel)]="renameContactValue" placeholder="Contact number" class="rename-input" id="rename-contact">
-            <input [(ngModel)]="renameImageValue" placeholder="Display image URL (optional)" class="rename-input" id="rename-image">
-            <div class="img-preview" *ngIf="renameImageValue">
-              <img [src]="renameImageValue" alt="preview" onerror="this.style.display='none'" style="height:70px;border-radius:8px;object-fit:cover;">
+
+            <!-- FILE UPLOAD for edit -->
+            <div class="upload-row" style="margin-top:10px;">
+              <label class="upload-label" for="rename-file">
+                📁 {{ renameFile ? renameFile.name : 'Replace Image (optional)' }}
+              </label>
+              <input type="file" id="rename-file" accept="image/*"
+                     (change)="onRenameFileSelected($event)" class="file-input-hidden">
             </div>
+            <div class="img-preview" *ngIf="renamePreview">
+              <img [src]="renamePreview" alt="preview"
+                   style="height:70px;border-radius:8px;object-fit:cover;">
+            </div>
+
             <div class="rename-actions">
               <button class="btn-save-sm" (click)="saveRename(rest)">Save</button>
               <button class="btn-cancel-sm" (click)="cancelRename()">Cancel</button>
@@ -117,9 +139,17 @@
     <!-- SELECTED RESTAURANT DETAILS -->
     <div class="rest-detail" *ngIf="selectedRestaurant">
       <div class="detail-header">
-        <img [src]="imgOf(selectedRestaurant)"
-             onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=300&fit=crop'"
-             class="detail-banner">
+        <!-- Show image if available, otherwise show name as heading -->
+        <ng-container *ngIf="selectedRestaurant.displayImage || selectedRestaurant.imageUrl; else detailNameFallback">
+          <img [src]="selectedRestaurant.displayImage || selectedRestaurant.imageUrl"
+               class="detail-banner"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="detail-banner-fallback" style="display:none">{{ selectedRestaurant.restaurantName }}</div>
+        </ng-container>
+        <ng-template #detailNameFallback>
+          <div class="detail-banner-fallback">{{ selectedRestaurant.restaurantName }}</div>
+        </ng-template>
+
         <div class="detail-overlay">
           <h1>{{ selectedRestaurant.restaurantName }}</h1>
           <p>{{ getCuisineString(selectedRestaurant.cuisine) }}</p>

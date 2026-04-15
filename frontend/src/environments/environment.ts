@@ -3,6 +3,7 @@
 
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:5000/api',
-  baseUrl: 'http://localhost:5000'
+  // Use relative paths — Angular proxy (proxy.conf.json) forwards /api to localhost:3000
+  apiUrl: '/api',
+  baseUrl: ''
 };

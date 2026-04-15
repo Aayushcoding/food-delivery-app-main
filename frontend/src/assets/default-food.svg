@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="280" viewBox="0 0 400 280">
+  <rect width="400" height="280" fill="#f5f5f5"/>
+  <rect width="400" height="280" fill="#FFF3E0" rx="12"/>
+  <circle cx="200" cy="110" r="52" fill="#FFE0B2"/>
+  <text x="200" y="126" font-size="52" text-anchor="middle" font-family="Arial">🍽️</text>
+  <text x="200" y="185" font-size="18" text-anchor="middle" font-family="Arial, sans-serif" fill="#BF360C" font-weight="600">No Image</text>
+  <text x="200" y="210" font-size="13" text-anchor="middle" font-family="Arial, sans-serif" fill="#E64A19">Upload a food photo</text>
+</svg>

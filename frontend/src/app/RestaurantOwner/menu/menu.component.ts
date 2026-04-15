@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
 
@@ -22,18 +23,24 @@ export class MenuComponent implements OnInit {
   private toastTimer: any;
 
   // New item form
-  newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true, image: '' };
+  newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true };
   showAddForm = false;
+  // File selected for new item
+  newItemFile: File | null = null;
+  newItemPreview: string | null = null;
 
   // Edit state
   editingId: string | null = null;
   editData: any = {};
+  editFile: File | null = null;
+  editPreview: string | null = null;
 
-  readonly DEFAULT_FOOD_IMAGE = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=200&fit=crop';
+
 
   constructor(
     private authService: AuthService,
     private customerService: CustomerService,
+    private http: HttpClient,
     private router: Router
   ) {}
 
@@ -41,22 +48,18 @@ export class MenuComponent implements OnInit {
     const owner = this.authService.getUser();
     if (!owner) { this.router.navigate(['/login']); return; }
 
-    // 1. Try to read restaurantId from router navigation state
     const nav = this.router.getCurrentNavigation();
     const state = nav?.extras?.state as any;
 
     if (state?.restaurantId) {
-      // Store in sessionStorage so page refresh still works
       sessionStorage.setItem('ownerRestaurantId', state.restaurantId);
       sessionStorage.setItem('ownerRestaurantName', state.restaurantName || '');
       this.loadRestaurantById(state.restaurantId);
     } else {
-      // Fallback: sessionStorage (after refresh)
       const storedId = sessionStorage.getItem('ownerRestaurantId');
       if (storedId) {
         this.loadRestaurantById(storedId);
       } else {
-        // Last resort: load first restaurant for this owner
         this.customerService.getRestaurantByOwner(owner.id).subscribe({
           next: (res) => {
             const list: any[] = res.success ? (res.data || []) : [];
@@ -100,27 +103,65 @@ export class MenuComponent implements OnInit {
 
   toggleAddForm(): void {
     this.showAddForm = !this.showAddForm;
-    this.newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true, image: '' };
+    this.newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true };
+    this.newItemFile = null;
+    this.newItemPreview = null;
+  }
+
+  /** Called when user picks a file in the Add-Item form */
+  onNewFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.newItemFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => this.newItemPreview = e.target?.result as string;
+      reader.readAsDataURL(this.newItemFile);
+    }
+  }
+
+  /** Called when user picks a file in the Edit form */
+  onEditFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.editFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => this.editPreview = e.target?.result as string;
+      reader.readAsDataURL(this.editFile);
+    }
   }
 
   addItem(): void {
-    if (!this.newItem.itemName.trim() || !this.newItem.price) {
-      this.showToast('Item name and price are required.', true);
+    if (!this.newItem.itemName.trim()) {
+      this.showToast('Item name is required.', true);
+      return;
+    }
+    if (!this.newItem.price || this.newItem.price <= 0) {
+      this.showToast('A valid price is required.', true);
       return;
     }
     this.saving = true;
-    const payload = {
-      ...this.newItem,
-      restaurantId: this.restaurant.restaurantId,
-      isAvailable: true
-    };
-    this.customerService.addMenuItem(payload).subscribe({
+
+    const fd = new FormData();
+    fd.append('restaurantId',  this.restaurant.restaurantId);
+    fd.append('itemName',      this.newItem.itemName.trim());
+    fd.append('price',         String(this.newItem.price));
+    fd.append('category',      this.newItem.category.trim());
+    fd.append('description',   this.newItem.description.trim());
+    fd.append('isVeg',         String(this.newItem.isVeg));
+    fd.append('isAvailable',   'true');
+    if (this.newItemFile) {
+      fd.append('image', this.newItemFile, this.newItemFile.name);
+    }
+
+    this.customerService.addMenuItem(fd).subscribe({
       next: (res) => {
         this.saving = false;
         if (res.success) {
           this.menuItems.push(res.data);
           this.showAddForm = false;
-          this.newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true, image: '' };
+          this.newItem = { itemName: '', price: 0, category: '', description: '', isVeg: true };
+          this.newItemFile = null;
+          this.newItemPreview = null;
           this.showToast('✅ Item added!', false);
         } else {
           this.showToast(res.message || 'Failed to add item.', true);
@@ -133,22 +174,38 @@ export class MenuComponent implements OnInit {
   startEdit(item: any): void {
     this.editingId = item.menuId;
     this.editData = {
-      itemName: item.itemName,
-      price: item.price,
-      category: item.category,
+      itemName:    item.itemName,
+      price:       item.price,
+      category:    item.category || '',
       description: item.description || '',
-      isVeg: item.isVeg,
-      isAvailable: item.isAvailable,
-      image: item.image || ''
+      isVeg:       item.isVeg,
+      isAvailable: item.isAvailable
     };
+    this.editFile    = null;
+    this.editPreview = null;
   }
 
   saveEdit(item: any): void {
-    this.customerService.updateMenuItemData(item.menuId, this.editData).subscribe({
+    const fd = new FormData();
+    fd.append('itemName',    this.editData.itemName);
+    fd.append('price',       String(this.editData.price));
+    fd.append('category',    this.editData.category || '');
+    fd.append('description', this.editData.description || '');
+    fd.append('isVeg',       String(this.editData.isVeg));
+    fd.append('isAvailable', String(this.editData.isAvailable));
+    if (this.editFile) {
+      fd.append('image', this.editFile, this.editFile.name);
+    }
+
+    this.customerService.updateMenuItemData(item.menuId, fd).subscribe({
       next: (res) => {
         if (res.success) {
           Object.assign(item, this.editData);
+          // If a new image was uploaded, refresh it from server response
+          if (res.data?.image) item.image = res.data.image;
           this.editingId = null;
+          this.editFile = null;
+          this.editPreview = null;
           this.showToast('✅ Item updated!', false);
         }
       },
@@ -156,7 +213,11 @@ export class MenuComponent implements OnInit {
     });
   }
 
-  cancelEdit(): void { this.editingId = null; }
+  cancelEdit(): void {
+    this.editingId   = null;
+    this.editFile    = null;
+    this.editPreview = null;
+  }
 
   toggleAvailability(item: any): void {
     this.customerService.updateMenuItemData(item.menuId, { isAvailable: !item.isAvailable }).subscribe({
@@ -184,7 +245,7 @@ export class MenuComponent implements OnInit {
   }
 
   imgOf(item: any): string {
-    return item.image || this.DEFAULT_FOOD_IMAGE;
+    return item.image || item.imageUrl || '';
   }
 
   showToast(msg: string, isError: boolean): void {

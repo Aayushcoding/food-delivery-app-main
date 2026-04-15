@@ -23,8 +23,8 @@ export class ProfileComponent implements OnInit {
   toastError = false;
   private toastTimer: any;
 
-  readonly DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=300&fit=crop';
-  private baseUrl = 'http://localhost:5000/api';
+  readonly DEFAULT_IMAGE = 'assets/default-restaurant.svg';
+  private baseUrl = '/api';
 
   constructor(
     private router: Router,

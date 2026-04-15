@@ -1,0 +1,28 @@
+Node.js v24.14.0
+npm v11.9.0
+Angular CLI v15.2.11
+MongoDB v8.2.5
+
+# Installation commands:
+# Node.js: https://nodejs.org/en/download (select v24.14.0)
+# Angular CLI: npm install -g @angular/cli@15.2.11
+# MongoDB: https://www.mongodb.com/try/download/community (select v8.2.5)
+
+# Backend dependencies (installed via npm install in /backend):
+express
+mongoose
+bcryptjs
+multer
+cors
+dotenv
+path
+fs
+
+# Frontend dependencies (installed via npm install in /frontend):
+@angular/core@15.2.11
+@angular/common@15.2.11
+@angular/forms@15.2.11
+@angular/router@15.2.11
+@angular/common/http@15.2.11
+bootstrap
+@fortawesome/fontawesome-free

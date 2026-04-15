@@ -15,6 +15,7 @@ import { HomePageComponent } from './RestaurantOwner/home-page/home-page.compone
 import { MenuComponent } from './RestaurantOwner/menu/menu.component';
 import { OrdersComponent } from './RestaurantOwner/orders/orders.component';
 import { ProfileComponent } from './RestaurantOwner/profile/profile.component';
+import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner-dashboard.component';
 
 import { AuthGuard } from './core/guards/auth.guard';
 
@@ -36,9 +37,10 @@ const routes: Routes = [
 
   // ── OWNER-ONLY ROUTES ──────────────────────────────────────────────────
   { path: 'restaurant',  component: HomePageComponent, canActivate: [AuthGuard], data: { roles: ['Owner'] } },
-  { path: 'owner/menu',  component: MenuComponent,     canActivate: [AuthGuard], data: { roles: ['Owner'] } },
-  { path: 'owner/orders',component: OrdersComponent,   canActivate: [AuthGuard], data: { roles: ['Owner'] } },
-  { path: 'owner/profile',component: ProfileComponent, canActivate: [AuthGuard], data: { roles: ['Owner'] } },
+  { path: 'owner/menu',      component: MenuComponent,           canActivate: [AuthGuard], data: { roles: ['Owner'] } },
+  { path: 'owner/orders',    component: OrdersComponent,         canActivate: [AuthGuard], data: { roles: ['Owner'] } },
+  { path: 'owner/profile',   component: ProfileComponent,        canActivate: [AuthGuard], data: { roles: ['Owner'] } },
+  { path: 'owner/dashboard', component: OwnerDashboardComponent, canActivate: [AuthGuard], data: { roles: ['Owner'] } },
 
   // Wildcard — redirect unknown paths to login
   { path: '**', redirectTo: 'login' }

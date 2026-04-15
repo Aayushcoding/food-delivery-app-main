@@ -20,7 +20,7 @@ export class CustomerProfileComponent implements OnInit {
   toastError = false;
   private toastTimer: any;
 
-  private baseUrl = 'http://localhost:5000/api';
+  private baseUrl = '/api';
 
   constructor(
     private http: HttpClient,

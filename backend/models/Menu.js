@@ -7,12 +7,12 @@ const menuSchema = new mongoose.Schema({
   itemName:     { type: String, required: true, trim: true },
   price:        { type: Number, required: true, min: 0 },
   category:     { type: String, default: '' },
-  rating:       { type: Number, default: 0 },
+  rating:       { type: Number, default: 0, min: 0, max: 5 },
   isAvailable:  { type: Boolean, default: true },
   description:  { type: String, default: '' },
   isVeg:        { type: Boolean, default: false },
-  image:        { type: String, default: '' },
-  imageUrl:     { type: String, default: '' }
+  image:        { type: String, default: null },
+  imageUrl:     { type: String, default: null }
 }, {
   versionKey: false,
   toJSON: {

@@ -1,192 +1,134 @@
-/////restaurantController.js
-const db = require('../utils/dbManager');
+// controllers/restaurantController.js
+const Restaurant = require('../models/Restaurant');
+const Menu       = require('../models/Menu');
+const { getNextSequence } = require('../utils/counter');
 
-const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=300&fit=crop';
+const PHONE_REGEX = /^\d{10}$/;
+
+const normalizeCuisine = (cuisine) => {
+  if (!cuisine) return [];
+  if (Array.isArray(cuisine)) return cuisine.map(c => c.trim()).filter(Boolean);
+  try { const p = JSON.parse(cuisine); if (Array.isArray(p)) return p.map(c => c.trim()).filter(Boolean); } catch (_) {}
+  return cuisine.split(',').map(c => c.trim()).filter(Boolean);
+};
+
+const resolveImage = (req) => {
+  if (req.file) return `/uploads/${req.file.filename}`;
+  return (req.body.displayImage || '').trim() || null;
+};
 
 // GET /api/restaurants
-const getAllRestaurants = async(req, res) => {
+const getAllRestaurants = async (req, res) => {
   try {
+    let restaurants = await Restaurant.find({}).lean();
     const { search } = req.query;
-    let restaurants = await db.getAllRestaurants();
-
-    restaurants = restaurants.map(r => ({
-      ...r,
-      displayImage: r.displayImage || DEFAULT_IMAGE,
-      imageUrl: r.displayImage || r.imageUrl || DEFAULT_IMAGE
-    }));
-
     if (search) {
+      const q = search.toLowerCase();
       restaurants = restaurants.filter(r =>
-        r.restaurantName.toLowerCase().includes(search.toLowerCase())
+        r.restaurantName.toLowerCase().includes(q) ||
+        (r.cuisine || []).some(c => c.toLowerCase().includes(q))
       );
     }
-
     res.json({ success: true, data: restaurants });
-  } catch(err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// GET /api/restaurants/:id
-const getRestaurantById = async(req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id || id.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'Restaurant ID is required' });
-    }
-
-    const restaurant = await db.getRestaurant(id);
-    if (!restaurant) {
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    }
-
-    restaurant.displayImage = restaurant.displayImage || DEFAULT_IMAGE;
-    restaurant.imageUrl = restaurant.displayImage;
-
-    res.json({ success: true, data: restaurant });
-  } catch(err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// GET /api/restaurants/:id/menu
-const getRestaurantMenu = async(req, res) => {
-  try {
-    const { id } = req.params;
-    if (!id || id.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'Restaurant ID is required' });
-    }
-
-    const restaurant = await db.getRestaurant(id);
-    if (!restaurant) {
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    }
-
-    const menuItems = (await db.getMenuByRestaurant(id)).filter(item => item.isAvailable);
-    res.json({ success: true, data: menuItems });
-  } catch(err) {
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // GET /api/restaurants/owner/:ownerId
-const getRestaurantByOwner = async(req, res) => {
+const getRestaurantByOwner = async (req, res) => {
   try {
-    const { ownerId } = req.params;
-    if (!ownerId || ownerId.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'ownerId is required' });
-    }
-
-    const owner = await db.getUser(ownerId);
-    if (!owner) {
-      return res.status(404).json({ success: false, message: `User '${ownerId}' not found` });
-    }
-
-    const restaurants = (await db.getRestaurantByOwnerId(ownerId)).map(r => ({
-      ...r,
-      displayImage: r.displayImage || DEFAULT_IMAGE,
-      imageUrl: r.displayImage || DEFAULT_IMAGE
-    }));
-
+    const restaurants = await Restaurant.find({ ownerId: req.params.ownerId }).lean();
     res.json({ success: true, data: restaurants });
-  } catch(err) {
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/restaurants/:id
+const getRestaurantById = async (req, res) => {
+  try {
+    const restaurant = await Restaurant.findOne({ restaurantId: req.params.id }).lean();
+    if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    res.json({ success: true, data: restaurant });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// GET /api/restaurants/:id/menu
+const getRestaurantMenu = async (req, res) => {
+  try {
+    const items = await Menu.find({ restaurantId: req.params.id, isAvailable: true }).lean();
+    res.json({ success: true, data: items });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // POST /api/restaurants
-const createRestaurant = async(req, res) => {
+const createRestaurant = async (req, res) => {
   try {
-    const { restaurantName, ownerId, restaurantContactNo, address, email, cuisine, gstinNo, displayImage } = req.body;
+    const { restaurantName, restaurantContactNo, address, cuisine } = req.body;
+    const ownerId = req.user.id;
 
-    if (!restaurantName || restaurantName.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'restaurantName is required' });
-    }
-    if (!ownerId || ownerId.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'ownerId is required' });
-    }
+    if (!restaurantName?.trim()) return res.status(400).json({ success: false, message: 'restaurantName is required' });
 
-    const owner = await db.getUser(ownerId);
-    if (!owner) {
-      return res.status(404).json({ success: false, message: `Owner '${ownerId}' not found` });
-    }
+    if (restaurantContactNo?.trim() && !PHONE_REGEX.test(restaurantContactNo.trim()))
+      return res.status(400).json({ success: false, message: 'Contact must be exactly 10 digits' });
 
-    const restaurant = await db.createRestaurant({
-      restaurantName: restaurantName.trim(),
+    const restaurant = await new Restaurant({
+      restaurantId:        await getNextSequence('rest'),
+      restaurantName:      restaurantName.trim(),
       ownerId,
-      restaurantContactNo,
-      address,
-      email,
-      cuisine,
-      gstinNo,
-      displayImage: displayImage || ''
-    });
+      restaurantContactNo: restaurantContactNo?.trim() || '',
+      address:             address || '',
+      cuisine:             normalizeCuisine(cuisine),
+      displayImage:        resolveImage(req)
+    }).save();
 
-    res.status(201).json({ success: true, data: restaurant });
-  } catch(err) {
+    res.status(201).json({ success: true, data: restaurant.toJSON() });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // PUT /api/restaurants/:id
-const updateRestaurant = async(req, res) => {
+const updateRestaurant = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { restaurantName, address, restaurantContactNo, cuisine, isVeg, rating, displayImage } = req.body;
+    const existing = await Restaurant.findOne({ restaurantId: req.params.id });
+    if (!existing) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    if (req.user.id !== existing.ownerId) return res.status(403).json({ success: false, message: 'Not your restaurant' });
 
-    if (!id || id.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'Restaurant ID is required' });
-    }
+    const { restaurantName, address, restaurantContactNo, cuisine } = req.body;
 
-    if (restaurantName !== undefined && !restaurantName.trim()) {
-      return res.status(400).json({ success: false, message: 'restaurantName cannot be empty.' });
-    }
+    if (restaurantContactNo?.trim() && !PHONE_REGEX.test(restaurantContactNo.trim()))
+      return res.status(400).json({ success: false, message: 'Contact must be exactly 10 digits' });
 
-    const existing = await db.getRestaurant(id);
-    if (!existing) {
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    }
+    const updates = {};
+    if (restaurantName?.trim())            updates.restaurantName      = restaurantName.trim();
+    if (address !== undefined)             updates.address             = address;
+    if (restaurantContactNo !== undefined) updates.restaurantContactNo = restaurantContactNo.trim();
+    if (cuisine !== undefined)             updates.cuisine             = normalizeCuisine(cuisine);
+    if (req.file)                          updates.displayImage        = `/uploads/${req.file.filename}`;
+    else if (req.body.displayImage !== undefined) updates.displayImage = req.body.displayImage.trim() || null;
 
-    if (req.user.id !== existing.ownerId) {
-      return res.status(403).json({ success: false, message: 'You are not the owner of this restaurant.' });
-    }
-
-    const restaurant = await db.updateRestaurant(id, {
-      restaurantName: (restaurantName && restaurantName.trim()) || existing.restaurantName,
-      address:             address !== undefined ? address : existing.address,
-      restaurantContactNo: restaurantContactNo !== undefined ? restaurantContactNo : existing.restaurantContactNo,
-      cuisine:             cuisine !== undefined ? cuisine : existing.cuisine,
-      isVeg:               isVeg !== undefined ? isVeg : existing.isVeg,
-      rating:              rating !== undefined ? rating : existing.rating,
-      displayImage:        displayImage !== undefined ? displayImage : existing.displayImage
-    });
-
-    res.json({ success: true, data: restaurant });
-  } catch(err) {
+    const updated = await Restaurant.findOneAndUpdate({ restaurantId: req.params.id }, updates, { new: true }).lean();
+    res.json({ success: true, data: updated });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };
 
 // DELETE /api/restaurants/:id
-const deleteRestaurant = async(req, res) => {
+const deleteRestaurant = async (req, res) => {
   try {
-    const { id } = req.params;
-    if (!id || id.trim().length === 0) {
-      return res.status(400).json({ success: false, message: 'Restaurant ID is required' });
-    }
-
-    const existing = await db.getRestaurant(id);
-    if (!existing) {
-      return res.status(404).json({ success: false, message: 'Restaurant not found' });
-    }
-
-    if (req.user.id !== existing.ownerId) {
-      return res.status(403).json({ success: false, message: 'You are not the owner of this restaurant.' });
-    }
-
-    await db.deleteRestaurant(id);
+    const existing = await Restaurant.findOne({ restaurantId: req.params.id });
+    if (!existing) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    if (req.user.id !== existing.ownerId) return res.status(403).json({ success: false, message: 'Not your restaurant' });
+    await Restaurant.findOneAndDelete({ restaurantId: req.params.id });
     res.json({ success: true, message: 'Restaurant deleted' });
-  } catch(err) {
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 };

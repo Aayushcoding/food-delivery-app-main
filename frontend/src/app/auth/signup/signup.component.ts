@@ -27,7 +27,7 @@ export class SignupComponent implements OnInit{
       username:['', [Validators.required, Validators.pattern(/^[a-zA-Z0-9._]+$/)]],
       email:   ['', [Validators.required, Validators.email]],
       password:['', [Validators.required, Validators.minLength(6), Validators.maxLength(16)]],
-      contact: ['', [Validators.required, Validators.pattern(/^[6-9]\d{9}$/)]],
+      contact: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
       address: this.fb.group({
         street: ['', [Validators.required]],
         city:   ['', [Validators.required]]

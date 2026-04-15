@@ -27,17 +27,21 @@ export class HomePageComponent implements OnInit {
 
   // Add Restaurant form
   showAddForm = false;
-  newRestaurant = { restaurantName: '', cuisine: '', displayImage: '' };
+  newRestaurant = { restaurantName: '', cuisine: '' };
+  newRestFile: File | null = null;
+  newRestPreview: string | null = null;
 
   // Rename / Edit state
   renamingId: string | null = null;
   renameValue = '';
-  renameImageValue = '';
+  renameImageValue = '';   // optional URL (kept for manual URL entry)
   renameCuisineValue = '';
   renameAddressValue = '';
   renameContactValue = '';
+  renameFile: File | null = null;
+  renamePreview: string | null = null;
 
-  readonly DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=600&h=300&fit=crop';
+
 
   constructor(
     private authService: AuthService,
@@ -64,7 +68,6 @@ export class HomePageComponent implements OnInit {
 
   selectRestaurant(rest: any): void {
     if (this.selectedRestaurant?.restaurantId === rest.restaurantId) {
-      // Toggle off
       this.selectedRestaurant = null;
       this.orders = [];
       return;
@@ -81,9 +84,7 @@ export class HomePageComponent implements OnInit {
     });
   }
 
-  // ── Stats getters ───────────────────────────────────────────────────
   get totalOrders(): number { return this.orders.length; }
-  /** Only delivered orders count toward earnings */
   get totalEarnings(): number {
     return this.orders
       .filter(o => o.status === 'delivered')
@@ -91,10 +92,8 @@ export class HomePageComponent implements OnInit {
   }
   get pendingOrders(): number { return this.orders.filter(o => o.status === 'pending').length; }
 
-
   // ── Navigation ──────────────────────────────────────────────────────
   goToMenu(rest: any): void {
-    // Always update sessionStorage to the restaurant being navigated to
     sessionStorage.setItem('ownerRestaurantId', rest.restaurantId);
     sessionStorage.setItem('ownerRestaurantName', rest.restaurantName || '');
     this.router.navigate(['/owner/menu'], {
@@ -103,7 +102,6 @@ export class HomePageComponent implements OnInit {
   }
 
   goToOrders(rest: any): void {
-    // Always update sessionStorage to the restaurant being navigated to
     sessionStorage.setItem('ownerRestaurantId', rest.restaurantId);
     sessionStorage.setItem('ownerRestaurantName', rest.restaurantName || '');
     this.router.navigate(['/owner/orders'], {
@@ -114,7 +112,19 @@ export class HomePageComponent implements OnInit {
   // ── Add Restaurant ──────────────────────────────────────────────────
   toggleAddForm(): void {
     this.showAddForm = !this.showAddForm;
-    this.newRestaurant = { restaurantName: '', cuisine: '', displayImage: '' };
+    this.newRestaurant = { restaurantName: '', cuisine: '' };
+    this.newRestFile = null;
+    this.newRestPreview = null;
+  }
+
+  onNewRestFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.newRestFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => this.newRestPreview = e.target?.result as string;
+      reader.readAsDataURL(this.newRestFile);
+    }
   }
 
   addRestaurant(): void {
@@ -126,22 +136,24 @@ export class HomePageComponent implements OnInit {
     const cuisineArray = this.newRestaurant.cuisine
       ? this.newRestaurant.cuisine.split(',').map(c => c.trim()).filter(Boolean)
       : [];
-    const payload = {
-      restaurantName: this.newRestaurant.restaurantName.trim(),
-      ownerId: this.owner.id,
-      cuisine: cuisineArray,
-      displayImage: this.newRestaurant.displayImage.trim()
-    };
-    this.customerService.createRestaurant(payload).subscribe({
+
+    const fd = new FormData();
+    fd.append('restaurantName', this.newRestaurant.restaurantName.trim());
+    fd.append('ownerId', this.owner.id);
+    fd.append('cuisine', JSON.stringify(cuisineArray));
+    if (this.newRestFile) {
+      fd.append('displayImage', this.newRestFile, this.newRestFile.name);
+    }
+
+    this.customerService.createRestaurant(fd).subscribe({
       next: (res) => {
         this.saving = false;
         if (res.success) {
-          this.restaurants.push({
-            ...res.data,
-            displayImage: res.data.displayImage || this.DEFAULT_IMAGE
-          });
+          this.restaurants.push(res.data);
           this.showAddForm = false;
-          this.newRestaurant = { restaurantName: '', cuisine: '', displayImage: '' };
+          this.newRestaurant = { restaurantName: '', cuisine: '' };
+          this.newRestFile = null;
+          this.newRestPreview = null;
           this.showToast('✅ Restaurant created!', false);
         } else {
           this.showToast(res.message || 'Failed to create restaurant.', true);
@@ -154,14 +166,26 @@ export class HomePageComponent implements OnInit {
     });
   }
 
-  // ── Rename Restaurant ───────────────────────────────────────────────
+  // ── Edit Restaurant ─────────────────────────────────────────────────
   startRename(rest: any): void {
     this.renamingId = rest.restaurantId;
     this.renameValue = rest.restaurantName;
-    this.renameImageValue = rest.displayImage === this.DEFAULT_IMAGE ? '' : (rest.displayImage || '');
+    this.renameImageValue = '';
     this.renameCuisineValue = Array.isArray(rest.cuisine) ? rest.cuisine.join(', ') : (rest.cuisine || '');
     this.renameAddressValue = rest.address || '';
     this.renameContactValue = rest.restaurantContactNo || '';
+    this.renameFile    = null;
+    this.renamePreview = null;
+  }
+
+  onRenameFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      this.renameFile = input.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => this.renamePreview = e.target?.result as string;
+      reader.readAsDataURL(this.renameFile);
+    }
   }
 
   saveRename(rest: any): void {
@@ -172,27 +196,30 @@ export class HomePageComponent implements OnInit {
     const cuisineArray = this.renameCuisineValue
       ? this.renameCuisineValue.split(',').map(c => c.trim()).filter(Boolean)
       : (Array.isArray(rest.cuisine) ? rest.cuisine : []);
-    this.customerService.updateRestaurant(rest.restaurantId, {
-      restaurantName: this.renameValue.trim(),
-      displayImage: this.renameImageValue.trim(),
-      cuisine: cuisineArray,
-      address: this.renameAddressValue.trim(),
-      restaurantContactNo: this.renameContactValue.trim()
-    }).subscribe({
+
+    const fd = new FormData();
+    fd.append('restaurantName',      this.renameValue.trim());
+    fd.append('cuisine',             JSON.stringify(cuisineArray));
+    fd.append('address',             this.renameAddressValue.trim());
+    fd.append('restaurantContactNo', this.renameContactValue.trim());
+    if (this.renameFile) {
+      fd.append('displayImage', this.renameFile, this.renameFile.name);
+    }
+
+    this.customerService.updateRestaurant(rest.restaurantId, fd).subscribe({
       next: (res) => {
         if (res.success) {
-          rest.restaurantName = this.renameValue.trim();
-          rest.displayImage = this.renameImageValue.trim() || this.DEFAULT_IMAGE;
-          rest.cuisine = cuisineArray;
-          rest.address = this.renameAddressValue.trim();
+          rest.restaurantName      = this.renameValue.trim();
+          rest.cuisine             = cuisineArray;
+          rest.address             = this.renameAddressValue.trim();
           rest.restaurantContactNo = this.renameContactValue.trim();
+          if (res.data?.displayImage) rest.displayImage = res.data.displayImage;
           if (this.selectedRestaurant?.restaurantId === rest.restaurantId) {
-            this.selectedRestaurant.restaurantName = rest.restaurantName;
-            this.selectedRestaurant.displayImage = rest.displayImage;
-            this.selectedRestaurant.cuisine = rest.cuisine;
-            this.selectedRestaurant.address = rest.address;
+            Object.assign(this.selectedRestaurant, rest);
           }
-          this.renamingId = null;
+          this.renamingId    = null;
+          this.renameFile    = null;
+          this.renamePreview = null;
           this.showToast('✅ Restaurant updated!', false);
         } else {
           this.showToast(res.message || 'Failed to update.', true);
@@ -203,10 +230,9 @@ export class HomePageComponent implements OnInit {
   }
 
   cancelRename(): void {
-    this.renamingId = null;
-    this.renameCuisineValue = '';
-    this.renameAddressValue = '';
-    this.renameContactValue = '';
+    this.renamingId    = null;
+    this.renameFile    = null;
+    this.renamePreview = null;
   }
 
   deleteRestaurant(rest: any): void {
@@ -234,7 +260,7 @@ export class HomePageComponent implements OnInit {
   }
 
   imgOf(rest: any): string {
-    return rest.displayImage || this.DEFAULT_IMAGE;
+    return rest.displayImage || rest.imageUrl || '';
   }
 
   getCuisineString(c: any): string {

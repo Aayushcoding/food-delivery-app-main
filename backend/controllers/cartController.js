@@ -1,5 +1,8 @@
-///cartController.js
-const db = require('../utils/dbManager');
+// controllers/cartController.js
+const User = require('../models/User');
+const Menu = require('../models/Menu');
+const Cart = require('../models/Cart');
+const { getNextSequence } = require('../utils/counter');
 
 const calcTotal = (items) =>
   items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -7,10 +10,10 @@ const calcTotal = (items) =>
 // GET ALL CARTS
 const getCarts = async (req, res) => {
   try {
-    const { userId, restaurantId } = req.query;
-    let carts = await db.getAllCarts();
-    if (userId)       carts = carts.filter(c => c.userId === userId);
-    if (restaurantId) carts = carts.filter(c => c.restaurantId === restaurantId);
+    const filter = {};
+    if (req.query.userId)       filter.userId       = req.query.userId;
+    if (req.query.restaurantId) filter.restaurantId = req.query.restaurantId;
+    const carts = await Cart.find(filter).lean();
     res.json({ success: true, data: carts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -20,7 +23,7 @@ const getCarts = async (req, res) => {
 // GET CART BY ID
 const getCart = async (req, res) => {
   try {
-    const cart = await db.getCart(req.params.id);
+    const cart = await Cart.findOne({ id: req.params.id }).lean();
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, data: cart });
   } catch (error) {
@@ -31,7 +34,7 @@ const getCart = async (req, res) => {
 // GET CART BY USER
 const getCartByUser = async (req, res) => {
   try {
-    const cart = await db.getCartByUserId(req.params.userId);
+    const cart = await Cart.findOne({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, data: cart });
   } catch (error) {
@@ -53,10 +56,10 @@ const addItemToCart = async (req, res) => {
       return res.status(400).json({ success: false, message: 'quantity must be a positive integer' });
     }
 
-    const user = await db.getUser(userId);
+    const user = await User.findOne({ id: userId }).lean();
     if (!user) return res.status(404).json({ success: false, message: `User '${userId}' not found` });
 
-    const menuItem = await db.getMenuItem(itemId);
+    const menuItem = await Menu.findOne({ menuId: itemId }).lean();
     if (!menuItem) return res.status(404).json({ success: false, message: `Menu item '${itemId}' not found` });
 
     if (!menuItem.isAvailable) {
@@ -64,10 +67,18 @@ const addItemToCart = async (req, res) => {
     }
 
     const restaurantId = menuItem.restaurantId;
-    let cart = await db.getCartByUserId(userId);
+    let cart = await Cart.findOne({ userId }).sort({ createdAt: -1 });
 
     if (!cart) {
-      cart = await db.createCart({ userId, restaurantId, items: [], totalAmount: 0 });
+      cart = new Cart({
+        id:           await getNextSequence('cart'),
+        userId,
+        restaurantId,
+        items:        [],
+        totalAmount:  0,
+        createdAt:    new Date().toISOString(),
+        updatedAt:    new Date().toISOString()
+      });
     } else if (cart.restaurantId !== restaurantId) {
       return res.status(400).json({
         success: false,
@@ -83,8 +94,10 @@ const addItemToCart = async (req, res) => {
     }
 
     cart.totalAmount = calcTotal(cart.items);
-    const updated = await db.updateCart(cart.id, { items: cart.items, totalAmount: cart.totalAmount, restaurantId: cart.restaurantId });
-    res.json({ success: true, message: 'Item added to cart', data: updated });
+    cart.updatedAt   = new Date().toISOString();
+    await cart.save();
+
+    res.json({ success: true, message: 'Item added to cart', data: cart.toJSON() });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -98,7 +111,7 @@ const updateItemQuantity = async (req, res) => {
       return res.status(400).json({ success: false, message: 'cartId, itemId and quantity are required' });
     }
 
-    let cart = await db.getCart(cartId);
+    const cart = await Cart.findOne({ id: cartId });
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
 
     const itemIndex = cart.items.findIndex(i => i.itemId === itemId);
@@ -112,8 +125,10 @@ const updateItemQuantity = async (req, res) => {
     }
 
     cart.totalAmount = calcTotal(cart.items);
-    const updated = await db.updateCart(cart.id, { items: cart.items, totalAmount: cart.totalAmount });
-    res.json({ success: true, message: 'Cart updated', data: updated });
+    cart.updatedAt   = new Date().toISOString();
+    await cart.save();
+
+    res.json({ success: true, message: 'Cart updated', data: cart.toJSON() });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -127,13 +142,15 @@ const removeItemFromCart = async (req, res) => {
       return res.status(400).json({ success: false, message: 'cartId and itemId are required' });
     }
 
-    let cart = await db.getCart(cartId);
+    const cart = await Cart.findOne({ id: cartId });
     if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
 
     cart.items = cart.items.filter(i => i.itemId !== itemId);
     cart.totalAmount = calcTotal(cart.items);
-    const updated = await db.updateCart(cart.id, { items: cart.items, totalAmount: cart.totalAmount });
-    res.json({ success: true, message: 'Item removed from cart', data: updated });
+    cart.updatedAt   = new Date().toISOString();
+    await cart.save();
+
+    res.json({ success: true, message: 'Item removed from cart', data: cart.toJSON() });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -142,7 +159,7 @@ const removeItemFromCart = async (req, res) => {
 // DELETE CART
 const deleteCart = async (req, res) => {
   try {
-    const deleted = await db.deleteCart(req.params.id);
+    const deleted = await Cart.findOneAndDelete({ id: req.params.id });
     if (!deleted) return res.status(404).json({ success: false, message: 'Cart not found' });
     res.json({ success: true, message: 'Cart cleared' });
   } catch (error) {

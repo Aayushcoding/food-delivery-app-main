@@ -37,12 +37,21 @@
       </select>
     </div>
     <input [(ngModel)]="newItem.description" placeholder="Description (optional)" class="form-input full-width" id="new-item-desc">
-    <input [(ngModel)]="newItem.image" placeholder="Image URL (optional)" class="form-input full-width" id="new-item-image">
-    <div class="img-preview-row" *ngIf="newItem.image">
-      <img [src]="newItem.image" alt="preview"
-           onerror="this.style.display='none'"
-           style="height:80px;border-radius:8px;object-fit:cover;">
+
+    <!-- IMAGE UPLOAD — any format, fully optional -->
+    <div class="upload-row">
+      <label class="upload-label" for="new-item-file">
+        📁 {{ newItemFile ? newItemFile.name : 'Choose Image (optional — JPG / PNG / SVG)' }}
+      </label>
+      <input type="file" id="new-item-file" accept="image/*"
+             (change)="onNewFileSelected($event)" class="file-input-hidden">
+      <span class="upload-hint">Image is optional — item name shown if skipped</span>
     </div>
+    <!-- preview only when file chosen -->
+    <div class="img-preview-row" *ngIf="newItemPreview">
+      <img [src]="newItemPreview" alt="preview" class="preview-img">
+    </div>
+
     <button (click)="addItem()" [disabled]="saving" class="btn-save">
       {{ saving ? 'Saving...' : 'Save Item' }}
     </button>
@@ -60,10 +69,16 @@
   <div class="menu-list" *ngIf="!loading && !errorMessage && menuItems.length > 0">
     <div *ngFor="let item of menuItems" class="menu-card" [class.unavailable]="!item.isAvailable">
 
-      <!-- ITEM IMAGE -->
+      <!-- ITEM IMAGE or TEXT FALLBACK -->
       <div class="menu-card-img">
-        <img [src]="imgOf(item)" [alt]="item.itemName"
-             onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=200&fit=crop'">
+        <ng-container *ngIf="item.image || item.imageUrl; else itemNameFallback">
+          <img [src]="item.image || item.imageUrl" [alt]="item.itemName"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="img-text-fallback" style="display:none">{{ item.itemName }}</div>
+        </ng-container>
+        <ng-template #itemNameFallback>
+          <div class="img-text-fallback">{{ item.itemName }}</div>
+        </ng-template>
         <span class="veg-dot" [class.nonveg]="!item.isVeg">{{ item.isVeg ? '🟢' : '🔴' }}</span>
         <span *ngIf="!item.isAvailable" class="unavail-badge">Unavailable</span>
       </div>
@@ -76,7 +91,8 @@
         <div class="price-row">
           <span class="item-price">₹{{ item.price }}</span>
           <div class="item-actions">
-            <button class="btn-toggle" (click)="toggleAvailability(item)" [title]="item.isAvailable ? 'Deactivate' : 'Activate'">
+            <button class="btn-toggle" (click)="toggleAvailability(item)"
+                    [title]="item.isAvailable ? 'Deactivate' : 'Activate'">
               {{ item.isAvailable ? '🔕' : '✅' }}
             </button>
             <button class="btn-edit" (click)="startEdit(item)">✏️ Edit</button>
@@ -97,7 +113,19 @@
           </select>
         </div>
         <input [(ngModel)]="editData.description" placeholder="Description" class="edit-input full" id="edit-desc">
-        <input [(ngModel)]="editData.image" placeholder="Image URL" class="edit-input full" id="edit-image">
+
+        <!-- Edit image upload -->
+        <div class="upload-row edit-upload">
+          <label class="upload-label" for="edit-item-file">
+            📁 {{ editFile ? editFile.name : 'Replace Image (optional)' }}
+          </label>
+          <input type="file" id="edit-item-file" accept="image/*"
+                 (change)="onEditFileSelected($event)" class="file-input-hidden">
+        </div>
+        <div class="img-preview-row" *ngIf="editPreview">
+          <img [src]="editPreview" alt="new preview" class="preview-img">
+        </div>
+
         <div class="edit-actions">
           <button class="btn-save-small" (click)="saveEdit(item)">✅ Save</button>
           <button class="btn-cancel-small" (click)="cancelEdit()">Cancel</button>

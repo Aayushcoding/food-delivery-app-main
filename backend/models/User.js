@@ -7,11 +7,27 @@ const addressSchema = new mongoose.Schema({
 }, { _id: false });
 
 const userSchema = new mongoose.Schema({
-  id:        { type: String, required: true, unique: true, index: true },
-  username:  { type: String, required: true, trim: true },
-  // email is NO LONGER globally unique — the compound index [email + role] is unique
-  email:     { type: String, required: true, lowercase: true, trim: true },
-  phoneNo:   { type: String, default: '' },
+  id:       { type: String, required: true, unique: true, index: true },
+  username: { type: String, required: true, trim: true },
+  // email uniqueness is enforced per role via compound index below
+  email: {
+    type:      String,
+    required:  true,
+    lowercase: true,
+    trim:      true,
+    validate: {
+      validator: (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      message:   'Invalid email format'
+    }
+  },
+  phoneNo: {
+    type:    String,
+    default: '',
+    validate: {
+      validator: (v) => !v || v === '' || /^\d{10}$/.test(v),
+      message:   'Phone number must be exactly 10 digits'
+    }
+  },
   password:  { type: String, required: true },
   address:   { type: [addressSchema], default: [] },
   role:      { type: String, enum: ['Customer', 'Owner', 'DeliveryAgent', 'Admin'], default: 'Customer' },
@@ -26,8 +42,7 @@ const userSchema = new mongoose.Schema({
   }
 });
 
-// Compound unique index: same email CAN exist for different roles
-// This replaces the old single-field unique: true on email
+// Same email can exist for different roles
 userSchema.index({ email: 1, role: 1 }, { unique: true });
 
 module.exports = mongoose.model('User', userSchema);

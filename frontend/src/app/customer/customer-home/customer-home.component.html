@@ -95,11 +95,17 @@
 >
   <!-- Image -->
   <div class="card-image">
-    <img 
-      [src]="restaurant.displayImage || restaurant.imageUrl || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'"
-      [alt]="restaurant.restaurantName"
-      onerror="this.src='https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop'"
-    >
+    <ng-container *ngIf="restaurant.displayImage || restaurant.imageUrl; else restFallback">
+      <img
+        [src]="restaurant.displayImage || restaurant.imageUrl"
+        [alt]="restaurant.restaurantName"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+      >
+      <div class="card-img-text-fallback" style="display:none">{{ restaurant.restaurantName }}</div>
+    </ng-container>
+    <ng-template #restFallback>
+      <div class="card-img-text-fallback">{{ restaurant.restaurantName }}</div>
+    </ng-template>
     <span class="veg-badge" *ngIf="restaurant.isVeg">🟢 Pure Veg</span>
   </div>
 

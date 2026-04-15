@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const { auth, roleAuth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 const {
   getAllRestaurants,
   getRestaurantById,
@@ -19,8 +20,9 @@ router.get("/:id/menu", getRestaurantMenu);
 router.get("/:id", getRestaurantById);
 
 // ── OWNER-ONLY ───────────────────────────────────────────────────────
-router.post("/", auth, roleAuth(['Owner']), createRestaurant);
-router.put("/:id", auth, roleAuth(['Owner']), updateRestaurant);
+// upload.single('displayImage') handles optional restaurant image upload
+router.post("/", auth, roleAuth(['Owner']), upload.single('displayImage'), createRestaurant);
+router.put("/:id", auth, roleAuth(['Owner']), upload.single('displayImage'), updateRestaurant);
 router.delete("/:id", auth, roleAuth(['Owner']), deleteRestaurant);
 
 module.exports = router;

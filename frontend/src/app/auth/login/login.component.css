@@ -15,10 +15,10 @@ height:100vh;
 /* ================= LEFT SIDE ================= */
 .left{
 flex:1;
-background:url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&h=900&fit=crop') center/cover no-repeat;
+background:linear-gradient(135deg,#1a0a00,#3d1a00,#1a0a00);
 position:relative;
 display:flex;
-align-items:start;
+align-items:flex-start;
 }
 
 .left::after{
