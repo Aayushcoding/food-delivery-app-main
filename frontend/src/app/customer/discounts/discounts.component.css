@@ -1,0 +1,245 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+.discounts-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #1a1a2e, #16213e, #0f3460);
+  font-family: 'Poppins', sans-serif;
+  color: #fff;
+  padding-bottom: 80px;
+}
+
+/* ── Header ───────────────────────────────────── */
+.disc-header {
+  text-align: center;
+  padding: 60px 24px 36px;
+  position: relative;
+}
+
+.disc-header h1 {
+  font-size: clamp(28px, 5vw, 46px);
+  font-weight: 800;
+  background: linear-gradient(135deg, #f7b731, #ff6a00, #f7b731);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s infinite linear;
+  margin-bottom: 10px;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+.disc-header p {
+  font-size: 16px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 18px;
+}
+
+.back-home {
+  display: inline-block;
+  color: rgba(255,255,255,0.4);
+  font-size: 13px;
+  text-decoration: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 6px 18px;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+.back-home:hover { color: #ff6a00; border-color: rgba(255,106,0,0.4); }
+
+/* ── Applied Banner ───────────────────────────── */
+.applied-banner {
+  max-width: 900px;
+  margin: 0 auto 24px;
+  padding: 0 24px;
+}
+
+.applied-inner {
+  background: rgba(0,200,120,0.1);
+  border: 1px solid rgba(0,200,120,0.3);
+  border-radius: 12px;
+  padding: 14px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: #00c878;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.remove-btn {
+  background: rgba(255,107,107,0.15);
+  border: 1px solid rgba(255,107,107,0.3);
+  color: #ff6b6b;
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.remove-btn:hover { background: rgba(255,107,107,0.25); }
+
+/* ── Toast ────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: linear-gradient(90deg, #00c878, #00e5a0);
+  color: #0f3460;
+  font-weight: 700;
+  padding: 14px 28px;
+  border-radius: 30px;
+  font-size: 15px;
+  box-shadow: 0 8px 30px rgba(0,200,120,0.4);
+  transition: transform 0.4s ease, opacity 0.4s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+/* ── Discounts Grid ───────────────────────────── */
+.discounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Discount Card ────────────────────────────── */
+.disc-card {
+  position: relative;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 18px;
+  padding: 24px 22px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+  animation: cardSlideUp 0.5s ease both;
+}
+
+.disc-card:nth-child(1)  { animation-delay: 0.05s; }
+.disc-card:nth-child(2)  { animation-delay: 0.10s; }
+.disc-card:nth-child(3)  { animation-delay: 0.15s; }
+.disc-card:nth-child(4)  { animation-delay: 0.20s; }
+.disc-card:nth-child(5)  { animation-delay: 0.25s; }
+.disc-card:nth-child(6)  { animation-delay: 0.30s; }
+.disc-card:nth-child(7)  { animation-delay: 0.35s; }
+.disc-card:nth-child(8)  { animation-delay: 0.40s; }
+.disc-card:nth-child(9)  { animation-delay: 0.45s; }
+.disc-card:nth-child(10) { animation-delay: 0.50s; }
+.disc-card:nth-child(11) { animation-delay: 0.55s; }
+.disc-card:nth-child(12) { animation-delay: 0.60s; }
+
+@keyframes cardSlideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.disc-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--accent);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.4);
+}
+
+.disc-card.selected {
+  border-color: var(--accent);
+  background: rgba(255,255,255,0.07);
+  box-shadow: 0 0 30px rgba(255,255,255,0.05), 0 0 0 2px var(--accent);
+}
+
+.disc-glow {
+  position: absolute;
+  top: -30px; right: -30px;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent), transparent 70%);
+  opacity: 0.15;
+  pointer-events: none;
+}
+
+.disc-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.disc-emoji { font-size: 32px; }
+
+.disc-code {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+  padding: 3px 10px;
+  border-radius: 20px;
+  letter-spacing: 1px;
+  font-family: monospace;
+}
+
+.disc-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.disc-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.disc-cap {
+  font-size: 11px;
+  color: rgba(255,255,255,0.35);
+  margin-bottom: 16px;
+}
+
+.disc-apply-btn {
+  width: 100%;
+  padding: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: rgba(255,255,255,0.7);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.disc-card:hover .disc-apply-btn {
+  background: var(--accent);
+  color: #0f3460;
+  border-color: var(--accent);
+}
+
+.disc-card.selected .disc-apply-btn {
+  background: var(--accent);
+  color: #0f3460;
+  border-color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .discounts-grid { grid-template-columns: 1fr; padding: 0 16px; }
+}

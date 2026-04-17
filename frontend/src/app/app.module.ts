@@ -7,8 +7,8 @@ import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 
 // AUTH
-import { LoginComponent } from './auth/login/login.component';
-import { SignupComponent } from './auth/signup/signup.component';
+import { LandingComponent } from './auth/landing/landing.component';
+import { AuthComponent } from './auth/auth/auth.component';
 
 // SHARED
 import { NavbarComponent } from './shared/navbar/navbar.component';
@@ -21,6 +21,9 @@ import { CustomerProfileComponent } from './customer/customer-profile/customer-p
 import { ItemCardComponent } from './customer/item-card/item-card.component';
 import { SuccessComponent } from './customer/success/success.component';
 import { CustomerMenuComponent } from './customer/customer-menu/customer-menu.component';
+import { DiscountsComponent } from './customer/discounts/discounts.component';
+import { ReviewsComponent } from './customer/reviews/reviews.component';
+import { InvoiceComponent } from './customer/invoice/invoice.component';
 
 // OWNER
 import { HomePageComponent } from './RestaurantOwner/home-page/home-page.component';
@@ -29,11 +32,17 @@ import { OrdersComponent } from './RestaurantOwner/orders/orders.component';
 import { ProfileComponent } from './RestaurantOwner/profile/profile.component';
 import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner-dashboard.component';
 
+// DELIVERY
+import { DeliveryDashboardComponent } from './delivery/delivery-dashboard/delivery-dashboard.component';
+
+// AGENT
+import { AgentDashboardComponent } from './agent/agent-dashboard/agent-dashboard.component';
+
 @NgModule({
   declarations: [
     AppComponent,
-    LoginComponent,
-    SignupComponent,
+    LandingComponent,
+    AuthComponent,
     NavbarComponent,
     CustomerHomeComponent,
     CustomerCartComponent,
@@ -42,11 +51,16 @@ import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner
     ItemCardComponent,
     SuccessComponent,
     CustomerMenuComponent,
+    DiscountsComponent,
+    ReviewsComponent,
+    InvoiceComponent,
     HomePageComponent,
     MenuComponent,
     OrdersComponent,
     ProfileComponent,
-    OwnerDashboardComponent
+    OwnerDashboardComponent,
+    DeliveryDashboardComponent,
+    AgentDashboardComponent
   ],
   imports: [
     BrowserModule,
@@ -58,4 +72,4 @@ import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner
   providers: [],
   bootstrap: [AppComponent]
 })
-export class AppModule {}
+export class AppModule { }

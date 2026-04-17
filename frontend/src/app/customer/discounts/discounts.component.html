@@ -1,0 +1,57 @@
+<div class="discounts-wrapper">
+
+  <!-- Header -->
+  <div class="disc-header">
+    <h1>🏷 Exclusive Offers</h1>
+    <p>Handpicked discounts just for you — pick one and save big!</p>
+    <a routerLink="/customer/customer-home" class="back-home">← Back to Home</a>
+  </div>
+
+  <!-- Applied Banner -->
+  <div class="applied-banner" *ngIf="appliedDiscount">
+    <div class="applied-inner">
+      <span>✅ <strong>{{ appliedDiscount.code }}</strong> applied — {{ appliedMessage }}</span>
+      <button class="remove-btn" (click)="removeDiscount()" id="btn-remove-discount">Remove</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" [class.show]="toastVisible">
+    🎉 Discount applied successfully!
+  </div>
+
+  <!-- Grid -->
+  <div class="discounts-grid">
+    <div
+      *ngFor="let d of discounts"
+      class="disc-card"
+      [class.selected]="d.selected"
+      [style.--accent]="d.color"
+      (click)="applyDiscount(d)"
+      [id]="'disc-' + d.id">
+
+      <div class="disc-glow"></div>
+
+      <div class="disc-top">
+        <span class="disc-emoji">{{ d.emoji }}</span>
+        <span class="disc-code">{{ d.code }}</span>
+      </div>
+
+      <h3 class="disc-title">{{ d.title }}</h3>
+      <p class="disc-desc">{{ d.description }}</p>
+
+      <div class="disc-cap" *ngIf="d.cap > 0">
+        Max savings: ₹{{ d.cap }}
+      </div>
+      <div class="disc-cap" *ngIf="d.type === 'free'">
+        No minimum order required
+      </div>
+
+      <button class="disc-apply-btn">
+        {{ d.selected ? '✅ Applied' : 'Apply Offer' }}
+      </button>
+
+    </div>
+  </div>
+
+</div>

@@ -1,24 +1,72 @@
 <div class="dashboard-container">
 
-<h2>{{restaurantName}} Dashboard</h2>
+  <!-- Nav -->
+  <nav class="dash-nav">
+    <div class="nav-brand">
+      🍴 ByteBites
+      <span class="nav-role-badge">Restaurant Owner</span>
+    </div>
+    <div class="nav-actions">
+      <span class="nav-username" *ngIf="restaurantName">{{ restaurantName }}</span>
+      <button class="btn-nav primary" routerLink="/restaurant" id="btn-manage-restaurants">🏪 Manage</button>
+      <button class="btn-nav" routerLink="/owner/orders" id="btn-view-orders">📋 Orders</button>
+    </div>
+  </nav>
 
-<div class="stats">
+  <!-- Header -->
+  <div class="page-header">
+    <h1>👋 Welcome back, {{ restaurantName || 'Owner' }}!</h1>
+    <p>Here's a snapshot of your restaurant's performance today.</p>
+  </div>
 
-<div class="card">
-<h3>Total Orders</h3>
-<p>{{stats.orders}}</p>
-</div>
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <span class="stat-icon">📦</span>
+      <div class="stat-body">
+        <div class="stat-value">{{ stats.orders }}</div>
+        <div class="stat-label">Total Orders</div>
+      </div>
+    </div>
 
-<div class="card">
-<h3>Revenue</h3>
-<p>₹{{stats.revenue}}</p>
-</div>
+    <div class="stat-card">
+      <span class="stat-icon">💰</span>
+      <div class="stat-body">
+        <div class="stat-value">₹{{ stats.revenue }}</div>
+        <div class="stat-label">Revenue</div>
+      </div>
+    </div>
 
-<div class="card">
-<h3>Pending Orders</h3>
-<p>{{stats.pending}}</p>
-</div>
+    <div class="stat-card">
+      <span class="stat-icon">⏳</span>
+      <div class="stat-body">
+        <div class="stat-value">{{ stats.pending }}</div>
+        <div class="stat-label">Pending Orders</div>
+      </div>
+    </div>
+  </div>
 
-</div>
+  <!-- Quick actions -->
+  <div class="quick-actions">
+    <p class="section-heading">Quick Actions</p>
+    <div class="actions-grid">
+      <button class="action-tile" routerLink="/restaurant">
+        <span class="tile-icon">🏪</span>
+        <span class="tile-label">My Restaurants</span>
+      </button>
+      <button class="action-tile" routerLink="/owner/menu">
+        <span class="tile-icon">🍽</span>
+        <span class="tile-label">Menu Items</span>
+      </button>
+      <button class="action-tile" routerLink="/owner/orders">
+        <span class="tile-icon">📋</span>
+        <span class="tile-label">View Orders</span>
+      </button>
+      <button class="action-tile" routerLink="/owner/profile">
+        <span class="tile-icon">👤</span>
+        <span class="tile-label">My Profile</span>
+      </button>
+    </div>
+  </div>
 
 </div>

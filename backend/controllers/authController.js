@@ -87,4 +87,34 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { registerCustomer, registerOwner, login };
+// POST /api/auth/register/delivery
+const registerDeliveryAgent = async (req, res) => {
+  try {
+    const { username, email, password, phoneNo } = req.body;
+    if (!username?.trim()) return res.status(400).json({ success: false, message: 'username is required' });
+    if (!email?.trim())    return res.status(400).json({ success: false, message: 'email is required' });
+    if (!password)         return res.status(400).json({ success: false, message: 'password is required' });
+    if (password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    if (phoneNo?.trim() && !PHONE_REGEX.test(phoneNo.trim()))
+      return res.status(400).json({ success: false, message: 'Phone must be exactly 10 digits' });
+
+    const existing = await User.findOne({ email: email.toLowerCase().trim(), role: 'DeliveryAgent' });
+    if (existing) return res.status(400).json({ success: false, message: 'Delivery agent account with this email already exists' });
+
+    const user = await new User({
+      id:       await getNextSequence('usr'),
+      username: username.trim(),
+      email:    email.toLowerCase().trim(),
+      password: await bcrypt.hash(password, 10),
+      phoneNo:  phoneNo?.trim() || '',
+      role:     'DeliveryAgent'
+    }).save();
+
+    const { password: _, ...safe } = user.toJSON();
+    res.status(201).json({ success: true, message: 'Delivery agent registered', data: safe });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { registerCustomer, registerOwner, registerDeliveryAgent, login };

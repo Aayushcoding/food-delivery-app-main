@@ -1,0 +1,279 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+.dashboard-wrapper {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #071a10 0%, #0f2d1a 50%, #071a10 100%);
+  font-family: 'Poppins', sans-serif;
+  color: #e2e8f0;
+}
+
+/* ── Navbar ───────────────────────────────────────────────── */
+.dash-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 32px;
+  background: rgba(0,0,0,0.3);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.nav-left { display: flex; align-items: center; gap: 14px; }
+
+.nav-logo {
+  font-size: 20px;
+  font-weight: 800;
+  color: #00c878;
+}
+
+.nav-role {
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(0,200,120,0.12);
+  border: 1px solid rgba(0,200,120,0.28);
+  color: #00c878;
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
+.nav-right { display: flex; align-items: center; gap: 14px; }
+.agent-name { font-size: 13px; color: rgba(255,255,255,0.55); }
+
+.btn-logout {
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.25);
+  color: #fc8181;
+  padding: 7px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  transition: all 0.2s;
+}
+.btn-logout:hover { background: rgba(255,107,107,0.2); }
+
+/* ── Page header ──────────────────────────────────────────── */
+.dash-header {
+  text-align: center;
+  padding: 48px 24px 28px;
+}
+
+.dash-header h1 {
+  font-size: clamp(22px, 4vw, 34px);
+  font-weight: 800;
+  background: linear-gradient(90deg, #00c878, #00e5a0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+}
+
+.dash-header p { color: rgba(255,255,255,0.45); font-size: 15px; }
+
+/* ── Toast ────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,200,120,0.92);
+  color: #072313;
+  font-weight: 700;
+  padding: 12px 28px;
+  border-radius: 30px;
+  font-size: 14px;
+  z-index: 9999;
+  animation: slideUp 0.35s ease;
+  white-space: nowrap;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.toast.toast-error { background: rgba(252,129,129,0.92); color: #fff; }
+@keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+/* ── Card actions (Accept + Ignore side by side) ──────────── */
+.card-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+/* Accept Order — orange brand */
+.accept-btn {
+  background: linear-gradient(135deg, #ff6b35, #f7931e);
+  color: #fff;
+}
+.accept-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,107,53,0.4);
+}
+
+/* Ignore Order — ghost red */
+.ignore-btn {
+  background: rgba(252,129,129,0.08);
+  border: 1px solid rgba(252,129,129,0.25) !important;
+  color: #fc8181;
+  width: auto;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+.ignore-btn:not(:disabled):hover {
+  background: rgba(252,129,129,0.16);
+}
+
+/* Advance status — green */
+.advance-btn {
+  background: linear-gradient(135deg, #00c878, #00e5a0);
+  color: #072313;
+  margin-top: 14px;
+}
+.advance-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,200,120,0.4);
+}
+
+/* ── Pickup countdown timer ───────────────────────────────── */
+.pickup-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,165,0,0.08);
+  border: 1px solid rgba(255,165,0,0.22);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: #ffa500;
+  margin-bottom: 14px;
+}
+.pickup-timer.urgent {
+  background: rgba(252,129,129,0.1);
+  border-color: rgba(252,129,129,0.3);
+  color: #fc8181;
+  animation: pulse 1.2s ease infinite;
+}
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.65; } }
+.timer-icon { font-size: 16px; }
+.text-danger { color: #fc8181; }
+
+/* ── Delivery stepper ─────────────────────────────────────── */
+.stepper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 18px 0 8px;
+  position: relative;
+}
+.stepper::before {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  right: 13px;
+  height: 2px;
+  background: rgba(255,255,255,0.08);
+  z-index: 0;
+}
+
+.step-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+}
+
+.step-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 2px solid rgba(255,255,255,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.3);
+  transition: all 0.3s;
+}
+
+.step-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.3);
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* Done step */
+.step-node.step-done .step-circle {
+  background: rgba(0,200,120,0.15);
+  border-color: #00c878;
+  color: #00c878;
+}
+.step-node.step-done .step-label { color: #00c878; }
+
+/* Active step */
+.step-node.step-active .step-circle {
+  background: rgba(0,200,120,0.25);
+  border-color: #00e5a0;
+  color: #00e5a0;
+  box-shadow: 0 0 12px rgba(0,200,120,0.4);
+}
+.step-node.step-active .step-label { color: #00e5a0; }
+
+/* ── Delivered banner ─────────────────────────────────────── */
+.delivered-banner {
+  text-align: center;
+  padding: 12px;
+  background: rgba(0,200,120,0.12);
+  border: 1px solid rgba(0,200,120,0.3);
+  border-radius: 10px;
+  color: #00c878;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 14px;
+}
+
+/* ── Empty state ──────────────────────────────────────────── */
+.empty-state {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 24px;
+  color: rgba(255,255,255,0.35);
+}
+.empty-icon { font-size: 56px; display: block; margin-bottom: 14px; }
+.empty-state p     { font-size: 17px; margin-bottom: 6px; color: rgba(255,255,255,0.5); }
+.empty-state small { font-size: 13px; }
+
+/* ── Loading dots ─────────────────────────────────────────── */
+.loading-dots span {
+  display: inline-block;
+  animation: blink 1.2s infinite;
+  opacity: 0;
+}
+.loading-dots span:nth-child(1) { animation-delay: 0s; }
+.loading-dots span:nth-child(2) { animation-delay: 0.3s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.6s; }
+@keyframes blink { 0%,80%,100% { opacity:0; } 40% { opacity:1; } }
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .dash-nav    { padding: 14px 16px; }
+  .dash-header { padding: 36px 16px 20px; }
+  .tab-bar     { gap: 8px; }
+  .tab-btn     { padding: 8px 16px; font-size: 13px; }
+  .orders-grid { grid-template-columns: 1fr; padding: 0 16px 40px; }
+  .card-actions { grid-template-columns: 1fr 1fr; }
+}
+

@@ -137,7 +137,9 @@ const getOrdersByRestaurant = async (req, res) => {
   }
 };
 
-// UPDATE ORDER STATUS
+// UPDATE ORDER STATUS — Restaurant owner only
+// Owners can set: pending, confirmed, preparing, out_for_delivery, cancelled
+// picked_up / on_the_way / arriving / delivered are AGENT-ONLY via delivery routes
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -146,9 +148,13 @@ const updateOrderStatus = async (req, res) => {
     if (!id) return res.status(400).json({ success: false, message: 'Order ID is required' });
     if (!status || !status.trim()) return res.status(400).json({ success: false, message: 'Status is required' });
 
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ success: false, message: `Status must be one of: ${validStatuses.join(', ')}` });
+    // Restaurant can ONLY control up to out_for_delivery
+    const ownerStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
+    if (!ownerStatuses.includes(status)) {
+      return res.status(403).json({
+        success: false,
+        message: `Restaurants cannot set status to '${status}'. Only delivery agents can progress past out_for_delivery.`
+      });
     }
 
     const order = await Order.findOneAndUpdate({ id }, { status }, { new: true }).lean();
@@ -192,4 +198,213 @@ const cancelOrder = async (req, res) => {
   }
 };
 
-module.exports = { createOrder, getUserOrders, getOrderById, getAllOrders, getOrdersByRestaurant, updateOrderStatus, cancelOrder };
+// GET INVOICE — GET /api/orders/:orderId/invoice
+const getInvoice = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!orderId) return res.status(400).json({ success: false, message: 'orderId is required' });
+
+    let order = await Order.findOne({ id: orderId }).lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    if (order.status !== 'delivered') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invoice is only available for delivered orders'
+      });
+    }
+
+    // Generate transactionId on-demand (prototype)
+    if (!order.transactionId) {
+      const txnId = 'txn_' + Math.random().toString(36).substr(2, 9).toUpperCase();
+      order = await Order.findOneAndUpdate(
+        { id: orderId },
+        { transactionId: txnId, invoiceGenerated: true },
+        { new: true }
+      ).lean();
+    }
+
+    const invoice = {
+      orderId:         order.id,
+      transactionId:   order.transactionId,
+      invoiceDate:     new Date().toISOString(),
+      orderDate:       order.createdAt,
+      status:          order.status,
+      deliveryAddress: order.deliveryAddress || '',
+      items:           order.items || [],
+      totalAmount:     order.totalAmount,
+      restaurantId:    order.restaurantId || ''
+    };
+
+    return res.json({ success: true, data: invoice });
+  } catch (error) {
+    console.error('[getInvoice]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { createOrder, getUserOrders, getOrderById, getAllOrders, getOrdersByRestaurant, updateOrderStatus, cancelOrder, getInvoice };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PART 2 — NEW DELIVERY ENDPOINTS (additive, non-breaking)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const PICKUP_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
+/**
+ * Shared helper: expire stale agent assignments.
+ * Called on each GET /api/orders/available hit.
+ */
+async function releaseExpiredOrderAssignments() {
+  const cutoff = new Date(Date.now() - PICKUP_TIMEOUT_MS);
+
+  // Find orders accepted >30 min ago that are still in out_for_delivery
+  const expired = await Order.find({
+    status:             'out_for_delivery',
+    deliveryAgentId:    { $ne: null },
+    deliveryAcceptedAt: { $lt: cutoff }
+  }).lean();
+
+  for (const order of expired) {
+    await Order.findOneAndUpdate(
+      { id: order.id },
+      { deliveryAgentId: null, acceptedAt: null, deliveryAcceptedAt: null }
+    );
+    console.log(`[timeout] Cleared stale assignment for order ${order.id}`);
+  }
+}
+
+// ── GET /api/orders/available ─────────────────────────────────────────────────
+// Returns out_for_delivery orders with no agent. Clears expired assignments first.
+const getAvailableOrdersForAgent = async (req, res) => {
+  try {
+    await releaseExpiredOrderAssignments();
+
+    const orders = await Order.find({
+      status:          'out_for_delivery',
+      deliveryAgentId: null
+    }).sort({ createdAt: -1 }).lean();
+
+    return res.json({ success: true, data: orders });
+  } catch (error) {
+    console.error('[getAvailableOrdersForAgent]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── PATCH /api/orders/:id/accept-delivery ─────────────────────────────────────
+// Agent accepts an order: assigns agentId, records timestamps.
+// Does NOT change status (stays out_for_delivery until agent scans/picks up).
+const acceptDelivery = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { agentId } = req.body;
+
+    if (!agentId) {
+      return res.status(400).json({ success: false, message: 'agentId is required' });
+    }
+
+    const order = await Order.findOne({ id }).lean();
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    if (order.status !== 'out_for_delivery') {
+      return res.status(400).json({
+        success: false,
+        message: `Order cannot be accepted (current status: ${order.status})`
+      });
+    }
+    if (order.deliveryAgentId) {
+      return res.status(409).json({
+        success: false,
+        message: 'This order has already been accepted by another agent'
+      });
+    }
+
+    const now = new Date();
+    const updated = await Order.findOneAndUpdate(
+      { id },
+      {
+        deliveryAgentId:    agentId,
+        acceptedAt:         now.toISOString(),    // ISO string (Part 1 compat)
+        deliveryAcceptedAt: now                   // Date for timeout math
+      },
+      { new: true }
+    ).lean();
+
+    return res.json({
+      success: true,
+      message: 'Order accepted — 30-minute pickup window started',
+      data: updated
+    });
+  } catch (error) {
+    console.error('[acceptDelivery]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// ── PATCH /api/orders/:id/delivery-status ─────────────────────────────────────
+// Agent advances delivery through: picked_up → on_the_way → arriving → delivered
+// Sets deliveredAt when status becomes 'delivered'.
+const updateDeliveryStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { agentId, status } = req.body;
+
+    const agentStatuses = ['picked_up', 'on_the_way', 'arriving', 'delivered'];
+    if (!status || !agentStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Status must be one of: ${agentStatuses.join(', ')}`
+      });
+    }
+    if (!agentId) {
+      return res.status(400).json({ success: false, message: 'agentId is required' });
+    }
+
+    const order = await Order.findOne({ id }).lean();
+    if (!order) {
+      return res.status(404).json({ success: false, message: 'Order not found' });
+    }
+    if (order.deliveryAgentId !== agentId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You are not assigned to this order'
+      });
+    }
+
+    const patch = { status };
+    if (status === 'delivered') {
+      patch.deliveredAt = new Date();
+    }
+
+    const updated = await Order.findOneAndUpdate({ id }, patch, { new: true }).lean();
+
+    return res.json({
+      success: true,
+      message: `Delivery status updated to ${status}`,
+      data: updated
+    });
+  } catch (error) {
+    console.error('[updateDeliveryStatus]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// Re-export everything including the three new handlers
+module.exports = {
+  // ── existing ──────────────────────────────────────────────
+  createOrder,
+  getUserOrders,
+  getOrderById,
+  getAllOrders,
+  getOrdersByRestaurant,
+  updateOrderStatus,
+  cancelOrder,
+  getInvoice,
+  // ── Part 2 additions ──────────────────────────────────────
+  getAvailableOrdersForAgent,
+  acceptDelivery,
+  updateDeliveryStatus
+};
+

@@ -17,6 +17,7 @@
 </div>
 
 <div class="navbar-right">
+<button class="discount-btn" routerLink="/customer/discounts" title="Offers">🏷 Offers</button>
 <button class="cart-btn" (click)="toggleCart()" title="Cart">
   🛒 <span class="badge" *ngIf="cartCount>0">{{cartCount}}</span>
 </button>
@@ -139,4 +140,7 @@
 <p>😕 No restaurants found. Try adjusting your search or filters.</p>
 </div>
 
-</div>
+<!-- Reviews Section -->
+<app-reviews></app-reviews>
+
+</div>

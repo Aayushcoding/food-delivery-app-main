@@ -1,100 +1,200 @@
 <div class="orders-container">
 
-<h1 class="page-title">📦 My Orders</h1>
-<p class="page-subtitle">Your complete order history</p>
+  <!-- HEADER BAR -->
+  <div class="orders-header">
+    <div>
+      <h1 class="page-title">📦 My Orders</h1>
+      <p class="page-subtitle">Your complete order history</p>
+    </div>
+    <button class="btn-back-home" (click)="goHome()">← Back to Home</button>
+  </div>
 
-<!-- TOAST -->
-<div *ngIf="toastMessage" class="toast" [class.toast-error]="toastError">
-  {{ toastMessage }}
-</div>
+  <!-- PAGE BODY -->
+  <div class="orders-body">
 
-<!-- LOADING -->
-<div *ngIf="loading" class="state-box">
-  <div class="state-icon">⏳</div>
-  <h3>Loading your orders...</h3>
-  <p>Just a moment</p>
-</div>
+    <!-- TOAST -->
+    <div *ngIf="toastMessage" class="toast" [class.toast-error]="toastError">
+      {{ toastMessage }}
+    </div>
 
-<!-- ERROR -->
-<div *ngIf="!loading && errorMessage" class="state-box">
-  <div class="state-icon">❌</div>
-  <h3>Something went wrong</h3>
-  <p>{{ errorMessage }}</p>
-  <button class="btn-browse" (click)="loadOrders()">Try Again</button>
-</div>
+    <!-- LOADING -->
+    <div *ngIf="loading" class="state-box">
+      <div class="state-icon">⏳</div>
+      <h3>Loading your orders...</h3>
+      <p>Just a moment</p>
+    </div>
 
-<!-- NO ORDERS -->
-<div *ngIf="!loading && !errorMessage && orders.length === 0" class="state-box">
-  <div class="state-icon">🛒</div>
-  <h3>No orders yet</h3>
-  <p>Looks like you haven't placed an order yet.</p>
-  <button class="btn-browse" (click)="goHome()">Browse Restaurants</button>
-</div>
+    <!-- ERROR -->
+    <div *ngIf="!loading && errorMessage" class="state-box">
+      <div class="state-icon">❌</div>
+      <h3>Something went wrong</h3>
+      <p>{{ errorMessage }}</p>
+      <button class="btn-browse" (click)="loadOrders()">Try Again</button>
+    </div>
 
-<!-- ORDER CARDS -->
-<div class="orders-list" *ngIf="!loading && orders.length > 0">
-  <div class="order-card" *ngFor="let order of orders">
+    <!-- NO ORDERS -->
+    <div *ngIf="!loading && !errorMessage && orders.length === 0" class="state-box">
+      <div class="state-icon">🛒</div>
+      <h3>No orders yet</h3>
+      <p>Looks like you haven't placed an order yet.</p>
+      <button class="btn-browse" (click)="goHome()">Browse Restaurants</button>
+    </div>
 
-    <!-- HEADER -->
-    <div class="order-card-header">
-      <div>
-        <div class="order-id"># {{ order.id }}</div>
-        <div class="order-date">{{ order.createdAt | date:'MMM d, y, h:mm a' }}</div>
+    <!-- ORDER CARDS -->
+    <div class="orders-list" *ngIf="!loading && orders.length > 0">
+      <div class="order-card" *ngFor="let order of orders">
+
+        <!-- HEADER -->
+        <div class="order-card-header">
+          <div class="order-id-block">
+            <div class="order-id"># {{ order.id }}</div>
+            <div class="order-date">{{ order.createdAt | date:'MMM d, y, h:mm a' }}</div>
+          </div>
+          <span class="status-badge" [class]="order.status || 'default'">
+            {{ order.status || 'pending' }}
+          </span>
+        </div>
+
+        <!-- ══ LIVE DELIVERY TIMELINE (shown for all delivery-phase statuses) ══ -->
+        <div *ngIf="isInDelivery(order)" class="delivery-timeline-wrap">
+
+          <!-- Banner message -->
+          <div class="delivery-banner">
+            <span *ngIf="order.status === 'out_for_delivery'">🟡 Waiting for a delivery agent...</span>
+            <span *ngIf="order.status === 'picked_up'">📦 Agent has picked up your order!</span>
+            <span *ngIf="order.status === 'on_the_way'">🛵 Your order is on the way!</span>
+            <span *ngIf="order.status === 'arriving'">📍 Your delivery agent is arriving!</span>
+            <span *ngIf="order.status === 'delivered'">🎉 Order delivered! Enjoy your meal!</span>
+          </div>
+
+          <!-- Step timeline -->
+          <div class="delivery-timeline">
+            <div *ngFor="let step of deliverySteps; let last = last"
+                 class="tl-step"
+                 [class.tl-done]="stepState(order, step) === 'done'"
+                 [class.tl-current]="stepState(order, step) === 'current'"
+                 [class.tl-pending]="stepState(order, step) === 'pending'">
+
+              <!-- Connector line before each step except first -->
+              <div class="tl-line-before" *ngIf="!last"></div>
+
+              <div class="tl-node">
+                <span class="tl-icon">{{ step.icon }}</span>
+              </div>
+              <div class="tl-label">{{ step.label }}</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- BODY -->
+        <div class="order-card-body">
+          <div class="order-meta">
+            <div class="order-meta-item">
+              <span class="meta-label">Total Amount</span>
+              <span class="meta-value price">₹{{ order.totalAmount | number:'1.0-0' }}</span>
+            </div>
+            <div class="order-meta-item">
+              <span class="meta-label">Delivery Address</span>
+              <span class="meta-value">{{ order.deliveryAddress || '—' }}</span>
+            </div>
+            <div class="order-meta-item">
+              <span class="meta-label">Items</span>
+              <span class="meta-value">{{ order.items?.length || 0 }}</span>
+            </div>
+          </div>
+
+          <!-- ITEMS -->
+          <p class="order-items-title">Items ordered</p>
+          <ul class="order-items-list">
+            <li class="order-item-row" *ngFor="let item of order.items">
+              <span class="item-name">{{ item.name || item.itemName || item.itemId }}</span>
+              <span class="item-qty">× {{ item.quantity }}</span>
+              <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="order-card-footer">
+          <button class="btn-reorder" (click)="goHome()">🔁 Order Again</button>
+
+          <!-- View Invoice — only for delivered orders -->
+          <button *ngIf="order.status === 'delivered'" class="btn-invoice" id="btn-invoice-{{ order.id }}"
+            (click)="viewInvoice(order)">
+            🧾 View Invoice
+          </button>
+
+          <!-- Give Review — only for delivered, not yet reviewed -->
+          <button *ngIf="order.status === 'delivered' && !reviewedOrderIds.has(order.id)" class="btn-review"
+            id="btn-review-{{ order.id }}" (click)="openReview(order)">
+            ⭐ Give Review
+          </button>
+
+          <!-- Already reviewed badge -->
+          <span *ngIf="order.status === 'delivered' && reviewedOrderIds.has(order.id)" class="reviewed-badge">
+            ✅ Reviewed
+          </span>
+
+          <!-- Cancel button: active within 5 min of placing -->
+          <ng-container *ngIf="order.status === 'pending'">
+            <button *ngIf="canCancel(order)" class="btn-cancel" [disabled]="cancellingId === order.id"
+              (click)="cancelOrder(order)">
+              {{ cancellingId === order.id ? 'Cancelling...' : '✕ Cancel Order (' + minutesLeft(order) + ' min left)' }}
+            </button>
+            <span *ngIf="!canCancel(order)" class="cancel-expired">
+              ⏱ Cancel window closed
+            </span>
+          </ng-container>
+        </div>
+
       </div>
-      <span class="status-badge" [class]="order.status || 'default'">
-        {{ order.status || 'pending' }}
-      </span>
     </div>
 
-    <!-- BODY -->
-    <div class="order-card-body">
-      <div class="order-meta">
-        <div class="order-meta-item">
-          <span class="meta-label">Total Amount</span>
-          <span class="meta-value price">₹{{ order.totalAmount | number:'1.0-0' }}</span>
-        </div>
-        <div class="order-meta-item">
-          <span class="meta-label">Delivery Address</span>
-          <span class="meta-value">{{ order.deliveryAddress || '—' }}</span>
-        </div>
-        <div class="order-meta-item">
-          <span class="meta-label">Items</span>
-          <span class="meta-value">{{ order.items?.length || 0 }}</span>
-        </div>
-      </div>
+  </div><!-- /orders-body -->
 
-      <!-- ITEMS -->
-      <p class="order-items-title">Items ordered</p>
-      <ul class="order-items-list">
-        <li class="order-item-row" *ngFor="let item of order.items">
-          <span class="item-name">{{ item.name || item.itemName || item.itemId }}</span>
-          <span class="item-qty">× {{ item.quantity }}</span>
-          <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
-        </li>
-      </ul>
+</div><!-- /orders-container -->
+
+<!-- ═══════════════════════════════════════════════════════════
+     REVIEW MODAL
+═══════════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="reviewModalOpen" (click)="closeReview()">
+  <div class="review-modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h2>⭐ Leave a Review</h2>
+      <button class="modal-close" (click)="closeReview()">✕</button>
     </div>
 
-    <!-- FOOTER -->
-    <div class="order-card-footer">
-      <button class="btn-reorder" (click)="goHome()">🔁 Order Again</button>
+    <p class="modal-subtitle">Order <strong>#{{ reviewOrder?.id }}</strong></p>
 
-      <!-- Cancel button: active within 5 min of placing, expired after -->
-      <ng-container *ngIf="order.status === 'pending'">
-        <button
-          *ngIf="canCancel(order)"
-          class="btn-cancel"
-          [disabled]="cancellingId === order.id"
-          (click)="cancelOrder(order)">
-          {{ cancellingId === order.id ? 'Cancelling...' : '&#x2715; Cancel Order (' + minutesLeft(order) + ' min left)' }}
-        </button>
-        <span *ngIf="!canCancel(order)" class="cancel-expired">
-          &#x23F1; Cancel window closed
-        </span>
-      </ng-container>
+    <!-- Star rating -->
+    <div class="stars-row">
+      <button *ngFor="let s of [1,2,3,4,5]" class="star-btn" [class.active]="s <= reviewRating" (click)="setRating(s)"
+        [id]="'star-' + s">★</button>
     </div>
+    <p class="rating-label">
+      <span *ngIf="reviewRating === 0">Tap a star to rate</span>
+      <span *ngIf="reviewRating === 1">😞 Poor</span>
+      <span *ngIf="reviewRating === 2">😐 Fair</span>
+      <span *ngIf="reviewRating === 3">🙂 Good</span>
+      <span *ngIf="reviewRating === 4">😊 Great</span>
+      <span *ngIf="reviewRating === 5">🤩 Excellent!</span>
+    </p>
 
+    <!-- Comment -->
+    <textarea class="review-textarea" [(ngModel)]="reviewComment" placeholder="Tell us what you loved (optional)..."
+      rows="4" maxlength="500"></textarea>
+
+    <!-- Actions -->
+    <div class="modal-actions">
+      <button class="btn-cancel-modal" (click)="closeReview()">Cancel</button>
+      <button class="btn-submit-review" id="btn-submit-review" [disabled]="reviewSubmitting || reviewRating === 0"
+        (click)="submitReview()">
+        <span *ngIf="!reviewSubmitting">Submit Review</span>
+        <span *ngIf="reviewSubmitting">Submitting...</span>
+      </button>
+    </div>
 
   </div>
-</div>
-
 </div>

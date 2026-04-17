@@ -1,0 +1,79 @@
+<div class="landing-wrapper">
+
+  <!-- Floating particles -->
+  <div class="particles">
+    <span class="particle">🍕</span>
+    <span class="particle">🍔</span>
+    <span class="particle">🍜</span>
+    <span class="particle">🌮</span>
+    <span class="particle">🍣</span>
+    <span class="particle">🥗</span>
+  </div>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-badge">🚀 Now serving 500+ cities</div>
+    <h1 class="brand">ByteBites</h1>
+    <p class="tagline">Crave it. Click it. Get it.</p>
+    <p class="sub-tagline">India's fastest growing food delivery platform</p>
+  </header>
+
+  <!-- Role cards -->
+  <section class="roles-section">
+    <h2 class="roles-title">Choose your role to get started</h2>
+    <div class="roles-grid">
+
+      <!-- Customer -->
+      <div class="role-card customer-card" (click)="goTo('customer')" id="btn-customer-login">
+        <div class="card-glow"></div>
+        <div class="card-icon">👤</div>
+        <h3>Customer</h3>
+        <p>Browse restaurants, order food, track deliveries in real-time</p>
+        <div class="card-perks">
+          <span>🍽 1000+ Restaurants</span>
+          <span>⚡ Fast Delivery</span>
+          <span>🏷 Great Discounts</span>
+        </div>
+        <button class="card-btn">Login as Customer →</button>
+      </div>
+
+      <!-- Restaurant Owner -->
+      <div class="role-card owner-card" (click)="goTo('owner')" id="btn-owner-login">
+        <div class="card-glow"></div>
+        <div class="card-icon">🍴</div>
+        <h3>Restaurant Owner</h3>
+        <p>Manage your menu, handle orders, and grow your business</p>
+        <div class="card-perks">
+          <span>📊 Analytics</span>
+          <span>📦 Order Mgmt</span>
+          <span>🌟 Ratings</span>
+        </div>
+        <button class="card-btn">Login as Owner →</button>
+      </div>
+
+      <!-- Delivery Agent -->
+      <div class="role-card delivery-card" (click)="goTo('delivery')" id="btn-delivery-login">
+        <div class="card-glow"></div>
+        <div class="card-icon">🛵</div>
+        <h3>Delivery Agent</h3>
+        <p>Pick up orders, deliver them, and earn great incentives daily</p>
+        <div class="card-perks">
+          <span>💰 Daily Earnings</span>
+          <span>🗺 GPS Routing</span>
+          <span>🏆 Bonuses</span>
+        </div>
+        <button class="card-btn">Login as Agent →</button>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Stats bar -->
+  <section class="stats-bar">
+    <div class="stat"><span class="stat-num">2M+</span><span class="stat-label">Happy Customers</span></div>
+    <div class="stat"><span class="stat-num">15K+</span><span class="stat-label">Restaurants</span></div>
+    <div class="stat"><span class="stat-num">50K+</span><span class="stat-label">Delivery Partners</span></div>
+    <div class="stat"><span class="stat-num">4.8★</span><span class="stat-label">Avg. Rating</span></div>
+  </section>
+
+</div>

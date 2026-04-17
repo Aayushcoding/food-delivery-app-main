@@ -18,7 +18,10 @@ export class AuthService {
 
   // Routes to the correct endpoint based on the role field
   register(data: any): Observable<any> {
-    const endpoint = data.role === 'Owner' ? 'register/owner' : 'register/customer';
+    const endpoint =
+      data.role === 'Owner'         ? 'register/owner'    :
+      data.role === 'DeliveryAgent' ? 'register/agent'    :
+                                     'register/customer';
     return this.http.post(`${this.baseUrl}/${endpoint}`, data);
   }
 

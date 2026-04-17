@@ -19,10 +19,28 @@ const orderSchema = new mongoose.Schema({
   deliveryAddress: { type: String, default: '' },
   status:          {
     type: String,
-    enum: ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered', 'cancelled'],
+    enum: [
+      'pending',
+      'confirmed',
+      'preparing',
+      'out_for_delivery',
+      'picked_up',
+      'on_the_way',
+      'arriving',
+      'delivered',
+      'cancelled'
+    ],
     default: 'pending'
   },
-  createdAt:       { type: String, default: () => new Date().toISOString() }
+  // Delivery agent assignment
+  deliveryAgentId:      { type: String, default: null },
+  acceptedAt:           { type: String, default: null },   // ISO string (Part 1 compat)
+  deliveryAcceptedAt:   { type: Date,   default: null },   // Date object for timeout math
+  deliveredAt:          { type: Date,   default: null },   // Timestamp on completion
+
+  transactionId:    { type: String, default: '' },
+  invoiceGenerated: { type: Boolean, default: false },
+  createdAt:        { type: String, default: () => new Date().toISOString() }
 }, {
   versionKey: false,
   toJSON: {

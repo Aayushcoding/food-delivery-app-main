@@ -1,0 +1,46 @@
+<div class="login-wrapper delivery-theme">
+  <div class="login-card">
+
+    <button class="back-btn" (click)="goBack()" id="btn-back-delivery">← Back</button>
+
+    <div class="login-header">
+      <span class="role-emoji">🛵</span>
+      <h1>ByteBites</h1>
+      <p class="role-label">Login as <strong>Delivery Agent</strong></p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+      <div class="field-group">
+        <label for="del-email">Email</label>
+        <input id="del-email" type="email" formControlName="email" placeholder="agent@bytebites.in" autocomplete="email"/>
+        <small class="err" *ngIf="f['email'].touched && f['email'].errors?.['required']">Email is required</small>
+        <small class="err" *ngIf="f['email'].touched && f['email'].errors?.['email']">Invalid email address</small>
+      </div>
+
+      <div class="field-group">
+        <label for="del-pass">Password</label>
+        <div class="pass-wrap">
+          <input id="del-pass" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••" autocomplete="current-password"/>
+          <button type="button" class="eye-btn" (click)="togglePassword()">{{ showPassword ? '🙈' : '👁' }}</button>
+        </div>
+        <small class="err" *ngIf="f['password'].touched && f['password'].errors?.['required']">Password is required</small>
+        <small class="err" *ngIf="f['password'].touched && f['password'].errors?.['minlength']">Min 6 characters</small>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-banner">⚠ {{ errorMessage }}</div>
+
+      <button type="submit" class="submit-btn" [disabled]="isLoading" id="btn-delivery-submit">
+        <span *ngIf="!isLoading">Login →</span>
+        <span *ngIf="isLoading" class="loading-dots">Logging in<span>.</span><span>.</span><span>.</span></span>
+      </button>
+
+    </form>
+
+    <div class="alt-links">
+      <span>New agent?</span>
+      <a routerLink="/signup/delivery" id="link-delivery-signup">Register here</a>
+    </div>
+
+  </div>
+</div>

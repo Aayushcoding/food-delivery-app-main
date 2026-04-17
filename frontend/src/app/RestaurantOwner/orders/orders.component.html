@@ -5,62 +5,73 @@
 
   <!-- HEADER -->
   <div class="page-header">
-    <button class="back-btn" (click)="goBack()">← Dashboard</button>
-    <div>
-      <h1>📋 Orders</h1>
-      <p class="restaurant-label" *ngIf="restaurantName">{{ restaurantName }}</p>
-    </div>
-    <div class="earnings-badge">
-      💰 Total: ₹{{ totalEarnings | number:'1.0-0' }}
+    <h1>📋 Orders <span *ngIf="restaurantName" style="font-size:14px;font-weight:400;color:#718096;margin-left:8px;">— {{ restaurantName }}</span></h1>
+    <div class="header-right">
+      <div class="earnings-badge">💰 Total: ₹{{ totalEarnings | number:'1.0-0' }}</div>
+      <button class="back-btn" (click)="goBack()">← Back</button>
     </div>
   </div>
 
-  <!-- LOADING -->
-  <div *ngIf="loading" class="state-box"><p>⏳ Loading orders...</p></div>
+  <!-- PAGE BODY -->
+  <div class="page-body">
 
-  <!-- ERROR -->
-  <div *ngIf="!loading && errorMessage" class="state-box error">
-    <p>{{ errorMessage }}</p>
-  </div>
+    <!-- LOADING -->
+    <div *ngIf="loading" class="state-box"><p>⏳ Loading orders...</p></div>
 
-  <!-- EMPTY -->
-  <div *ngIf="!loading && !errorMessage && orders.length === 0" class="state-box">
-    <p>🎉 No orders yet for your restaurant.</p>
-  </div>
+    <!-- ERROR -->
+    <div *ngIf="!loading && errorMessage" class="state-box error">
+      <p>{{ errorMessage }}</p>
+    </div>
 
-  <!-- ORDERS LIST -->
-  <div class="orders-list" *ngIf="!loading && orders.length > 0">
+    <!-- EMPTY -->
+    <div *ngIf="!loading && !errorMessage && orders.length === 0" class="state-box">
+      <p>🎉 No orders yet for your restaurant.</p>
+    </div>
 
-    <div *ngFor="let order of orders" class="order-card">
+    <!-- ORDERS LIST -->
+    <div class="orders-list" *ngIf="!loading && orders.length > 0">
 
-      <!-- ORDER HEADER -->
-      <div class="order-head">
-        <span class="order-id"># {{ order.id }}</span>
-        <span class="order-date">{{ order.createdAt | date:'d MMM y, h:mm a' }}</span>
-        <span class="status-pill" [class]="order.status">{{ order.status }}</span>
-      </div>
+      <div *ngFor="let order of orders" class="order-card">
 
-      <!-- ITEMS -->
-      <div class="order-items">
-        <div *ngFor="let item of order.enrichedItems || order.items" class="order-item-row">
-          <span class="item-name">{{ item.itemName || item.itemId }}</span>
-          <span class="item-qty">× {{ item.quantity }}</span>
-          <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+        <!-- ORDER HEADER -->
+        <div class="order-head">
+          <span class="order-id"># {{ order.id }}</span>
+          <span class="order-date">{{ order.createdAt | date:'d MMM y, h:mm a' }}</span>
+          <span class="status-pill" [class]="order.status">{{ order.status }}</span>
         </div>
-      </div>
 
-      <!-- FOOTER -->
-      <div class="order-foot">
-        <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
-        <div class="status-update">
-          <label>Update Status:</label>
-          <select (change)="updateStatus(order, $event)" [value]="order.status">
-            <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
-          </select>
+        <!-- ITEMS -->
+        <div class="order-items">
+          <div *ngFor="let item of order.enrichedItems || order.items" class="order-item-row">
+            <span class="item-name">{{ item.itemName || item.itemId }}</span>
+            <span class="item-qty">× {{ item.quantity }}</span>
+            <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+          </div>
         </div>
+
+        <!-- FOOTER -->
+        <div class="order-foot">
+          <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
+
+          <!-- If delivery agent is assigned: show read-only badge, owner's job is done -->
+          <div *ngIf="isAssigned(order)" class="agent-assigned-badge">
+            🛵 Assigned to Delivery Agent
+            <span class="agent-status-pill">{{ order.status | titlecase }}</span>
+          </div>
+
+          <!-- Owner controls: only visible before agent assignment -->
+          <div *ngIf="!isAssigned(order)" class="status-update">
+            <label>Update Status:</label>
+            <select (change)="updateStatus(order, $event)" [value]="order.status">
+              <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
+            </select>
+          </div>
+        </div>
+
+
       </div>
-
     </div>
-  </div>
 
-</div>
+  </div><!-- /page-body -->
+
+</div>

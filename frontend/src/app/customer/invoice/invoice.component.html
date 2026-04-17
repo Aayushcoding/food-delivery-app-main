@@ -1,0 +1,120 @@
+<div class="invoice-page" id="invoice-print-area">
+
+  <!-- Nav (hidden on print) -->
+  <div class="invoice-nav no-print">
+    <button class="btn-back" (click)="goBack()" id="btn-invoice-back">← My Orders</button>
+    <button class="btn-print" (click)="printInvoice()" id="btn-print-invoice"
+            *ngIf="invoice" title="Print / Save as PDF">
+      🖨 Print / Download
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-center">
+    <div class="spinner"></div>
+    <p>Loading invoice...</p>
+  </div>
+
+  <!-- Error -->
+  <div *ngIf="!loading && errorMsg" class="state-center">
+    <span class="err-icon">⚠</span>
+    <p class="err-text">{{ errorMsg }}</p>
+    <button class="btn-back" (click)="goBack()">← Go Back</button>
+  </div>
+
+  <!-- Invoice card -->
+  <div *ngIf="!loading && invoice" class="invoice-card">
+
+    <!-- Header -->
+    <div class="inv-header">
+      <div class="inv-brand">
+        <span class="brand-logo">🍽</span>
+        <span class="brand-name">ByteBites</span>
+      </div>
+      <div class="inv-title-block">
+        <h1>INVOICE</h1>
+        <span class="inv-badge">✅ Delivered</span>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Meta grid -->
+    <div class="inv-meta">
+      <div class="meta-col">
+        <div class="meta-row">
+          <span class="meta-label">Order ID</span>
+          <span class="meta-value mono">#{{ invoice.orderId }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Transaction ID</span>
+          <span class="meta-value mono txn">{{ invoice.transactionId }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Delivery Address</span>
+          <span class="meta-value">{{ invoice.deliveryAddress || '—' }}</span>
+        </div>
+      </div>
+      <div class="meta-col">
+        <div class="meta-row">
+          <span class="meta-label">Order Date</span>
+          <span class="meta-value">{{ invoice.orderDate | date:'d MMM y, h:mm a' }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Invoice Generated</span>
+          <span class="meta-value">{{ invoice.invoiceDate | date:'d MMM y, h:mm a' }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Payment Mode</span>
+          <span class="meta-value">Cash on Delivery</span>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Items table -->
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th class="th-item">Item</th>
+          <th class="th-qty">Qty</th>
+          <th class="th-price">Unit Price</th>
+          <th class="th-total">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of invoice.items" class="inv-row">
+          <td class="td-name">{{ item.name || item.itemName || item.itemId }}</td>
+          <td class="td-qty">{{ item.quantity }}</td>
+          <td class="td-price">₹{{ item.price | number:'1.0-0' }}</td>
+          <td class="td-total">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Totals -->
+    <div class="inv-totals">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span>₹{{ subtotal | number:'1.0-0' }}</span>
+      </div>
+      <div class="total-row">
+        <span>Delivery Fee</span>
+        <span class="green">FREE</span>
+      </div>
+      <div class="total-row total-grand">
+        <span>Grand Total</span>
+        <span>₹{{ invoice.totalAmount | number:'1.0-0' }}</span>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="inv-footer">
+      <p>Thank you for ordering with <strong>ByteBites</strong>! 🍕</p>
+      <p class="footer-note">This is a system-generated invoice. No signature required.</p>
+    </div>
+
+  </div>
+
+</div>

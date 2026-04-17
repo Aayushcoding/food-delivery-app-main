@@ -1,0 +1,46 @@
+<div class="login-wrapper owner-theme">
+  <div class="login-card">
+
+    <button class="back-btn" (click)="goBack()" id="btn-back-owner">← Back</button>
+
+    <div class="login-header">
+      <span class="role-emoji">🍴</span>
+      <h1>ByteBites</h1>
+      <p class="role-label">Login as <strong>Restaurant Owner</strong></p>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+
+      <div class="field-group">
+        <label for="own-email">Email</label>
+        <input id="own-email" type="email" formControlName="email" placeholder="owner@restaurant.com" autocomplete="email"/>
+        <small class="err" *ngIf="f['email'].touched && f['email'].errors?.['required']">Email is required</small>
+        <small class="err" *ngIf="f['email'].touched && f['email'].errors?.['email']">Invalid email address</small>
+      </div>
+
+      <div class="field-group">
+        <label for="own-pass">Password</label>
+        <div class="pass-wrap">
+          <input id="own-pass" [type]="showPassword ? 'text' : 'password'" formControlName="password" placeholder="••••••" autocomplete="current-password"/>
+          <button type="button" class="eye-btn" (click)="togglePassword()">{{ showPassword ? '🙈' : '👁' }}</button>
+        </div>
+        <small class="err" *ngIf="f['password'].touched && f['password'].errors?.['required']">Password is required</small>
+        <small class="err" *ngIf="f['password'].touched && f['password'].errors?.['minlength']">Min 6 characters</small>
+      </div>
+
+      <div *ngIf="errorMessage" class="error-banner">⚠ {{ errorMessage }}</div>
+
+      <button type="submit" class="submit-btn" [disabled]="isLoading" id="btn-owner-submit">
+        <span *ngIf="!isLoading">Login →</span>
+        <span *ngIf="isLoading" class="loading-dots">Logging in<span>.</span><span>.</span><span>.</span></span>
+      </button>
+
+    </form>
+
+    <div class="alt-links">
+      <span>Not registered yet?</span>
+      <a routerLink="/signup">Create account</a>
+    </div>
+
+  </div>
+</div>

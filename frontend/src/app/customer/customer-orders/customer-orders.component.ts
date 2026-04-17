@@ -1,120 +1,201 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-
 import { Router } from '@angular/router';
-import { OrderService } from '../../core/services/order.service';
-import { AuthService } from '../../core/services/auth.service';
+import { OrderService }    from '../../core/services/order.service';
+import { AuthService }     from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
+import { ReviewService }   from '../../core/services/review.service';
 
 @Component({
-selector:'app-customer-orders',
-templateUrl:'./customer-orders.component.html',
-styleUrls:['./customer-orders.component.css']
+  selector:    'app-customer-orders',
+  templateUrl: './customer-orders.component.html',
+  styleUrls:   ['./customer-orders.component.css']
 })
 export class CustomerOrdersComponent implements OnInit, OnDestroy {
 
+  orders:       any[]    = [];
+  loading:      boolean  = false;
+  errorMessage: string   = '';
+  cancellingId: string   = '';
+  toastMessage: string   = '';
+  toastError:   boolean  = false;
+  private toastTimer: any;
+  private pollTimer:  any;
 
-orders: any[] = [];
-loading: boolean = false;
-errorMessage: string = '';
-cancellingId: string = '';  // tracks which order is mid-cancel
-toastMessage: string = '';
-toastError: boolean = false;
-private toastTimer: any;
+  // ── Review modal state ──────────────────────────────────
+  reviewModalOpen   = false;
+  reviewOrder:      any    = null;
+  reviewRating      = 0;
+  reviewComment     = '';
+  reviewSubmitting  = false;
+  reviewedOrderIds: Set<string> = new Set();
 
-// Ticker to keep the 5-minute window live without a heavy interval
-private ticker: any;
+  // ── Delivery timeline steps ─────────────────────────────
+  readonly deliverySteps = [
+    { status: 'out_for_delivery', label: 'Ready',      icon: '✅' },
+    { status: 'picked_up',        label: 'Picked Up',  icon: '📦' },
+    { status: 'on_the_way',       label: 'On the Way', icon: '🛵' },
+    { status: 'arriving',         label: 'Arriving',   icon: '📍' },
+    { status: 'delivered',        label: 'Delivered',  icon: '🎉' }
+  ];
 
-constructor(
-  private orderService: OrderService,
-  private authService: AuthService,
-  private customerService: CustomerService,
-  private router: Router
-){}
+  constructor(
+    private orderService:    OrderService,
+    private authService:     AuthService,
+    private customerService: CustomerService,
+    private reviewService:   ReviewService,
+    private router:          Router
+  ) {}
 
-ngOnInit(): void {
-  this.loadOrders();
-  // Refresh every 30 s so cancel buttons auto-disable after the 5-min window
-  this.ticker = setInterval(() => { this.orders = [...this.orders]; }, 30000);
-}
-
-ngOnDestroy(): void {
-  clearInterval(this.ticker);
-  clearTimeout(this.toastTimer);
-}
-
-loadOrders(): void {
-  const user = this.authService.getUser();
-  if (!user) {
-    this.router.navigate(['/login']);
-    return;
+  ngOnInit(): void {
+    this.loadOrders();
+    // Poll every 30 s — re-fetch from API so live status changes appear
+    this.pollTimer = setInterval(() => this.loadOrders(), 30000);
   }
 
-  this.loading = true;
-  this.errorMessage = '';
+  ngOnDestroy(): void {
+    clearInterval(this.pollTimer);
+    clearTimeout(this.toastTimer);
+  }
 
-  this.orderService.getUserOrders(user.id).subscribe({
-    next: (res) => {
-      this.loading = false;
-      if (res.success) {
-        this.orders = res.data || [];
-      } else {
-        this.errorMessage = res.message || 'Could not load orders.';
+  // ── Orders ──────────────────────────────────────────────
+
+  loadOrders(): void {
+    const user = this.authService.getUser();
+    if (!user) { this.router.navigate(['/login']); return; }
+
+    this.loading      = true;
+    this.errorMessage = '';
+
+    this.orderService.getUserOrders(user.id).subscribe({
+      next: (res) => {
+        this.loading = false;
+        if (res.success) {
+          this.orders = res.data || [];
+          this.orders
+            .filter(o => o.status === 'delivered')
+            .forEach(o => this.checkReviewed(o.id));
+        } else {
+          this.errorMessage = res.message || 'Could not load orders.';
+        }
+      },
+      error: (err) => {
+        this.loading      = false;
+        this.errorMessage = err?.error?.message || 'Failed to load orders. Please try again.';
       }
-    },
-    error: (err) => {
-      this.loading = false;
-      this.errorMessage = err?.error?.message || 'Failed to load orders. Please try again.';
-      console.error('Error loading orders:', err);
-    }
-  });
-}
+    });
+  }
 
-/** Returns true only when the order is pending AND within the 5-minute cancel window */
-canCancel(order: any): boolean {
-  if (order.status !== 'pending') return false;
-  const created = new Date(order.createdAt).getTime();
-  const diffMs = Date.now() - created;
-  return diffMs <= 5 * 60 * 1000;  // 5 minutes in ms
-}
+  checkReviewed(orderId: string): void {
+    this.reviewService.getReviewByOrder(orderId).subscribe({
+      next: (res) => { if (res.data) this.reviewedOrderIds.add(orderId); },
+      error: () => {}
+    });
+  }
 
-/** Returns minutes remaining in the cancel window (0 = expired) */
-minutesLeft(order: any): number {
-  const created = new Date(order.createdAt).getTime();
-  const elapsed = (Date.now() - created) / (1000 * 60);
-  return Math.max(0, Math.ceil(5 - elapsed));
-}
+  // ── Delivery timeline helpers ────────────────────────────
 
-cancelOrder(order: any): void {
-  if (this.cancellingId || !this.canCancel(order)) return;
-  if (!confirm('Cancel this order?')) return;
+  isInDelivery(order: any): boolean {
+    return ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving', 'delivered'].includes(order.status);
+  }
 
-  this.cancellingId = order.id;
-  this.orderService.cancelOrder(order.id).subscribe({
-    next: (res) => {
-      this.cancellingId = '';
-      if (res.success) {
-        order.status = 'cancelled';
-        this.showToast('Order cancelled successfully.', false);
-      } else {
-        this.showToast(res.message || 'Could not cancel order.', true);
+  stepIndex(status: string): number {
+    return this.deliverySteps.findIndex(s => s.status === status);
+  }
+
+  stepState(order: any, step: any): 'done' | 'current' | 'pending' {
+    const cur = this.stepIndex(order.status);
+    const si  = this.stepIndex(step.status);
+    if (si < cur)   return 'done';
+    if (si === cur) return 'current';
+    return 'pending';
+  }
+
+  // ── Cancel ──────────────────────────────────────────────
+
+  canCancel(order: any): boolean {
+    if (order.status !== 'pending') return false;
+    return (Date.now() - new Date(order.createdAt).getTime()) <= 5 * 60 * 1000;
+  }
+
+  minutesLeft(order: any): number {
+    const elapsed = (Date.now() - new Date(order.createdAt).getTime()) / (1000 * 60);
+    return Math.max(0, Math.ceil(5 - elapsed));
+  }
+
+  cancelOrder(order: any): void {
+    if (this.cancellingId || !this.canCancel(order)) return;
+    if (!confirm('Cancel this order?')) return;
+
+    this.cancellingId = order.id;
+    this.orderService.cancelOrder(order.id).subscribe({
+      next: (res) => {
+        this.cancellingId = '';
+        if (res.success) {
+          order.status = 'cancelled';
+          this.showToast('Order cancelled successfully.', false);
+        } else {
+          this.showToast(res.message || 'Could not cancel order.', true);
+        }
+      },
+      error: (err) => {
+        this.cancellingId = '';
+        this.showToast(err?.error?.message || 'Failed to cancel order.', true);
       }
-    },
-    error: (err) => {
-      this.cancellingId = '';
-      this.showToast(err?.error?.message || 'Failed to cancel order.', true);
-    }
-  });
-}
+    });
+  }
 
-showToast(message: string, isError: boolean): void {
-  this.toastMessage = message;
-  this.toastError = isError;
-  clearTimeout(this.toastTimer);
-  this.toastTimer = setTimeout(() => this.toastMessage = '', 3000);
-}
+  // ── Review modal ─────────────────────────────────────────
 
-goHome(){
-  this.router.navigate(['/customer/customer-home']);
-}
+  openReview(order: any): void {
+    this.reviewOrder   = order;
+    this.reviewRating  = 0;
+    this.reviewComment = '';
+    this.reviewModalOpen = true;
+  }
 
+  closeReview(): void {
+    this.reviewModalOpen = false;
+    this.reviewOrder = null;
+  }
+
+  setRating(r: number): void { this.reviewRating = r; }
+
+  submitReview(): void {
+    if (!this.reviewRating) { this.showToast('Please select a star rating.', true); return; }
+    this.reviewSubmitting = true;
+
+    this.reviewService.submitReview(
+      this.reviewOrder.id,
+      this.reviewRating,
+      this.reviewComment
+    ).subscribe({
+      next: () => {
+        this.reviewSubmitting = false;
+        this.reviewedOrderIds.add(this.reviewOrder.id);
+        this.closeReview();
+        this.showToast('⭐ Review submitted! Thank you.', false);
+      },
+      error: (err) => {
+        this.reviewSubmitting = false;
+        this.showToast(err?.error?.message || 'Could not submit review.', true);
+      }
+    });
+  }
+
+  // ── Invoice ──────────────────────────────────────────────
+
+  viewInvoice(order: any): void {
+    this.router.navigate(['/invoice', order.id]);
+  }
+
+  // ── Helpers ──────────────────────────────────────────────
+
+  showToast(message: string, isError: boolean): void {
+    this.toastMessage = message;
+    this.toastError   = isError;
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(() => this.toastMessage = '', 3500);
+  }
+
+  goHome(): void { this.router.navigate(['/customer/customer-home']); }
 }

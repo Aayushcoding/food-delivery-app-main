@@ -91,6 +91,26 @@
   transform: scale(1.05);
 }
 
+.discount-btn {
+  background: linear-gradient(90deg, #ff6a00, #ffb347);
+  color: #fff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.discount-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(255,106,0,0.3);
+}
+
+
 .badge {
   position: absolute;
   top: -8px;

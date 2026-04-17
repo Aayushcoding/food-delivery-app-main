@@ -18,7 +18,9 @@ export class OrdersComponent implements OnInit {
   toastError = false;
   private toastTimer: any;
 
-  readonly statuses = ['pending','confirmed','preparing','out_for_delivery','delivered','cancelled'];
+  // Owner can ONLY set these statuses — agent controls the rest
+  readonly statuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
+  readonly agentStatuses = ['picked_up', 'on_the_way', 'arriving', 'delivered'];
 
   constructor(
     private authService: AuthService,
@@ -84,8 +86,17 @@ export class OrdersComponent implements OnInit {
     });
   }
 
+  /** True when a delivery agent has been assigned — owner's job is done */
+  isAssigned(order: any): boolean {
+    return !!(order.deliveryAgentId) || this.agentStatuses.includes(order.status);
+  }
+
   updateStatus(order: any, event: Event): void {
     const status = (event.target as HTMLSelectElement).value;
+    if (this.agentStatuses.includes(status)) {
+      this.showToast('⛔ Only delivery agents can set that status.', true);
+      return;
+    }
     this.customerService.updateOrderStatus(order.id, status).subscribe({
       next: (res) => {
         if (res.success) {
@@ -93,7 +104,7 @@ export class OrdersComponent implements OnInit {
           this.showToast('✅ Status updated!', false);
         }
       },
-      error: () => this.showToast('Failed to update status.', true)
+      error: (err) => this.showToast(err?.error?.message || 'Failed to update status.', true)
     });
   }
 

@@ -1,0 +1,138 @@
+<div class="auth-wrapper" [class]="roleClass">
+
+  <!-- Card -->
+  <div class="auth-card" [@fadeSlide]>
+
+    <!-- Brand -->
+    <div class="auth-brand">
+      <span class="brand-icon">🍽</span>
+      <span class="brand-name">ByteBites</span>
+    </div>
+
+    <!-- Mode toggle -->
+    <div class="mode-toggle">
+      <button class="toggle-btn"
+              [class.active]="mode === 'login'"
+              (click)="switchMode('login')"
+              id="btn-mode-login">
+        Login
+      </button>
+      <button class="toggle-btn"
+              [class.active]="mode === 'signup'"
+              (click)="switchMode('signup')"
+              id="btn-mode-signup">
+        Sign Up
+      </button>
+    </div>
+
+    <!-- Role selector -->
+    <div class="role-selector">
+      <button *ngFor="let r of roles"
+              class="role-chip"
+              [class.active]="role === r.value"
+              (click)="selectRole(r.value)"
+              [id]="'role-' + r.value.toLowerCase()">
+        {{ r.emoji }} {{ r.label }}
+      </button>
+    </div>
+
+    <!-- Heading -->
+    <h1 class="auth-title">
+      <span *ngIf="mode === 'login'">Welcome back</span>
+      <span *ngIf="mode === 'signup'">Create account</span>
+    </h1>
+    <p class="auth-sub">{{ role === 'Customer' ? '🍕 Order your favourite food' : role === 'Owner' ? '🍴 Manage your restaurant' : '🛵 Deliver & earn daily' }}</p>
+
+    <!-- Alerts -->
+    <div class="banner error-banner" *ngIf="errorMessage">⚠ {{ errorMessage }}</div>
+    <div class="banner success-banner" *ngIf="successMessage">{{ successMessage }}</div>
+
+    <!-- Form -->
+    <form (ngSubmit)="onSubmit()" #authForm="ngForm" novalidate>
+
+      <!-- Username (signup only) -->
+      <div class="field-group" *ngIf="mode === 'signup'">
+        <label for="auth-username">Username</label>
+        <input id="auth-username"
+               type="text"
+               [(ngModel)]="username"
+               name="username"
+               placeholder="e.g. rahul_2024"
+               autocomplete="username"
+               required>
+      </div>
+
+      <!-- Email -->
+      <div class="field-group">
+        <label for="auth-email">Email</label>
+        <input id="auth-email"
+               type="email"
+               [(ngModel)]="email"
+               name="email"
+               placeholder="you@example.com"
+               autocomplete="email"
+               required>
+      </div>
+
+      <!-- Password -->
+      <div class="field-group">
+        <label for="auth-password">Password</label>
+        <div class="pass-wrap">
+          <input [type]="showPassword ? 'text' : 'password'"
+                 id="auth-password"
+                 [(ngModel)]="password"
+                 name="password"
+                 [placeholder]="mode === 'signup' ? 'Min 6 characters' : '••••••'"
+                 autocomplete="current-password"
+                 required>
+          <button type="button" class="eye-btn" (click)="togglePassword()">
+            {{ showPassword ? '🙈' : '👁' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Phone (signup only) -->
+      <div class="field-group" *ngIf="mode === 'signup'">
+        <label for="auth-phone">Phone <span class="optional">(optional)</span></label>
+        <input id="auth-phone"
+               type="tel"
+               [(ngModel)]="phoneNo"
+               name="phoneNo"
+               placeholder="10-digit number"
+               autocomplete="tel"
+               maxlength="10">
+      </div>
+
+      <!-- Submit -->
+      <button type="submit"
+              class="submit-btn"
+              id="btn-auth-submit"
+              [disabled]="isLoading">
+        <span *ngIf="!isLoading">
+          {{ mode === 'login' ? 'Login →' : 'Create Account →' }}
+        </span>
+        <span *ngIf="isLoading" class="loading-dots">
+          {{ mode === 'login' ? 'Logging in' : 'Creating account' }}<span>.</span><span>.</span><span>.</span>
+        </span>
+      </button>
+
+    </form>
+
+    <!-- Alt link -->
+    <p class="alt-link">
+      <span *ngIf="mode === 'login'">Don't have an account?
+        <button type="button" class="link-btn" id="link-to-signup" (click)="switchMode('signup')">Sign up</button>
+      </span>
+      <span *ngIf="mode === 'signup'">Already have an account?
+        <button type="button" class="link-btn" id="link-to-login" (click)="switchMode('login')">Login</button>
+      </span>
+    </p>
+
+  </div>
+
+  <!-- Decorative food emojis -->
+  <div class="float-emojis" aria-hidden="true">
+    <span>🍕</span><span>🍔</span><span>🍜</span><span>🌮</span><span>🍣</span><span>🥗</span>
+  </div>
+
+</div>

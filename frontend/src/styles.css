@@ -1,151 +1,191 @@
-/* Global Styles */
+/* ═══════════════════════════════════════════════════════════
+   ByteBites — Global Design System
+   Single source of truth for colors, typography, utilities
+═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-* {
+/* ── CSS Custom Properties (Design Tokens) ───────────────── */
+:root {
+  /* Brand palette */
+  --bb-orange:        #ff6b35;
+  --bb-orange-light:  #ffb347;
+  --bb-orange-dark:   #e55a2a;
+
+  /* Dark backgrounds — layered depth */
+  --bb-bg-base:       #0b0d14;   /* deepest */
+  --bb-bg-1:          #0f1117;   /* page bg */
+  --bb-bg-2:          #1a1d2e;   /* cards */
+  --bb-bg-3:          #252840;   /* nested cards / inputs */
+  --bb-bg-4:          #2d3158;   /* borders, dividers */
+
+  /* Text */
+  --bb-text-primary:  #e2e8f0;
+  --bb-text-secondary:#a0aec0;
+  --bb-text-muted:    #718096;
+  --bb-text-dim:      #4a5568;
+
+  /* Semantic colors */
+  --bb-success:       #22c55e;
+  --bb-warning:       #f6ad55;
+  --bb-danger:        #ef4444;
+  --bb-info:          #63b3ed;
+
+  /* Surfaces */
+  --bb-border:        rgba(255,255,255,0.07);
+  --bb-border-hover:  rgba(255,255,255,0.14);
+  --bb-glass:         rgba(255,255,255,0.04);
+
+  /* Spacing & shape */
+  --bb-radius-sm:     8px;
+  --bb-radius-md:     12px;
+  --bb-radius-lg:     16px;
+  --bb-radius-xl:     20px;
+  --bb-shadow:        0 4px 24px rgba(0,0,0,0.3);
+  --bb-shadow-lg:     0 12px 40px rgba(0,0,0,0.5);
+
+  /* Transitions */
+  --bb-transition:    all 0.22s ease;
+}
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html, body {
   height: 100%;
-  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  color: #333;
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bb-bg-1);
+  color: var(--bb-text-primary);
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
-button {
-  font-family: inherit;
-  transition: all 0.3s ease;
+/* ── Typography helpers ──────────────────────────────────── */
+a {
+  color: var(--bb-orange);
+  text-decoration: none;
+  transition: var(--bb-transition);
 }
+a:hover { color: var(--bb-orange-light); }
 
+/* ── Global form inputs ──────────────────────────────────── */
 input, select, textarea {
   font-family: inherit;
-  transition: all 0.3s ease;
+  transition: var(--bb-transition);
+  background: var(--bb-bg-3);
+  border: 1px solid var(--bb-bg-4);
+  color: var(--bb-text-primary);
+  border-radius: var(--bb-radius-sm);
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: var(--bb-text-dim); }
+input:focus, select:focus, textarea:focus {
+  border-color: var(--bb-orange);
+  box-shadow: 0 0 0 3px rgba(255,107,53,0.2);
 }
 
-a {
-  color: #ff4d4f;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-a:hover {
-  color: #d4380d;
-  text-decoration: none;
-}
-
-/* Custom Variables */
-:root {
-  --primary-color: #ff4d4f;
-  --secondary-color: #f5f5f5;
-  --accent-color: #52c41a;
-  --text-color: #333;
-  --light-bg: #ffffff;
-  --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  --shadow-hover: 0 8px 15px rgba(0, 0, 0, 0.15);
-  --border-radius: 12px;
-}
-
-/* Modern Card Styles */
-.card {
+/* ── Shared button base ──────────────────────────────────── */
+button {
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--bb-transition);
   border: none;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  transition: all 0.3s ease;
-  background: var(--light-bg);
+  outline: none;
 }
 
-.card:hover {
-  box-shadow: var(--shadow-hover);
+/* Primary CTA button */
+.bb-btn-primary {
+  background: linear-gradient(135deg, var(--bb-orange), var(--bb-orange-light));
+  color: #fff;
+  padding: 11px 22px;
+  border-radius: var(--bb-radius-sm);
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: var(--bb-transition);
+}
+.bb-btn-primary:hover:not(:disabled) {
+  opacity: 0.88;
   transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,107,53,0.35);
+}
+.bb-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Ghost button */
+.bb-btn-ghost {
+  background: var(--bb-glass);
+  color: var(--bb-text-secondary);
+  border: 1px solid var(--bb-border);
+  padding: 10px 18px;
+  border-radius: var(--bb-radius-sm);
+  font-weight: 600;
+  font-size: 13px;
+}
+.bb-btn-ghost:hover { background: var(--bb-border-hover); color: var(--bb-text-primary); }
+
+/* ── Shared card ─────────────────────────────────────────── */
+.bb-card {
+  background: var(--bb-bg-2);
+  border: 1px solid var(--bb-border);
+  border-radius: var(--bb-radius-lg);
+  box-shadow: var(--bb-shadow);
 }
 
-/* Button Styles */
-.btn-primary {
-  background: linear-gradient(135deg, var(--primary-color) 0%, #ff7875 100%);
-  border: none;
-  border-radius: var(--border-radius);
-  padding: 12px 24px;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* ── Status pill (shared across owner + delivery) ────────── */
+.status-pill {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: capitalize;
 }
+.status-pill.pending         { background: rgba(246,173,85,0.15);  color: #f6ad55; border: 1px solid rgba(246,173,85,0.3); }
+.status-pill.confirmed       { background: rgba(99,179,237,0.15);  color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+.status-pill.preparing       { background: rgba(183,148,246,0.15); color: #b794f6; border: 1px solid rgba(183,148,246,0.3); }
+.status-pill.out_for_delivery{ background: rgba(99,179,237,0.15);  color: #63b3ed; border: 1px solid rgba(99,179,237,0.3); }
+.status-pill.delivered       { background: rgba(104,211,145,0.15); color: #68d391; border: 1px solid rgba(104,211,145,0.3); }
+.status-pill.cancelled       { background: rgba(252,129,129,0.15); color: #fc8181; border: 1px solid rgba(252,129,129,0.3); }
 
-.btn-primary:hover {
-  background: linear-gradient(135deg, #d4380d 0%, var(--primary-color) 100%);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-hover);
-}
-
-.btn-success {
-  background: linear-gradient(135deg, var(--accent-color) 0%, #73d13d 100%);
-  border: none;
-  border-radius: var(--border-radius);
-}
-
-.btn-success:hover {
-  background: linear-gradient(135deg, #389e0d 0%, var(--accent-color) 100%);
-  transform: translateY(-1px);
-}
-
-/* Form Controls */
-.form-control {
-  border: 2px solid #e8e8e8;
-  border-radius: var(--border-radius);
-  padding: 12px 16px;
-  transition: all 0.3s ease;
-}
-
-.form-control:focus {
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.25);
-}
-
-/* Loading Spinner */
-.spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid var(--primary-color);
+/* ── Shared spinner ──────────────────────────────────────── */
+.bb-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--bb-bg-4);
+  border-top-color: var(--bb-orange);
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  animation: spin 1s linear infinite;
-  margin: 20px auto;
+  animation: bb-spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+@keyframes bb-spin { to { transform: rotate(360deg); } }
+
+/* ── Animations ──────────────────────────────────────────── */
+@keyframes bb-fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bb-slide-in-right {
+  from { transform: translateX(60px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+/* ── Global toast (used by multiple components) ──────────── */
+.bb-toast {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  background: var(--bb-success);
+  color: #fff;
+  padding: 12px 22px;
+  border-radius: var(--bb-radius-md);
+  font-weight: 600;
+  font-size: 14px;
+  z-index: 9999;
+  box-shadow: var(--bb-shadow);
+  animation: bb-slide-in-right 0.3s ease;
 }
-
-/* Animations */
-.fade-in {
-  animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.slide-up {
-  animation: slideUp 0.6s ease-out;
-}
-
-@keyframes slideUp {
-  from { transform: translateY(50px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-  .container {
-    padding: 0 15px;
-  }
-
-  .card {
-    margin-bottom: 20px;
-  }
-}
+.bb-toast.error { background: var(--bb-danger); }

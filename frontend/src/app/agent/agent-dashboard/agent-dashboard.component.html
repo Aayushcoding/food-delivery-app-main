@@ -1,0 +1,181 @@
+<div class="page">
+
+  <!-- ── Navbar — same structure as Customer Home ── -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <h1 class="logo">🛵 ByteBites</h1>
+      <span class="role-pill">Delivery Agent</span>
+    </div>
+    <div class="nav-right">
+      <span class="agent-name" *ngIf="agent">{{ agent.username }}</span>
+      <button class="btn-logout" id="btn-logout" (click)="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── Toast ── -->
+  <div *ngIf="toast.msg" class="toast" [class.toast-error]="toast.error">{{ toast.msg }}</div>
+
+  <!-- ── Page intro ── -->
+  <div class="page-intro">
+    <h2>Welcome, {{ agent?.username }}! 👋</h2>
+    <p>Manage your deliveries below.</p>
+  </div>
+
+  <!-- ── Tab bar ── -->
+  <div class="tab-bar">
+    <button class="tab" [class.active]="activeTab==='available'"
+            (click)="switchTab('available')" id="tab-available">
+      📦 Available Orders
+      <span class="count-badge" *ngIf="availableOrders.length">{{ availableOrders.length }}</span>
+    </button>
+    <button class="tab" [class.active]="activeTab==='active'"
+            (click)="switchTab('active')" id="tab-active">
+      🗺 My Deliveries
+      <span class="count-badge count-active" *ngIf="activeOrders.length">{{ activeOrders.length }}</span>
+    </button>
+  </div>
+
+  <p *ngIf="loading" class="loading-msg">Loading orders...</p>
+
+  <!-- ════════════════════════════════════════
+       AVAILABLE ORDERS TAB
+  ════════════════════════════════════════ -->
+  <div *ngIf="!loading && activeTab==='available'" class="orders-grid">
+
+    <div *ngIf="availableOrders.length===0" class="empty-state">
+      <p>😕 No orders available right now. Check back shortly!</p>
+    </div>
+
+    <div *ngFor="let order of availableOrders" class="order-card">
+
+      <div class="card-head">
+        <div>
+          <span class="order-id">Order #{{ order.id }}</span>
+          <span class="chip chip-{{ statusColor(order.status) }}">{{ label(order.status) }}</span>
+        </div>
+        <span class="amount">₹{{ order.totalAmount | number:'1.0-0' }}</span>
+      </div>
+
+      <div class="info-row" *ngIf="order.restaurantId">
+        <span class="info-icon">🏪</span>
+        <span>{{ order.restaurantId }}</span>
+      </div>
+
+      <div class="info-row" *ngIf="order.deliveryAddress">
+        <span class="info-icon">📍</span>
+        <span>{{ order.deliveryAddress }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-icon">🍽</span>
+        <span class="item-list">{{ itemList(order) }}</span>
+      </div>
+
+      <div class="card-actions">
+        <button class="btn btn-primary"
+                id="btn-accept-{{ order.id }}"
+                [disabled]="actionLoading[order.id]"
+                (click)="accept(order)">
+          {{ actionLoading[order.id] ? 'Accepting...' : '✅ Accept Order' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       ACTIVE DELIVERIES TAB
+  ════════════════════════════════════════ -->
+  <div *ngIf="!loading && activeTab==='active'" class="orders-grid">
+
+    <div *ngIf="activeOrders.length===0" class="empty-state">
+      <p>🏁 No active deliveries. Accept an order from the Available tab!</p>
+    </div>
+
+    <div *ngFor="let order of activeOrders" class="order-card order-card-active">
+
+      <div class="card-head">
+        <div>
+          <span class="order-id">Order #{{ order.id }}</span>
+          <span class="chip chip-{{ statusColor(order.status) }}">{{ label(order.status) }}</span>
+        </div>
+        <span class="amount">₹{{ order.totalAmount | number:'1.0-0' }}</span>
+      </div>
+
+      <!-- Pickup countdown (only before first pickup scan) -->
+      <div *ngIf="order.status==='out_for_delivery'"
+           class="timer" [class.timer-urgent]="urgentPickup(order)">
+        <span>⏱</span>
+        <span>
+          <strong *ngIf="minsLeft(order)>0">{{ minsLeft(order) }} min</strong>
+          <strong *ngIf="minsLeft(order)===0" class="expired">Expired!</strong>
+          to pick up
+        </span>
+      </div>
+
+      <div class="info-row" *ngIf="order.deliveryAddress">
+        <span class="info-icon">📍</span>
+        <span>{{ order.deliveryAddress }}</span>
+      </div>
+
+      <div class="info-row">
+        <span class="info-icon">🍽</span>
+        <span class="item-list">{{ itemList(order) }}</span>
+      </div>
+
+      <!-- ── Progress stepper ── -->
+      <div class="stepper">
+        <div *ngFor="let step of steps"
+             class="step"
+             [class.done]="stepDone(order, step)"
+             [class.current]="stepCurrent(order, step)">
+          <div class="step-circle">
+            <span *ngIf="stepDone(order,step) && !stepCurrent(order,step)">✓</span>
+            <span *ngIf="stepCurrent(order,step)">●</span>
+          </div>
+          <span class="step-label">{{ label(step) }}</span>
+        </div>
+      </div>
+
+      <!-- ── Step action buttons ── -->
+      <div class="card-actions" *ngIf="order.status!=='delivered'">
+
+        <button *ngIf="order.status==='out_for_delivery'"
+                class="btn btn-primary" id="btn-pickup-{{ order.id }}"
+                [disabled]="actionLoading[order.id]"
+                (click)="advance(order,'picked_up')">
+          {{ actionLoading[order.id] ? 'Updating...' : '📦 Picked Up' }}
+        </button>
+
+        <button *ngIf="order.status==='picked_up'"
+                class="btn btn-secondary" id="btn-onway-{{ order.id }}"
+                [disabled]="actionLoading[order.id]"
+                (click)="advance(order,'on_the_way')">
+          {{ actionLoading[order.id] ? 'Updating...' : '🛵 On The Way' }}
+        </button>
+
+        <button *ngIf="order.status==='on_the_way'"
+                class="btn btn-secondary" id="btn-arriving-{{ order.id }}"
+                [disabled]="actionLoading[order.id]"
+                (click)="advance(order,'arriving')">
+          {{ actionLoading[order.id] ? 'Updating...' : '📍 Arriving' }}
+        </button>
+
+        <button *ngIf="order.status==='arriving'"
+                class="btn btn-success" id="btn-delivered-{{ order.id }}"
+                [disabled]="actionLoading[order.id]"
+                (click)="advance(order,'delivered')">
+          {{ actionLoading[order.id] ? 'Updating...' : '✅ Mark as Delivered' }}
+        </button>
+
+      </div>
+
+      <!-- Delivered confirmation -->
+      <div *ngIf="order.status==='delivered'" class="delivered-banner">
+        🎉 Delivered Successfully!
+      </div>
+
+    </div>
+  </div>
+
+</div>

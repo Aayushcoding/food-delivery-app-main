@@ -1,0 +1,29 @@
+<section class="reviews-section">
+  <div class="reviews-header">
+    <h2>💬 What Our Customers Say</h2>
+    <p>Real experiences from real food lovers</p>
+  </div>
+
+  <div class="reviews-grid">
+    <div *ngFor="let review of reviews" class="review-card">
+
+      <div class="review-top">
+        <div class="avatar" [attr.data-initials]="review.avatar">{{ review.avatar }}</div>
+        <div class="reviewer-info">
+          <h4>{{ review.name }}
+            <span class="verified-badge" *ngIf="review.verified" title="Verified order">✓</span>
+          </h4>
+          <p class="restaurant-name">🍽 {{ review.restaurant }}</p>
+        </div>
+        <div class="review-date">{{ review.date }}</div>
+      </div>
+
+      <div class="stars">
+        <span *ngFor="let s of stars(review.rating)" class="star filled">★</span>
+        <span *ngFor="let s of emptyStars(review.rating)" class="star empty">★</span>
+      </div>
+
+      <p class="review-comment">"{{ review.comment }}"</p>
+    </div>
+  </div>
+</section>
