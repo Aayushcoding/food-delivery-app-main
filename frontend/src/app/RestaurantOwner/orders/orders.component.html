@@ -78,13 +78,10 @@
               👨‍🍳 Start Preparing
             </button>
 
-            <!-- PREPARING → Ready for Delivery (agents will see this) -->
-            <button *ngIf="order.status === 'preparing'"
-                    class="btn-action btn-dispatch"
-                    [disabled]="updatingId === order.id"
-                    (click)="setStatus(order, 'out_for_delivery')">
-              🚀 Ready for Pickup
-            </button>
+            <!-- PREPARING → waiting for agent (owner cannot set out_for_delivery) -->
+            <div *ngIf="order.status === 'preparing'" class="agent-wait-banner">
+              📡 Food is being prepared. A delivery agent will pick it up soon.
+            </div>
 
             <!-- Cancel — available on pending & confirmed -->
             <button *ngIf="order.status === 'pending' || order.status === 'confirmed'"
@@ -98,10 +95,10 @@
             <span *ngIf="updatingId === order.id" class="updating-spinner">⏳</span>
           </div>
 
-          <!-- Helper tip for preparing/confirmed -->
-          <p *ngIf="order.status === 'confirmed' || order.status === 'preparing'"
+          <!-- Helper tip for confirmed only -->
+          <p *ngIf="order.status === 'confirmed'"
              class="delivery-hint">
-            💡 Agents can see this order. Click "Ready for Pickup" when food is ready.
+            💡 Click "Start Preparing" when you begin cooking the order.
           </p>
 
         </div>

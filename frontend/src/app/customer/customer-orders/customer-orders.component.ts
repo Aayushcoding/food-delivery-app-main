@@ -33,11 +33,11 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
 
   // ── Delivery timeline steps ─────────────────────────────
   readonly deliverySteps = [
-    { status: 'out_for_delivery', label: 'Ready',      icon: '✅' },
-    { status: 'picked_up',        label: 'Picked Up',  icon: '📦' },
-    { status: 'on_the_way',       label: 'On the Way', icon: '🛵' },
-    { status: 'arriving',         label: 'Arriving',   icon: '📍' },
-    { status: 'delivered',        label: 'Delivered',  icon: '🎉' }
+    { status: 'out_for_delivery', label: 'Agent Assigned', icon: '🛵' },
+    { status: 'picked_up',        label: 'Picked Up',     icon: '📦' },
+    { status: 'on_the_way',       label: 'On the Way',    icon: '🛵' },
+    { status: 'arriving',         label: 'Arriving',      icon: '📍' },
+    { status: 'delivered',        label: 'Delivered',     icon: '🎉' }
   ];
 
   constructor(
@@ -120,6 +120,11 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
 
   isInDelivery(order: any): boolean {
     return ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving', 'delivered'].includes(order.status);
+  }
+
+  /** True when the order is in the pool but no agent has accepted yet */
+  isSearching(order: any): boolean {
+    return order.status === 'out_for_delivery' && !order.deliveryAgentId;
   }
 
   stepIndex(status: string): number {

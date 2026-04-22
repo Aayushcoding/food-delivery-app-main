@@ -49,6 +49,13 @@ export class InvoiceComponent implements OnInit {
     return this.invoice.items.reduce((sum: number, i: any) => sum + (i.price * i.quantity), 0);
   }
 
+  formatAddress(addr: any): string {
+    if (!addr) return '—';
+    if (typeof addr === 'string') return addr || '—';
+    const parts = [addr.street, addr.city, addr.pincode, addr.landmark].filter(Boolean);
+    return parts.join(', ') || '—';
+  }
+
   printInvoice(): void { window.print(); }
 
   goBack(): void { this.router.navigate(['/customer/orders']); }

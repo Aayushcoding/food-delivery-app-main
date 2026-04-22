@@ -38,9 +38,9 @@
   transition: background 0.4s;
 }
 
-/* Orange — Customer */
-.accent-orange::before { background: radial-gradient(circle, rgba(255,107,53,0.18), transparent 70%); }
-.accent-orange::after  { background: radial-gradient(circle, rgba(247,147,30,0.1),  transparent 70%); }
+/* Lime — Customer */
+.accent-orange::before { background: radial-gradient(circle, rgba(163,230,53,0.15), transparent 70%); }
+.accent-orange::after  { background: radial-gradient(circle, rgba(74,222,128,0.08),  transparent 70%); }
 
 /* Purple — Owner */
 .accent-purple::before { background: radial-gradient(circle, rgba(159,122,234,0.18), transparent 70%); }
@@ -81,9 +81,10 @@
 }
 .brand-icon { font-size: 28px; }
 .brand-name {
+  font-family: 'Syne', sans-serif;
   font-size: 22px;
   font-weight: 800;
-  background: linear-gradient(90deg, #ff6b35, #f7931e);
+  background: linear-gradient(90deg, #A3E635, #4ade80);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -141,11 +142,11 @@
 }
 .role-chip:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
 
-/* Role-specific active states */
+/* Customer active chip — lime green */
 .accent-orange .role-chip.active {
-  background: rgba(255,107,53,0.14);
-  border-color: rgba(255,107,53,0.4);
-  color: #ff6b35;
+  background: rgba(163,230,53,0.12);
+  border-color: rgba(163,230,53,0.4);
+  color: #A3E635;
 }
 .accent-purple .role-chip.active {
   background: rgba(159,122,234,0.14);
@@ -210,8 +211,8 @@
 .field-group input:focus {
   background: rgba(255,255,255,0.08);
 }
-/* Accent border on focus — per role */
-.accent-orange .field-group input:focus { border-color: #ff6b35; box-shadow: 0 0 0 3px rgba(255,107,53,0.2); }
+/* Focus border per role */
+.accent-orange .field-group input:focus { border-color: #A3E635; box-shadow: 0 0 0 3px rgba(163,230,53,0.18); }
 .accent-purple .field-group input:focus { border-color: #b794f6; box-shadow: 0 0 0 3px rgba(183,148,246,0.2); }
 .accent-green  .field-group input:focus { border-color: #00c878; box-shadow: 0 0 0 3px rgba(0,200,120,0.2); }
 
@@ -244,9 +245,9 @@
 }
 .submit-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-/* Gradient switches with role */
-.accent-orange .submit-btn { background: linear-gradient(90deg, #ff6b35, #f7931e); }
-.accent-orange .submit-btn:hover:not(:disabled) { box-shadow: 0 10px 28px rgba(255,107,53,0.4); transform: translateY(-2px); }
+/* Submit gradient per role */
+.accent-orange .submit-btn { background: linear-gradient(90deg, #A3E635, #4ade80); color: #0D0F14; font-weight: 800; }
+.accent-orange .submit-btn:hover:not(:disabled) { box-shadow: 0 10px 28px rgba(163,230,53,0.35); transform: translateY(-2px); }
 
 .accent-purple .submit-btn { background: linear-gradient(90deg, #7c3aed, #b794f6); }
 .accent-purple .submit-btn:hover:not(:disabled) { box-shadow: 0 10px 28px rgba(124,58,237,0.4); transform: translateY(-2px); }
@@ -270,7 +271,7 @@
   margin-left: 4px;
   transition: opacity 0.2s;
 }
-.accent-orange .link-btn { color: #ff6b35; }
+.accent-orange .link-btn { color: #A3E635; }
 .accent-purple .link-btn { color: #b794f6; }
 .accent-green  .link-btn { color: #00c878; }
 .link-btn:hover { opacity: 0.78; }

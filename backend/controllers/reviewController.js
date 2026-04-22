@@ -35,6 +35,10 @@ const submitReview = async (req, res) => {
     if (order.status !== 'delivered')
       return res.status(400).json({ success: false, message: 'Reviews can only be submitted for delivered orders' });
 
+    // Ensure only the customer who placed the order can review it
+    if (req.user && order.userId !== req.user.id)
+      return res.status(403).json({ success: false, message: 'You can only review your own orders' });
+
     // Prevent duplicate reviews for the same order
     const existing = await Review.findOne({ orderId }).lean();
     if (existing)

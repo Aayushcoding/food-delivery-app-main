@@ -22,11 +22,10 @@ import { OrdersComponent } from './RestaurantOwner/orders/orders.component';
 import { ProfileComponent } from './RestaurantOwner/profile/profile.component';
 import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner-dashboard.component';
 
-// ── Delivery ─────────────────────────────────────────────────────────────────
-import { DeliveryDashboardComponent } from './delivery/delivery-dashboard/delivery-dashboard.component';
 
 // ── Agent ─────────────────────────────────────────────────────
 import { AgentDashboardComponent } from './agent/agent-dashboard/agent-dashboard.component';
+import { AgentProfileComponent } from './agent/agent-profile/agent-profile.component';
 
 // ── Guards ────────────────────────────────────────────────────────────────────
 import { AuthGuard } from './core/guards/auth.guard';
@@ -65,12 +64,10 @@ const routes: Routes = [
   { path: 'owner/profile', component: ProfileComponent, canActivate: [AuthGuard], data: { roles: ['Owner'] } },
   { path: 'owner/dashboard', component: OwnerDashboardComponent, canActivate: [AuthGuard], data: { roles: ['Owner'] } },
 
-  // ── DELIVERY ROUTES ────────────────────────────────────────────────────────
-  { path: 'delivery/dashboard', component: DeliveryDashboardComponent, canActivate: [AuthGuard], data: { roles: ['DeliveryAgent'] } },
-  { path: 'delivery', redirectTo: 'delivery/dashboard' },
 
   // ── AGENT ROUTES ───────────────────────────────────────────────────────────
   { path: 'agent/dashboard', component: AgentDashboardComponent, canActivate: [AuthGuard], data: { roles: ['DeliveryAgent'] } },
+  { path: 'agent/profile', component: AgentProfileComponent, canActivate: [AuthGuard], data: { roles: ['DeliveryAgent'] } },
   { path: 'agent', redirectTo: 'agent/dashboard' },
 
   // Wildcard

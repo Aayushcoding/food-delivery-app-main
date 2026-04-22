@@ -1,0 +1,99 @@
+<div class="page">
+
+  <!-- ── Navbar ── -->
+  <nav class="navbar">
+    <div class="nav-left">
+      <button class="btn-back" (click)="goBack()" id="btn-back" title="Back to Dashboard">← Dashboard</button>
+      <h1 class="logo">🛵 ByteBites</h1>
+      <span class="role-pill">Delivery Agent</span>
+    </div>
+    <div class="nav-right">
+      <span class="agent-name" *ngIf="agent">{{ agent.username }}</span>
+      <button class="btn-logout" id="btn-logout" (click)="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <!-- ── Toast ── -->
+  <div *ngIf="toast.msg" class="toast" [class.toast-error]="toast.error">{{ toast.msg }}</div>
+
+  <div class="profile-container">
+
+    <div class="profile-header">
+      <div class="avatar">{{ (username || agent?.username || 'A').charAt(0).toUpperCase() }}</div>
+      <div class="profile-title">
+        <h2>My Profile</h2>
+        <p>Manage your personal info and delivery cities</p>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <p *ngIf="loading" class="loading-msg">Loading profile…</p>
+
+    <div *ngIf="!loading" class="profile-form">
+
+      <!-- ── Personal Info Section ── -->
+      <div class="section-card">
+        <h3 class="section-title">👤 Personal Information</h3>
+
+        <div class="field-group">
+          <label class="field-label" for="input-username">Username</label>
+          <input id="input-username" class="field-input"
+                 type="text" [(ngModel)]="username"
+                 placeholder="Your display name" />
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="input-email">Email</label>
+          <input id="input-email" class="field-input field-readonly"
+                 type="email" [value]="profile?.email || agent?.email || ''"
+                 readonly title="Email cannot be changed" />
+          <span class="field-hint">Email cannot be changed</span>
+        </div>
+
+        <div class="field-group">
+          <label class="field-label" for="input-phone">Phone Number</label>
+          <input id="input-phone" class="field-input"
+                 type="tel" [(ngModel)]="phoneNo"
+                 placeholder="10-digit phone number" maxlength="10" />
+        </div>
+      </div>
+
+      <!-- ── Delivery Cities Section ── -->
+      <div class="section-card">
+        <h3 class="section-title">🏙️ Delivery Cities</h3>
+        <p class="section-desc">
+          Add the cities where you are available to deliver. You will only see orders from these cities.
+          <br><span class="hint-note">Leave empty to see orders from <strong>all cities</strong>.</span>
+        </p>
+
+        <!-- City chips -->
+        <div class="city-chips" *ngIf="cities.length > 0">
+          <span class="city-chip" *ngFor="let city of cities">
+            <span class="city-name">{{ city }}</span>
+            <button class="chip-remove" (click)="removeCity(city)" [id]="'btn-remove-' + city" title="Remove {{ city }}">✕</button>
+          </span>
+        </div>
+        <p *ngIf="cities.length === 0" class="no-cities">No cities added yet — you will see orders from all cities.</p>
+
+        <!-- City input -->
+        <div class="city-input-row">
+          <input id="input-city" class="field-input city-input"
+                 type="text" [(ngModel)]="cityInput"
+                 (keydown)="onCityKeydown($event)"
+                 placeholder="e.g. pune, mumbai, bangalore…" />
+          <button class="btn btn-add" id="btn-add-city" (click)="addCity()">+ Add City</button>
+        </div>
+      </div>
+
+      <!-- ── Save Button ── -->
+      <div class="save-row">
+        <button class="btn btn-save" id="btn-save-profile"
+                [disabled]="saving" (click)="saveProfile()">
+          {{ saving ? 'Saving…' : '💾 Save Profile' }}
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</div>

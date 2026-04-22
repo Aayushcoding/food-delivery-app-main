@@ -51,6 +51,8 @@ const orderSchema = new mongoose.Schema({
 
   transactionId:    { type: String, default: '' },
   invoiceGenerated: { type: Boolean, default: false },
+  // Idempotency key from frontend — prevents duplicate orders from retries/double-taps
+  clientOrderId:    { type: String, default: null, sparse: true },
   createdAt:        { type: String, default: () => new Date().toISOString() }
 }, {
   versionKey: false,

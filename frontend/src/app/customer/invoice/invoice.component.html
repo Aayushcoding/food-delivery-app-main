@@ -52,7 +52,7 @@
         </div>
         <div class="meta-row">
           <span class="meta-label">Delivery Address</span>
-          <span class="meta-value">{{ invoice.deliveryAddress || '—' }}</span>
+          <span class="meta-value">{{ formatAddress(invoice.deliveryAddress) }}</span>
         </div>
       </div>
       <div class="meta-col">

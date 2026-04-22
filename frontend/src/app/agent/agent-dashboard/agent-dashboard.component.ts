@@ -19,6 +19,13 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
   availableOrders: any[] = [];
   activeOrders:    any[] = [];
   deliveryHistory: any[] = [];
+  agentCities:     string[] = [];   // cities this agent delivers in (from profile)
+
+  // ── Earnings ──────────────────────────────────────────────────
+  totalEarnings    = 0;
+  totalDeliveries  = 0;
+  todayEarnings    = 0;
+  todayDeliveries  = 0;
 
   loading = false;
   actionLoading: { [orderId: string]: boolean } = {};
@@ -40,6 +47,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
       return;
     }
     this.loadAvailable();
+    this.loadEarnings();
     // Auto-refresh every 30 s to pick up new orders
     this.pollInterval = setInterval(() => this.load(), 30000);
   }
@@ -66,9 +74,15 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   loadAvailable(): void {
     this.loading = true;
-    this.http.get<any>('/api/orders/available').subscribe({
-      next: res => { this.availableOrders = res.data || []; this.loading = false; },
-      error: ()  => { this.showToast('Could not load orders.', true); this.loading = false; }
+    this.http.get<any>('/api/agent/available-orders',
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: res => {
+        this.availableOrders = res.data || [];
+        this.agentCities     = res.agentCities || [];
+        this.loading = false;
+      },
+      error: () => { this.showToast('Could not load orders.', true); this.loading = false; }
     });
   }
 
@@ -93,6 +107,23 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: res => { this.deliveryHistory = res.data || []; this.loading = false; },
       error: ()  => { this.showToast('Could not load history.', true); this.loading = false; }
+    });
+  }
+
+  // ── Earnings ──────────────────────────────────────────────────────────────
+
+  loadEarnings(): void {
+    this.http.get<any>('/api/agent/earnings',
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: res => {
+        const d = res.data || {};
+        this.totalEarnings   = d.totalEarnings   || 0;
+        this.totalDeliveries = d.totalDeliveries || 0;
+        this.todayEarnings   = d.todayEarnings   || 0;
+        this.todayDeliveries = d.todayDeliveries || 0;
+      },
+      error: () => {} // silent — don't block the UI
     });
   }
 
@@ -140,6 +171,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
         order.status = step;
         if (step === 'delivered') {
           this.showToast(`🎉 Order #${order.id} delivered! Well done!`, false);
+          this.loadEarnings(); // refresh earnings immediately
           setTimeout(() => {
             this.activeOrders = this.activeOrders.filter(o => o.id !== order.id);
           }, 2000);
@@ -176,6 +208,12 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
   }
 
   urgentPickup(order: any): boolean { return this.minsLeft(order) <= 5; }
+
+  /** How much the agent will earn for this order: ₹30 flat + 5% of value */
+  calcEarning(order: any): number {
+    const amt = (order.finalAmount > 0 ? order.finalAmount : order.totalAmount) || 0;
+    return Math.round(30 + amt * 0.05);
+  }
 
   // ── Display helpers ───────────────────────────────────────────────────────
 
@@ -215,6 +253,10 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   goHome(): void {
     this.router.navigate(['/agent/dashboard']);
+  }
+
+  goProfile(): void {
+    this.router.navigate(['/agent/profile']);
   }
 
   logout(): void {

@@ -1,111 +1,144 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
-import { OrderService } from '../../core/services/order.service';
-import { AuthService } from '../../core/services/auth.service';
+import { OrderService }    from '../../core/services/order.service';
+import { AuthService }     from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
 import { computeDiscount, CouponContext } from '../discounts/discounts.component';
 
+interface CartView {
+  cartId:        string;
+  restaurantId:  string;
+  restaurantName: string;
+  items:         any[];
+  // coupon state per cart
+  couponCode:    string;
+  couponApplied: boolean;
+  couponMessage: string;
+  couponError:   string;
+  discountAmount: number;
+  // ui state
+  loading:       boolean;
+  priceWarning:  string;
+  errorMessage:  string;
+  // batch order result
+  orderPlaced:   boolean;
+  placedOrderId: string;
+}
+
 @Component({
-  selector:'app-customer-cart',
-  templateUrl:'./customer-cart.component.html',
-  styleUrls:['./customer-cart.component.css']
+  selector:    'app-customer-cart',
+  templateUrl: './customer-cart.component.html',
+  styleUrls:   ['./customer-cart.component.css']
 })
 export class CustomerCartComponent implements OnInit {
 
-  // Cart state
-  cartItems:    any[]   = [];
-  cartId:       string  = '';
-  loading:      boolean = false;
-  cartLoading:  boolean = false;
-  errorMessage: string  = '';
+  carts: CartView[] = [];
+  activeIdx = 0;
 
-  // Prevent double-tap per item
+  cartLoading = false;
   inFlight: { [itemId: string]: boolean } = {};
-
-  // ── Coupon ──────────────────────────────────────────────────────────
-  couponCode:     string  = '';
-  couponApplied:  boolean = false;
-  couponMessage:  string  = '';
-  couponError:    string  = '';
-  discountAmount: number  = 0;
 
   private readonly baseUrl = '/api';
 
   constructor(
-    private router:         Router,
-    private http:           HttpClient,
-    private orderService:   OrderService,
-    private authService:    AuthService,
+    private router:          Router,
+    private http:            HttpClient,
+    private orderService:    OrderService,
+    private authService:     AuthService,
     private customerService: CustomerService
   ) {}
 
   ngOnInit(): void {
-    this.loadCart();
-    // Pre-fill coupon if user copied one from Offers page
+    this.loadAllCarts();
     const saved = localStorage.getItem('couponCode') || '';
-    if (saved) this.couponCode = saved;
+    if (saved && this.activeCart) this.activeCart.couponCode = saved;
   }
 
-  // ── CART LOAD ───────────────────────────────────────────────────────
-  loadCart(): void {
+  get activeCart(): CartView | null {
+    return this.carts[this.activeIdx] || null;
+  }
+
+  // ── LOAD ────────────────────────────────────────────────────────────
+  loadAllCarts(): void {
     const user = this.authService.getUser();
-    if (!user) { this.router.navigate(['/login']); return; }
+    if (!user) { this.router.navigate(['/auth']); return; }
 
-    this.cartLoading  = true;
-    this.errorMessage = '';
-
-    this.customerService.getCart(user.id).subscribe({
+    this.cartLoading = true;
+    this.customerService.getCartsByUser(user.id).subscribe({
       next: (res) => {
         this.cartLoading = false;
-        if (res.success && res.data) {
-          this.cartId = res.data.id;
-          this.cartItems = (res.data.items || []).map((item: any) => ({
-            ...item,
-            itemName: item.name || item.itemName || item.itemId
-          }));
-          // Re-evaluate coupon against new subtotal
-          if (this.couponCode) this.applyCoupon();
-        } else {
-          this.cartItems = [];
-        }
+        const rawCarts: any[] = Array.isArray(res.data) ? res.data : [];
+        // Filter out empty carts
+        const nonEmpty = rawCarts.filter(c => c.items && c.items.length > 0);
+        this.carts = nonEmpty.map(c => this.buildCartView(c));
+        // Fetch restaurant names
+        this.carts.forEach(cv => this.loadRestaurantName(cv));
+        this.activeIdx = 0;
       },
-      error: (err) => {
-        this.cartLoading = false;
-        this.cartItems   = [];
-        if (err.status !== 404) this.errorMessage = 'Failed to load cart. Please refresh.';
-      }
+      error: () => { this.cartLoading = false; }
     });
   }
 
-  // ── LIVE TOTALS ─────────────────────────────────────────────────────
-  /** Live subtotal computed directly from cart items (no stale backend value) */
-  get subtotal(): number {
-    return this.cartItems.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0);
+  private buildCartView(raw: any): CartView {
+    return {
+      cartId:        raw.id,
+      restaurantId:  raw.restaurantId,
+      restaurantName: raw.restaurantId, // overwritten by loadRestaurantName
+      items: (raw.items || []).map((item: any) => ({
+        ...item,
+        itemName: item.name || item.itemName || item.itemId
+      })),
+      couponCode:    '',
+      couponApplied: false,
+      couponMessage: '',
+      couponError:   '',
+      discountAmount: 0,
+      loading:       false,
+      priceWarning:  '',
+      errorMessage:  '',
+      orderPlaced:   false,
+      placedOrderId: ''
+    };
   }
 
-  get itemCount(): number {
-    return this.cartItems.reduce((sum, i) => sum + (i.quantity || 1), 0);
+  private loadRestaurantName(cv: CartView): void {
+    this.customerService.getRestaurantById(cv.restaurantId).subscribe({
+      next: (res) => {
+        if (res.success && res.data) cv.restaurantName = res.data.restaurantName || cv.restaurantId;
+      },
+      error: () => {}
+    });
   }
 
-  get finalTotal(): number {
-    return Math.max(0, this.subtotal - this.discountAmount);
+  // ── TOTALS ───────────────────────────────────────────────────────────
+  subtotalOf(cv: CartView): number {
+    return cv.items.reduce((s, i) => s + (i.price || 0) * (i.quantity || 1), 0);
   }
 
-  // ── COUPON LOGIC ────────────────────────────────────────────────────
-  onCouponChange(): void {
-    // Reset discount whenever user edits the coupon field
-    this.couponApplied  = false;
-    this.couponMessage  = '';
-    this.couponError    = '';
-    this.discountAmount = 0;
+  itemCountOf(cv: CartView): number {
+    return cv.items.reduce((s, i) => s + (i.quantity || 1), 0);
   }
 
-  applyCoupon(): void {
-    const code = this.couponCode.trim().toUpperCase();
+  finalTotalOf(cv: CartView): number {
+    return Math.max(0, this.subtotalOf(cv) - cv.discountAmount);
+  }
+
+  get totalItemsAcrossAllCarts(): number {
+    return this.carts.reduce((s, cv) => s + this.itemCountOf(cv), 0);
+  }
+
+  // ── COUPON ───────────────────────────────────────────────────────────
+  onCouponChange(cv: CartView): void {
+    cv.couponApplied  = false;
+    cv.couponMessage  = '';
+    cv.couponError    = '';
+    cv.discountAmount = 0;
+  }
+
+  applyCoupon(cv: CartView): void {
+    const code = cv.couponCode.trim().toUpperCase();
     if (!code) return;
-
-    // FIRST70 requires knowing if this is the user's first order — check order history
     if (code === 'FIRST70') {
       const user = this.authService.getUser();
       this.http.get<any>(`${this.baseUrl}/orders/user/${user?.id}`, {
@@ -113,165 +146,242 @@ export class CustomerCartComponent implements OnInit {
       }).subscribe({
         next: (res) => {
           const orders: any[] = res?.data || [];
-          const deliveredCount = orders.filter((o: any) => o.status === 'delivered').length;
-          const ctx: CouponContext = { isFirstOrder: deliveredCount === 0 };
-          this._applyWithContext(code, ctx);
+          const isFirst = orders.filter((o: any) => o.status === 'delivered').length === 0;
+          this._applyWithContext(cv, code, { isFirstOrder: isFirst });
         },
         error: () => {
-          // If unable to check, deny for safety
-          this.couponApplied  = false;
-          this.couponError    = '❌ Could not verify order history. Please try again.';
-          this.discountAmount = 0;
+          cv.couponError    = '❌ Could not verify order history. Please try again.';
+          cv.discountAmount = 0;
         }
       });
     } else {
-      this._applyWithContext(code, { isFirstOrder: false });
+      this._applyWithContext(cv, code, { isFirstOrder: false });
     }
   }
 
-  private _applyWithContext(code: string, ctx: CouponContext): void {
-    const result = computeDiscount(code, this.subtotal, ctx);
+  private _applyWithContext(cv: CartView, code: string, ctx: CouponContext): void {
+    const result = computeDiscount(code, this.subtotalOf(cv), ctx);
     if (result.valid) {
-      this.couponApplied  = true;
-      this.couponError    = '';
-      this.discountAmount = result.discount;
-      this.couponMessage  = result.message;
+      cv.couponApplied  = true;
+      cv.couponError    = '';
+      cv.discountAmount = result.discount;
+      cv.couponMessage  = result.message;
       localStorage.setItem('couponCode', code);
     } else {
-      this.couponApplied  = false;
-      this.couponError    = result.reason || 'Coupon not valid.';
-      this.discountAmount = 0;
+      cv.couponApplied  = false;
+      cv.couponError    = result.reason || 'Coupon not valid.';
+      cv.discountAmount = 0;
     }
   }
 
-  removeCoupon(): void {
-    this.couponCode     = '';
-    this.couponApplied  = false;
-    this.couponMessage  = '';
-    this.couponError    = '';
-    this.discountAmount = 0;
+  removeCoupon(cv: CartView): void {
+    cv.couponCode     = '';
+    cv.couponApplied  = false;
+    cv.couponMessage  = '';
+    cv.couponError    = '';
+    cv.discountAmount = 0;
     localStorage.removeItem('couponCode');
   }
 
-  // ── QUANTITY CONTROLS ───────────────────────────────────────────────
-  increase(item: any): void {
-    if (!this.cartId || this.inFlight[item.itemId]) return;
+  // ── QUANTITY CONTROLS ────────────────────────────────────────────────
+  increase(cv: CartView, item: any): void {
+    if (!cv.cartId || this.inFlight[item.itemId]) return;
     this.inFlight = { ...this.inFlight, [item.itemId]: true };
     const newQty = (item.quantity || 1) + 1;
-
-    this.customerService.updateCartItemQuantity(this.cartId, item.itemId, newQty).subscribe({
+    this.customerService.updateCartItemQuantity(cv.cartId, item.itemId, newQty).subscribe({
       next: (res) => {
         this.inFlight = { ...this.inFlight, [item.itemId]: false };
-        if (res.success) {
-          item.quantity = newQty;
-          // Re-evaluate discount against new subtotal
-          if (this.couponApplied) this.applyCoupon();
-        }
+        if (res.success) { item.quantity = newQty; if (cv.couponApplied) this.applyCoupon(cv); }
       },
       error: () => { this.inFlight = { ...this.inFlight, [item.itemId]: false }; }
     });
   }
 
-  decrease(item: any): void {
-    if (!this.cartId || this.inFlight[item.itemId]) return;
+  decrease(cv: CartView, item: any): void {
+    if (!cv.cartId || this.inFlight[item.itemId]) return;
     this.inFlight = { ...this.inFlight, [item.itemId]: true };
-
     if ((item.quantity || 1) <= 1) {
-      this.customerService.removeFromCart(this.cartId, item.itemId).subscribe({
+      this.customerService.removeFromCart(cv.cartId, item.itemId).subscribe({
         next: (res) => {
           this.inFlight = { ...this.inFlight, [item.itemId]: false };
           if (res.success) {
-            this.cartItems = this.cartItems.filter(i => i.itemId !== item.itemId);
-            if (this.couponApplied) this.applyCoupon();
+            cv.items = cv.items.filter(i => i.itemId !== item.itemId);
+            // Remove empty cart tab
+            if (cv.items.length === 0) this._removeCart(cv);
+            else if (cv.couponApplied) this.applyCoupon(cv);
           }
         },
         error: () => { this.inFlight = { ...this.inFlight, [item.itemId]: false }; }
       });
     } else {
       const newQty = item.quantity - 1;
-      this.customerService.updateCartItemQuantity(this.cartId, item.itemId, newQty).subscribe({
+      this.customerService.updateCartItemQuantity(cv.cartId, item.itemId, newQty).subscribe({
         next: (res) => {
           this.inFlight = { ...this.inFlight, [item.itemId]: false };
-          if (res.success) {
-            item.quantity = newQty;
-            if (this.couponApplied) this.applyCoupon();
-          }
+          if (res.success) { item.quantity = newQty; if (cv.couponApplied) this.applyCoupon(cv); }
         },
         error: () => { this.inFlight = { ...this.inFlight, [item.itemId]: false }; }
       });
     }
   }
 
-  remove(item: any): void {
-    if (!this.cartId || !item?.itemId) return;
-    this.customerService.removeFromCart(this.cartId, item.itemId).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.cartItems = this.cartItems.filter(i => i.itemId !== item.itemId);
-          if (this.couponApplied) this.applyCoupon();
-        }
-      },
-      error: (err) => { this.errorMessage = err?.error?.message || 'Could not remove item.'; }
+  clearCart(cv: CartView): void {
+    if (!cv.cartId) return;
+    this.customerService.clearCart(cv.cartId).subscribe({
+      next: () => this._removeCart(cv),
+      error: () => {}
     });
   }
 
-  // ── NAVIGATION ──────────────────────────────────────────────────────
-  goHome():    void { this.router.navigate(['/customer/customer-home']); }
-  goToOffers(): void { this.router.navigate(['/customer/discounts']); }
+  private _removeCart(cv: CartView): void {
+    const idx = this.carts.indexOf(cv);
+    this.carts = this.carts.filter(c => c !== cv);
+    this.activeIdx = Math.min(idx, this.carts.length - 1);
+  }
 
-  // ── PLACE ORDER ─────────────────────────────────────────────────────
-  placeOrder(): void {
-    if (this.cartItems.length === 0) return;
-    const user = this.authService.getUser();
-    if (!user) { this.router.navigate(['/login']); return; }
+  // ── PLACE ORDER ──────────────────────────────────────────────────────
+  /**
+   * Place order for a single cart.
+   * @param batchMode  If true, don't navigate away — used by placeAllOrders().
+   * @returns Promise<string | null>  resolves to orderId on success, null on failure.
+   */
+  placeOrder(cv: CartView, batchMode = false): Promise<string | null> {
+    return new Promise((resolve) => {
+      if (cv.items.length === 0) { resolve(null); return; }
+      const user = this.authService.getUser();
+      if (!user) { this.router.navigate(['/auth']); resolve(null); return; }
 
-    this.loading      = true;
-    this.errorMessage = '';
+      cv.loading      = true;
+      cv.errorMessage = '';
+      cv.priceWarning = '';
 
-    this.http.get<any>(`${this.baseUrl}/users/${user.id}`, {
-      headers: this.authService.getAuthHeaders()
-    }).subscribe({
-      next: (profileRes) => {
-        const addresses: any[] = profileRes?.data?.addresses || [];
-        const firstAddr = addresses[0];
-
-        if (!firstAddr) {
-          this.loading      = false;
-          this.errorMessage = '📍 No delivery address saved. Please go to your Profile and add an address first.';
-          return;
-        }
-
-        this.orderService.createOrder({
-          userId:         user.id,
-          addressId:      String(firstAddr._id),
-          couponCode:     this.couponApplied ? this.couponCode.toUpperCase() : undefined,
-          discountAmount: this.couponApplied ? this.discountAmount : 0,
-          finalAmount:    this.finalTotal
+      const proceed = () => {
+        this.http.get<any>(`${this.baseUrl}/users/${user.id}`, {
+          headers: this.authService.getAuthHeaders()
         }).subscribe({
-          next: (response) => {
-            this.loading = false;
-            if (response.success) {
-              // Clear coupon after successful order
-              localStorage.removeItem('couponCode');
-              this.cartItems = [];
-              this.cartId    = '';
-              this.router.navigate(['/customer/success'], {
-                state: { orderId: response.data?.id || 'Placed' }
-              });
-            } else {
-              this.errorMessage = 'Failed to place order: ' + (response.message || 'Unknown error');
+          next: (profileRes) => {
+            const addresses: any[] = profileRes?.data?.addresses || [];
+            const firstAddr = addresses[0];
+            if (!firstAddr) {
+              cv.loading      = false;
+              cv.errorMessage = '📍 No delivery address saved. Please go to Profile and add one first.';
+              resolve(null); return;
             }
+            const clientOrderId = `${user.id}_${cv.restaurantId}_${Date.now()}`;
+            this.orderService.createOrder({
+              userId:         user.id,
+              restaurantId:   cv.restaurantId,
+              addressId:      String(firstAddr._id),
+              couponCode:     cv.couponApplied ? cv.couponCode.toUpperCase() : undefined,
+              discountAmount: cv.couponApplied ? cv.discountAmount : 0,
+              finalAmount:    this.finalTotalOf(cv),
+              clientOrderId
+            }).subscribe({
+              next: (response) => {
+                cv.loading = false;
+                if (response.success) {
+                  localStorage.removeItem('couponCode');
+                  const orderId = response.data?.id || 'Placed';
+                  if (batchMode) {
+                    // Mark cart as placed but don't remove yet
+                    cv.orderPlaced   = true;
+                    cv.placedOrderId = orderId;
+                    resolve(orderId);
+                  } else {
+                    this._removeCart(cv);
+                    this.router.navigate(['/customer/success'], {
+                      state: { orderId }
+                    });
+                    resolve(orderId);
+                  }
+                } else {
+                  cv.errorMessage = response.message || 'Failed to place order.';
+                  resolve(null);
+                }
+              },
+              error: (err) => {
+                cv.loading      = false;
+                cv.errorMessage = err?.error?.message || 'Error placing order. Please try again.';
+                resolve(null);
+              }
+            });
           },
-          error: (err) => {
-            this.loading      = false;
-            this.errorMessage = err?.error?.message || 'Error placing order. Please try again.';
-          }
+          error: () => { cv.loading = false; cv.errorMessage = 'Could not fetch your profile.'; resolve(null); }
         });
-      },
-      error: () => {
-        this.loading      = false;
-        this.errorMessage = 'Could not fetch your profile. Please try again.';
-      }
+      };
+
+      // Price validation
+      this.http.get<any>(`${this.baseUrl}/menu/restaurant/${cv.restaurantId}`).subscribe({
+        next: (menuRes) => {
+          const liveItems: any[] = menuRes?.data || [];
+          const changed: string[] = [];
+          for (const ci of cv.items) {
+            const live = liveItems.find((m: any) => m.menuId === ci.itemId);
+            if (!live) continue;
+            if (live.price !== ci.price) {
+              changed.push(`${ci.itemName} (₹${ci.price}→₹${live.price})`);
+              ci.price = live.price;
+            }
+          }
+          if (changed.length > 0) {
+            cv.loading      = false;
+            cv.priceWarning = `⚠️ Price changed: ${changed.join(', ')}. Review & place again.`;
+            if (cv.couponApplied) this.applyCoupon(cv);
+            resolve(null);
+          } else {
+            proceed();
+          }
+        },
+        error: () => proceed()
+      });
     });
   }
+
+  // ── PLACE ALL ORDERS AT ONCE ─────────────────────────────────────────
+  placeAllLoading = false;
+  placeAllError   = '';
+
+  async placeAllOrders(): Promise<void> {
+    const readyCarts = this.carts.filter(cv => cv.items.length > 0 && !cv.orderPlaced);
+    if (readyCarts.length === 0) return;
+
+    this.placeAllLoading = true;
+    this.placeAllError   = '';
+
+    // Fire all orders in parallel
+    const results = await Promise.all(readyCarts.map(cv => this.placeOrder(cv, true)));
+
+    this.placeAllLoading = false;
+
+    const successIds  = results.filter((id): id is string => id !== null);
+    const failCount   = results.filter(id => id === null).length;
+
+    if (successIds.length > 0) {
+      // Remove successfully placed carts
+      this.carts = this.carts.filter(cv => !cv.orderPlaced);
+      this.activeIdx = 0;
+
+      if (failCount === 0) {
+        // All succeeded — navigate with all order IDs
+        this.router.navigate(['/customer/success'], {
+          state: { orderId: successIds[0], allOrderIds: successIds }
+        });
+      } else {
+        // Some failed — show partial success message
+        this.placeAllError =
+          `✅ ${successIds.length} order(s) placed! ❌ ${failCount} failed — review above errors.`;
+      }
+    } else {
+      this.placeAllError = '❌ All orders failed. Please check the errors above and try again.';
+    }
+  }
+
+  // ── SINGLE ORDER (void wrapper for template click handlers) ─────────────
+  placeSingleOrder(cv: CartView): void {
+    this.placeOrder(cv, false);
+  }
+
+  // ── NAV ──────────────────────────────────────────────────────────────
+  goHome():     void { this.router.navigate(['/customer/customer-home']); }
+  goToOffers(): void { this.router.navigate(['/customer/discounts']); }
 }

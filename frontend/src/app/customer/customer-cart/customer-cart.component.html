@@ -4,145 +4,166 @@
   <div class="cart-header">
     <button class="back-btn" (click)="goHome()">← Back</button>
     <div class="header-title">
-      <h1>🛒 Your Cart</h1>
-      <span class="item-count-chip" *ngIf="itemCount > 0">
-        {{ itemCount }} item{{ itemCount !== 1 ? 's' : '' }}
+      <h1>🛒 Your Carts</h1>
+      <span class="item-count-chip" *ngIf="totalItemsAcrossAllCarts > 0">
+        {{ totalItemsAcrossAllCarts }} item{{ totalItemsAcrossAllCarts !== 1 ? 's' : '' }}
       </span>
     </div>
-  </div>
-
-  <!-- ERROR -->
-  <div *ngIf="errorMessage" class="error-banner">
-    ⚠️ {{ errorMessage }}
-    <a *ngIf="errorMessage.includes('address')" routerLink="/customer/profile"
-       style="margin-left:8px;color:#ff6b35;font-weight:700;">→ Set address in Profile</a>
+    <button class="offers-btn" (click)="goToOffers()">🎁 Offers</button>
   </div>
 
   <!-- LOADING -->
   <div *ngIf="cartLoading" class="state-box">
     <div class="state-icon">⏳</div>
-    <p>Loading your cart…</p>
+    <p>Loading your carts…</p>
   </div>
 
-  <!-- EMPTY CART -->
-  <div *ngIf="!cartLoading && cartItems.length === 0 && !errorMessage" class="state-box">
+  <!-- ALL CARTS EMPTY -->
+  <div *ngIf="!cartLoading && carts.length === 0" class="state-box">
     <div class="state-icon">🛒</div>
     <p>Your cart is empty</p>
     <button class="btn-primary" (click)="goHome()">Browse Restaurants</button>
   </div>
 
-  <!-- CART WITH ITEMS -->
-  <div *ngIf="!cartLoading && cartItems.length > 0" class="cart-layout">
+  <!-- MULTI-CART LAYOUT -->
+  <div *ngIf="!cartLoading && carts.length > 0" class="multi-cart-wrap">
 
-    <!-- LEFT: ITEM CARDS -->
-    <div class="items-column">
-      <div *ngFor="let item of cartItems" class="cart-card">
+    <!-- Restaurant Tabs (shown only if more than 1 cart) -->
+    <div class="restaurant-tabs" *ngIf="carts.length > 1">
+      <button
+        *ngFor="let cv of carts; let i = index"
+        class="rest-tab"
+        [class.active]="activeIdx === i"
+        [class.tab-placed]="cv.orderPlaced"
+        (click)="activeIdx = i">
+        <span *ngIf="cv.orderPlaced" class="tab-check">✓</span>
+        🍽 {{ cv.restaurantName }}
+        <span class="tab-badge">{{ itemCountOf(cv) }}</span>
+      </button>
+    </div>
 
-        <!-- Item Name + Unit price -->
-        <div class="card-left">
-          <h3 class="cart-item-name">{{ item.itemName }}</h3>
-          <p class="cart-unit-price">₹{{ item.price | number:'1.0-0' }} each</p>
-        </div>
-
-        <!-- Right: Stepper + Subtotal + Remove -->
-        <div class="card-right">
-          <!-- Quantity stepper -->
-          <div class="qty-stepper">
-            <button class="qty-btn minus"
-              (click)="decrease(item)"
-              [disabled]="inFlight[item.itemId]">−</button>
-            <span class="qty-value">{{ item.quantity }}</span>
-            <button class="qty-btn plus"
-              (click)="increase(item)"
-              [disabled]="inFlight[item.itemId]">+</button>
-          </div>
-
-          <!-- Subtotal (live) -->
-          <span class="item-subtotal">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
-
-          <!-- Remove -->
-          <button class="remove-btn"
-            (click)="remove(item)"
-            [disabled]="inFlight[item.itemId]"
-            title="Remove item">🗑</button>
-        </div>
+    <!-- PLACE ALL ORDERS banner (only when multiple carts exist) -->
+    <div *ngIf="carts.length > 1" class="place-all-bar">
+      <div class="place-all-info">
+        <span class="place-all-label">🛝 {{ carts.length }} restaurant carts ready</span>
+        <span class="place-all-hint">Place one at a time — or all at once</span>
+      </div>
+      <div *ngIf="placeAllError" class="place-all-msg"
+           [class.place-all-success]="placeAllError.includes('✅')"
+           [class.place-all-fail]="placeAllError.includes('❌') && !placeAllError.includes('✅')">
+        {{ placeAllError }}
+      </div>
+      <div class="place-all-actions">
+        <button class="btn-place-single-bar"
+                [disabled]="placeAllLoading || !activeCart || activeCart.loading || activeCart.orderPlaced"
+                (click)="activeCart && placeSingleOrder(activeCart)">
+          <ng-container *ngIf="activeCart?.orderPlaced">✅ Placed — {{ activeCart?.restaurantName }}</ng-container>
+          <ng-container *ngIf="!activeCart?.orderPlaced">
+            {{ activeCart?.loading ? '⏳ Placing…' : '🛒 Place: ' + (activeCart?.restaurantName || '') }}
+          </ng-container>
+        </button>
+        <button class="btn-place-all"
+                [disabled]="placeAllLoading"
+                (click)="placeAllOrders()">
+          {{ placeAllLoading ? '⏳ Placing All…' : '🚀 Place All (' + carts.length + ')' }}
+        </button>
       </div>
     </div>
 
-    <!-- RIGHT: ORDER SUMMARY -->
-    <div class="summary-column">
-      <div class="summary-card">
-        <h3 class="summary-title">Order Summary</h3>
+    <!-- Active Cart Panel -->
+    <ng-container *ngIf="activeCart as cv">
 
-        <!-- Live total lines -->
-        <div class="summary-lines">
-          <div class="summary-row">
-            <span>Items</span>
-            <span>{{ itemCount }}</span>
-          </div>
-          <div class="summary-row">
-            <span>Subtotal</span>
-            <span>₹{{ subtotal | number:'1.0-0' }}</span>
+      <!-- Error banner -->
+      <div *ngIf="cv.errorMessage" class="error-banner">
+        ⚠️ {{ cv.errorMessage }}
+        <a *ngIf="cv.errorMessage.includes('address')" routerLink="/customer/profile"
+           style="margin-left:8px;color:#A3E635;font-weight:700;">→ Go to Profile</a>
+      </div>
+
+      <!-- Price change warning -->
+      <div *ngIf="cv.priceWarning" class="price-warning-banner">{{ cv.priceWarning }}</div>
+
+      <div class="cart-layout">
+
+        <!-- LEFT: ITEMS -->
+        <div class="items-column">
+
+          <div class="restaurant-label">
+            <span class="rest-name-big">{{ cv.restaurantName }}</span>
+            <button class="btn-clear-cart" (click)="clearCart(cv)">🗑 Clear Cart</button>
           </div>
 
-          <!-- Coupon Input -->
-          <div class="coupon-section">
-            <div class="coupon-input-row">
-              <input
-                type="text"
-                class="coupon-input"
-                [(ngModel)]="couponCode"
-                (ngModelChange)="onCouponChange()"
-                placeholder="Enter coupon code"
-                id="coupon-input"
-                [class.coupon-valid]="couponApplied"
-                [class.coupon-invalid]="couponError">
-              <button class="coupon-btn"
-                (click)="applyCoupon()"
-                [disabled]="!couponCode.trim()"
-                id="btn-apply-coupon">
-                {{ couponApplied ? '✓' : 'Apply' }}
-              </button>
+          <div *ngFor="let item of cv.items" class="cart-card">
+            <div class="card-left">
+              <h3 class="cart-item-name">{{ item.itemName }}</h3>
+              <p class="cart-unit-price">₹{{ item.price | number:'1.0-0' }} each</p>
             </div>
-            <p class="coupon-msg coupon-success" *ngIf="couponApplied">{{ couponMessage }}</p>
-            <p class="coupon-msg coupon-fail"    *ngIf="couponError">{{ couponError }}</p>
-            <button class="browse-offers-link" (click)="goToOffers()">🏷 Browse Offers</button>
+            <div class="card-right">
+              <div class="qty-stepper">
+                <button class="qty-btn minus" (click)="decrease(cv, item)" [disabled]="inFlight[item.itemId]">−</button>
+                <span class="qty-value">{{ item.quantity }}</span>
+                <button class="qty-btn plus"  (click)="increase(cv, item)" [disabled]="inFlight[item.itemId]">+</button>
+              </div>
+              <span class="item-subtotal">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
+            </div>
           </div>
 
-          <!-- Discount row (only when coupon valid) -->
-          <div class="summary-row discount-row" *ngIf="couponApplied && discountAmount > 0">
-            <span>🎉 Discount ({{ couponCode.toUpperCase() }})</span>
-            <span class="discount-value">−₹{{ discountAmount | number:'1.0-0' }}</span>
-          </div>
-
-          <div class="summary-row">
-            <span>Delivery</span>
-            <span class="free-tag">FREE</span>
-          </div>
-          <div class="summary-divider"></div>
-          <div class="summary-row total-row">
-            <span>Total</span>
-            <span>₹{{ finalTotal | number:'1.0-0' }}</span>
-          </div>
-          <div class="savings-chip" *ngIf="discountAmount > 0">
-            💰 You save ₹{{ discountAmount | number:'1.0-0' }} on this order!
-          </div>
         </div>
 
-        <!-- Place Order -->
-        <button
-          class="btn-checkout"
-          (click)="placeOrder()"
-          [disabled]="loading || cartItems.length === 0">
-          {{ loading ? '⏳ Processing…' : '🚀 Place Order' }}
-        </button>
+        <!-- RIGHT: SUMMARY + COUPON -->
+        <div class="summary-column">
 
-        <!-- Continue Shopping -->
-        <button class="btn-continue" (click)="goHome()">
-          ← Continue Shopping
-        </button>
+          <!-- Coupon -->
+          <div class="coupon-section">
+            <p class="summary-title" style="font-size:14px;margin-bottom:12px;">🎟 Coupon Code</p>
+            <div class="coupon-input-row">
+              <input class="coupon-input"
+                     [(ngModel)]="cv.couponCode"
+                     (ngModelChange)="onCouponChange(cv)"
+                     placeholder="e.g. FLAT100"
+                     [class.coupon-valid]="cv.couponApplied"
+                     [disabled]="cv.couponApplied">
+              <button class="coupon-btn" *ngIf="!cv.couponApplied" (click)="applyCoupon(cv)">Apply</button>
+              <button class="coupon-btn" *ngIf="cv.couponApplied" (click)="removeCoupon(cv)"
+                      style="background:rgba(239,68,68,0.15);color:#FCA5A5;">✕</button>
+            </div>
+            <p class="coupon-msg coupon-success" *ngIf="cv.couponApplied">✅ {{ cv.couponMessage }}</p>
+            <p class="coupon-msg coupon-fail"    *ngIf="cv.couponError">{{ cv.couponError }}</p>
+          </div>
+
+          <!-- Summary card -->
+          <div class="summary-card">
+            <h2 class="summary-title">🧾 Order Summary</h2>
+            <div class="summary-lines">
+              <div class="summary-row">
+                <span>Subtotal ({{ itemCountOf(cv) }} items)</span>
+                <span>₹{{ subtotalOf(cv) | number:'1.0-0' }}</span>
+              </div>
+              <div class="summary-row discount-row" *ngIf="cv.couponApplied">
+                <span>Discount</span>
+                <span class="discount-value">− ₹{{ cv.discountAmount | number:'1.0-0' }}</span>
+              </div>
+              <hr class="summary-divider">
+              <div class="summary-row total-row">
+                <span>Total</span>
+                <span>₹{{ finalTotalOf(cv) | number:'1.0-0' }}</span>
+              </div>
+            </div>
+
+            <button class="btn-checkout"
+                    [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading"
+                    (click)="placeSingleOrder(cv)">
+              <ng-container *ngIf="cv.orderPlaced">✅ Order Placed!</ng-container>
+              <ng-container *ngIf="!cv.orderPlaced">{{ cv.loading ? 'Placing Order…' : '🚀 Place This Order' }}</ng-container>
+            </button>
+
+            <button class="btn-continue" (click)="goHome()">+ Add from another restaurant</button>
+          </div>
+
+        </div>
       </div>
-    </div>
+    </ng-container>
 
   </div>
+
 </div>

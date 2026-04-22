@@ -10,8 +10,6 @@ import { AppRoutingModule } from './app-routing.module';
 import { LandingComponent } from './auth/landing/landing.component';
 import { AuthComponent } from './auth/auth/auth.component';
 
-// SHARED
-import { NavbarComponent } from './shared/navbar/navbar.component';
 
 // CUSTOMER
 import { CustomerHomeComponent } from './customer/customer-home/customer-home.component';
@@ -32,18 +30,16 @@ import { OrdersComponent } from './RestaurantOwner/orders/orders.component';
 import { ProfileComponent } from './RestaurantOwner/profile/profile.component';
 import { OwnerDashboardComponent } from './RestaurantOwner/owner-dashboard/owner-dashboard.component';
 
-// DELIVERY
-import { DeliveryDashboardComponent } from './delivery/delivery-dashboard/delivery-dashboard.component';
 
 // AGENT
 import { AgentDashboardComponent } from './agent/agent-dashboard/agent-dashboard.component';
+import { AgentProfileComponent }   from './agent/agent-profile/agent-profile.component';
 
 @NgModule({
   declarations: [
     AppComponent,
     LandingComponent,
     AuthComponent,
-    NavbarComponent,
     CustomerHomeComponent,
     CustomerCartComponent,
     CustomerOrdersComponent,
@@ -59,8 +55,8 @@ import { AgentDashboardComponent } from './agent/agent-dashboard/agent-dashboard
     OrdersComponent,
     ProfileComponent,
     OwnerDashboardComponent,
-    DeliveryDashboardComponent,
-    AgentDashboardComponent
+    AgentDashboardComponent,
+    AgentProfileComponent
   ],
   imports: [
     BrowserModule,

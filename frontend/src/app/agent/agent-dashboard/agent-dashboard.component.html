@@ -8,6 +8,7 @@
     </div>
     <div class="nav-right">
       <span class="agent-name" *ngIf="agent">{{ agent.username }}</span>
+      <button class="btn-profile" id="btn-profile" (click)="goProfile()">👤 Profile</button>
       <button class="btn-logout" id="btn-logout" (click)="logout()">Logout</button>
     </div>
   </nav>
@@ -19,6 +20,29 @@
   <div class="page-intro">
     <h2>Welcome, {{ agent?.username }}! 👋</h2>
     <p>Manage your deliveries below.</p>
+  </div>
+
+  <!-- ── Earnings Stats Bar ── -->
+  <div class="earnings-bar">
+    <div class="earning-stat">
+      <span class="earning-label">💰 Today's Earnings</span>
+      <span class="earning-value lime">₹{{ todayEarnings | number:'1.0-0' }}</span>
+    </div>
+    <div class="earning-stat">
+      <span class="earning-label">🛵 Today's Deliveries</span>
+      <span class="earning-value">{{ todayDeliveries }}</span>
+    </div>
+    <div class="earning-stat">
+      <span class="earning-label">🏦 Total Earnings</span>
+      <span class="earning-value lime">₹{{ totalEarnings | number:'1.0-0' }}</span>
+    </div>
+    <div class="earning-stat">
+      <span class="earning-label">📦 Total Deliveries</span>
+      <span class="earning-value">{{ totalDeliveries }}</span>
+    </div>
+    <div class="earning-rate-note">
+      ₹30 flat + 5% of order value per delivery
+    </div>
   </div>
 
   <!-- ── Tab bar ── -->
@@ -47,6 +71,17 @@
   ════════════════════════════════════════ -->
   <div *ngIf="!loading && activeTab==='available'" class="orders-grid">
 
+    <!-- City filter info bar -->
+    <div class="city-info-bar" *ngIf="agentCities.length > 0">
+      <span class="ci-icon">🏙️</span>
+      <span>Showing orders in: <strong>{{ agentCities.join(', ') }}</strong></span>
+      <a class="ci-link" (click)="goProfile()" id="lnk-manage-cities">Manage cities →</a>
+    </div>
+    <div class="city-info-bar city-info-all" *ngIf="agentCities.length === 0">
+      <span class="ci-icon">🌐</span>
+      <span>Showing orders from <strong>all cities</strong>. <a class="ci-link" (click)="goProfile()" id="lnk-add-cities">Add your cities →</a></span>
+    </div>
+
     <div *ngIf="availableOrders.length===0" class="empty-state">
       <p>😕 No orders available right now. Check back shortly!</p>
     </div>
@@ -61,9 +96,9 @@
         <span class="amount">₹{{ order.totalAmount | number:'1.0-0' }}</span>
       </div>
 
-      <div class="info-row" *ngIf="order.restaurantId">
+      <div class="info-row" *ngIf="order.restaurantName || order.restaurantId">
         <span class="info-icon">🏪</span>
-        <span>{{ order.restaurantId }}</span>
+        <span>{{ order.restaurantName || order.restaurantId }}</span>
       </div>
 
       <div class="info-row" *ngIf="order.deliveryAddress">
@@ -84,6 +119,11 @@
       <div class="info-row">
         <span class="info-icon">🍽</span>
         <span class="item-list">{{ itemList(order) }}</span>
+      </div>
+
+      <div class="info-row earn-preview">
+        <span class="info-icon">💵</span>
+        <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
       </div>
 
       <div class="card-actions">
@@ -138,6 +178,11 @@
         <span class="item-list">{{ itemList(order) }}</span>
       </div>
 
+      <div class="info-row earn-preview">
+        <span class="info-icon">💵</span>
+        <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
+      </div>
+
       <!-- ── Progress stepper ── -->
       <div class="stepper">
         <div *ngFor="let step of steps"
@@ -187,7 +232,7 @@
 
       <!-- Delivered confirmation -->
       <div *ngIf="order.status==='delivered'" class="delivered-banner">
-        🎉 Delivered Successfully!
+        🎉 Delivered! You earned <strong>₹{{ calcEarning(order) }}</strong>
       </div>
 
     </div>

@@ -84,8 +84,16 @@ const addMenuItem = async (req, res) => {
 // PUT /api/menu/:id
 const updateMenuItem = async (req, res) => {
   try {
-    const existing = await Menu.findOne({ menuId: req.params.id });
+    const existing = await Menu.findOne({ menuId: req.params.id }).lean();
     if (!existing) return res.status(404).json({ success: false, message: 'Menu item not found' });
+
+    // Ownership check: only the restaurant's owner can edit items
+    if (req.user) {
+      const restaurant = await Restaurant.findOne({ restaurantId: existing.restaurantId }).lean();
+      if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+      if (restaurant.ownerId !== req.user.id)
+        return res.status(403).json({ success: false, message: 'You can only edit menu items for your own restaurant' });
+    }
 
     const { itemName, price, description, isVeg, category, isAvailable } = req.body;
     const updates = {};
@@ -108,8 +116,18 @@ const updateMenuItem = async (req, res) => {
 // DELETE /api/menu/:id
 const deleteMenuItem = async (req, res) => {
   try {
-    const item = await Menu.findOneAndDelete({ menuId: req.params.id });
+    const item = await Menu.findOne({ menuId: req.params.id }).lean();
     if (!item) return res.status(404).json({ success: false, message: 'Menu item not found' });
+
+    // Ownership check: only the restaurant's owner can delete items
+    if (req.user) {
+      const restaurant = await Restaurant.findOne({ restaurantId: item.restaurantId }).lean();
+      if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
+      if (restaurant.ownerId !== req.user.id)
+        return res.status(403).json({ success: false, message: 'You can only delete menu items for your own restaurant' });
+    }
+
+    await Menu.findOneAndDelete({ menuId: req.params.id });
     res.json({ success: true, message: 'Menu item deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

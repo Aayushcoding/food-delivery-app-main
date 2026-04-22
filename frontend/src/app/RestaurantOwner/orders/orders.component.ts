@@ -20,9 +20,9 @@ export class OrdersComponent implements OnInit, OnDestroy {
   private toastTimer: any;
   private pollTimer:  any;
 
-  // Owner can ONLY set these statuses — agent controls the rest
-  readonly statuses      = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
-  readonly agentStatuses = ['picked_up', 'on_the_way', 'arriving', 'delivered'];
+  // Owner can ONLY set these statuses — out_for_delivery and beyond are agent-controlled
+  readonly statuses      = ['pending', 'confirmed', 'preparing', 'cancelled'];
+  readonly agentStatuses = ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving', 'delivered'];
 
   constructor(
     private authService: AuthService,

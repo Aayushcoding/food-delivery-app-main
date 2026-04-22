@@ -125,9 +125,14 @@ export class AuthComponent implements OnInit {
     if (!/^\d{10}$/.test(this.phoneNo.trim())) {
       this.errorMessage = 'Phone must be exactly 10 digits.'; return;
     }
-    // City required for Customer and DeliveryAgent
-    if (this.role !== 'Owner' && !this.city.trim()) {
-      this.errorMessage = 'City is required.'; return;
+    // Address required for Customer and DeliveryAgent
+    if (this.role !== 'Owner') {
+      if (!this.street.trim())  { this.errorMessage = 'Street / Area is required.'; return; }
+      if (!this.city.trim())    { this.errorMessage = 'City is required.'; return; }
+      if (!this.pincode.trim()) { this.errorMessage = 'Pincode is required.'; return; }
+      if (!/^\d{6}$/.test(this.pincode.trim())) {
+        this.errorMessage = 'Pincode must be exactly 6 digits.'; return;
+      }
     }
 
     const payload: any = {
@@ -138,8 +143,8 @@ export class AuthComponent implements OnInit {
       role:     this.role
     };
 
-    // Include addresses for Customer & DeliveryAgent
-    if (this.role !== 'Owner' && (this.street.trim() || this.city.trim())) {
+    // Always include address for Customer & DeliveryAgent
+    if (this.role !== 'Owner') {
       payload.addresses = [{
         street:  this.street.trim(),
         city:    this.city.trim().toLowerCase(),

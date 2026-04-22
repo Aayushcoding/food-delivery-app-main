@@ -346,16 +346,38 @@ const updateOrderStatusByAgent = async (req, res) => {
 const getAvailableOrdersForAgentRoute = async (req, res) => {
   try {
     await releaseExpiredAssignments();
-    const orders = await Order.find({
-      status:          'out_for_delivery',
-      deliveryAgentId: null
-    }).sort({ createdAt: -1 }).lean();
 
-    console.log(`[available-orders] Agent: ${req.agent?.id} | Query: {status:"out_for_delivery", deliveryAgentId:null} | Results: ${orders.length}`);
-    orders.forEach(o => console.log(`  → Order ${o.id} | status: ${o.status} | agentId: ${o.deliveryAgentId}`));
+    // Fetch agent's city list from User collection (agents registered via /api/auth)
+    let agentCities = [];
+    const agentUser = await User.findOne({ id: req.agent.id }).lean();
+    if (agentUser && Array.isArray(agentUser.cities) && agentUser.cities.length > 0) {
+      agentCities = agentUser.cities.map(c => c.toLowerCase().trim());
+    }
 
-    const clean = orders.map(({ _id, __v, ...o }) => o);
-    res.json({ success: true, data: clean });
+    let query = { status: 'out_for_delivery', deliveryAgentId: null };
+
+    // If agent has cities set, filter orders whose deliveryAddress.city matches
+    if (agentCities.length > 0) {
+      query['deliveryAddress.city'] = { $in: agentCities };
+    }
+
+    const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
+
+    // Enrich each order with restaurantName
+    const enriched = await Promise.all(orders.map(async (order) => {
+      const { _id, __v, ...o } = order;
+      let restaurantName = o.restaurantId || 'Unknown Restaurant';
+      if (o.restaurantId) {
+        const rest = await Restaurant.findOne({ restaurantId: o.restaurantId }).lean();
+        if (rest?.restaurantName) restaurantName = rest.restaurantName;
+      }
+      return { ...o, restaurantName };
+    }));
+
+    console.log(`[available-orders] Agent: ${req.agent?.id} | Cities: [${agentCities.join(', ') || 'ALL'}] | Results: ${enriched.length}`);
+    enriched.forEach(o => console.log(`  → Order ${o.id} | restaurant: ${o.restaurantName} | city: ${o.deliveryAddress?.city}`));
+
+    res.json({ success: true, data: enriched, agentCities });
   } catch (error) {
     console.error('[getAvailableOrdersForAgentRoute]', error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -395,51 +417,60 @@ const acceptOrderByAgent = async (req, res) => {
     const { orderId } = req.params;
     const agentId    = req.agent.id;
 
-    console.log(`[acceptOrder] Agent: ${agentId} trying to accept order: ${orderId}`);
+    console.log(`[acceptOrder] Agent: ${agentId} → Order: ${orderId}`);
 
     // Auto-release any expired assignments first
     await releaseExpiredAssignments();
 
-    const order = await Order.findOne({ id: orderId });
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
-    }
-
-    console.log(`[acceptOrder] Order ${orderId} | status: ${order.status} | agentId: ${order.deliveryAgentId}`);
-
-    if (order.status !== 'out_for_delivery') {
-      return res.status(400).json({
-        success: false,
-        message: `Order is not available for pickup (status: ${order.status})`
-      });
-    }
-    if (order.deliveryAgentId) {
+    // Busy-check: agent must not already have an active delivery
+    const activeDelivery = await Order.findOne({
+      deliveryAgentId: agentId,
+      status: { $in: ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving'] }
+    }).lean();
+    if (activeDelivery) {
       return res.status(409).json({
         success: false,
-        message: 'Order has already been accepted by another agent'
+        message: `You already have an active delivery (Order #${activeDelivery.id}). Complete it before accepting a new one.`
       });
     }
 
+    // ─────────────────────────────────────────────────────────────
+    // ATOMIC ASSIGNMENT — the condition { deliveryAgentId: null }
+    // guarantees no two agents can accept the same order.
+    // If another agent snuck in between the busy-check and here,
+    // findOneAndUpdate returns null and we return 409.
+    // ─────────────────────────────────────────────────────────────
     const now = new Date();
     const updated = await Order.findOneAndUpdate(
-      { id: orderId },
+      {
+        id:              orderId,
+        status:          'out_for_delivery',   // must still be waiting
+        deliveryAgentId: null                  // must be unassigned
+      },
       {
         deliveryAgentId:    agentId,
         acceptedAt:         now.toISOString(),
         deliveryAcceptedAt: now,
-        status:             'picked_up'           // per spec: accept → immediately picked_up
+        status:             'picked_up'
       },
       { new: true }
     ).lean();
 
-    // Mark agent busy (only applies to legacy DeliveryAgent collection)
+    if (!updated) {
+      // Either order not found, wrong status, or already taken — all handled
+      const existing = await Order.findOne({ id: orderId }).lean();
+      if (!existing)                  return res.status(404).json({ success: false, message: 'Order not found' });
+      if (existing.deliveryAgentId)   return res.status(409).json({ success: false, message: 'Order already accepted by another agent' });
+      return res.status(400).json({ success: false, message: `Order is not available for pickup (status: ${existing.status})` });
+    }
+
+    // Mark legacy DeliveryAgent collection busy (non-critical, best-effort)
     await DeliveryAgent.findOneAndUpdate(
       { id: agentId },
       { isAvailable: false, currentOrderId: orderId }
-    );
+    ).catch(() => {});
 
-    console.log(`[acceptOrder] ✅ Order ${orderId} accepted by agent ${agentId} → status: picked_up`);
-
+    console.log(`[acceptOrder] ✅ Order ${orderId} accepted by ${agentId} → picked_up`);
     const { _id, __v, ...clean } = updated;
     res.json({ success: true, message: 'Order accepted and picked up!', data: clean });
   } catch (error) {
@@ -448,24 +479,22 @@ const acceptOrderByAgent = async (req, res) => {
   }
 };
 
-/**
- * POST /api/agent/update-status/:orderId
- * Agent advances the delivery status:
- *   picked_up → on_the_way → arriving → delivered
- * Body: { status }
- */
+// AGENT STATUS TRANSITION MAP
+// Each state only has ONE legal next state — no skipping allowed.
+const AGENT_TRANSITIONS = {
+  picked_up:  ['on_the_way'],
+  on_the_way: ['arriving'],
+  arriving:   ['delivered']
+};
+
 const updateStatusByAgent = async (req, res) => {
   try {
     const { orderId } = req.params;
     const agentId    = req.agent.id;
     const { status } = req.body;
 
-    const allowedStatuses = ['on_the_way', 'arriving', 'delivered'];
-    if (!status || !allowedStatuses.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Status must be one of: ${allowedStatuses.join(', ')}`
-      });
+    if (!status) {
+      return res.status(400).json({ success: false, message: 'status is required' });
     }
 
     const order = await Order.findOne({ id: orderId }).lean();
@@ -476,20 +505,41 @@ const updateStatusByAgent = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You are not assigned to this order' });
     }
 
+    // Enforce strict one-step transition
+    const allowed = AGENT_TRANSITIONS[order.status];
+    if (!allowed || !allowed.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid status change: '${order.status}' → '${status}'. Allowed: ${allowed ? allowed.join(', ') : 'none'}`
+      });
+    }
+
     const patch = { status };
     if (status === 'delivered') patch.deliveredAt = new Date();
 
     const updated = await Order.findOneAndUpdate({ id: orderId }, patch, { new: true }).lean();
 
-    // Revenue accumulation + free agent on delivery
+    // Revenue accumulation + agent earnings + free agent on delivery
     if (status === 'delivered') {
       const orderAmount = updated.finalAmount > 0 ? updated.finalAmount : updated.totalAmount;
+
+      // 1. Add to restaurant revenue
       if (updated.restaurantId) {
         await Restaurant.findOneAndUpdate(
           { restaurantId: updated.restaurantId },
           { $inc: { totalRevenue: orderAmount } }
         );
       }
+
+      // 2. Credit agent's earnings: flat ₹30 + 5% of order value (rounded)
+      const agentCut = Math.round(30 + orderAmount * 0.05);
+      await User.findOneAndUpdate(
+        { id: agentId },
+        { $inc: { totalEarnings: agentCut, totalDeliveries: 1 } }
+      );
+      console.log(`[earnings] Agent ${agentId} earned ₹${agentCut} for order ${orderId}`);
+
+      // 3. Free agent for next delivery
       await DeliveryAgent.findOneAndUpdate(
         { id: agentId },
         { isAvailable: true, currentOrderId: null }
@@ -528,6 +578,55 @@ const debugMakeAvailable = async (req, res) => {
     res.json({ success: true, message: `Order ${orderId} is now out_for_delivery and visible to agents`, data: clean });
   } catch (error) {
     console.error('[debugMakeAvailable]', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * GET /api/agent/profile
+ * Returns the authenticated agent's profile (from User collection).
+ */
+const getAgentProfile = async (req, res) => {
+  try {
+    const agentId = req.agent.id;
+    const user = await User.findOne({ id: agentId }).lean();
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Agent profile not found' });
+    }
+    const { password, _id, ...safe } = user;
+    res.json({ success: true, data: safe });
+  } catch (error) {
+    console.error('[getAgentProfile]', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+/**
+ * PUT /api/agent/profile
+ * Updates the authenticated agent's profile fields: username, phoneNo, cities.
+ * cities: array of city strings (lowercase normalized).
+ */
+const updateAgentProfile = async (req, res) => {
+  try {
+    const agentId = req.agent.id;
+    const { username, phoneNo, cities } = req.body;
+
+    const updates = {};
+    if (username !== undefined) updates.username = username.trim();
+    if (phoneNo  !== undefined) updates.phoneNo  = String(phoneNo).trim();
+    if (cities   !== undefined) {
+      updates.cities = Array.isArray(cities)
+        ? [...new Set(cities.map(c => c.toLowerCase().trim()).filter(Boolean))]
+        : [];
+    }
+
+    const updated = await User.findOneAndUpdate({ id: agentId }, updates, { new: true }).lean();
+    if (!updated) return res.status(404).json({ success: false, message: 'Agent not found' });
+
+    const { password, _id, ...safe } = updated;
+    res.json({ success: true, message: 'Profile updated', data: safe });
+  } catch (error) {
+    console.error('[updateAgentProfile]', error.message);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -593,6 +692,57 @@ module.exports = {
   getMyDeliveryHistory,
   acceptOrderByAgent,
   updateStatusByAgent,
+  getAgentProfile,
+  updateAgentProfile,
+  getAgentEarnings,
   // debug (temp — remove in production)
   debugMakeAvailable
 };
+
+/**
+ * GET /api/agent/earnings
+ * Returns the authenticated agent's total earnings, total deliveries,
+ * today's earnings, and today's delivery count.
+ */
+async function getAgentEarnings(req, res) {
+  try {
+    const agentId = req.agent.id;
+
+    // ── Fetch the agent's cumulative earnings from User record ────────────────
+    const agent = await User.findOne({ id: agentId }).lean();
+    if (!agent) return res.status(404).json({ success: false, message: 'Agent not found' });
+
+    const totalEarnings   = agent.totalEarnings   || 0;
+    const totalDeliveries = agent.totalDeliveries || 0;
+
+    // ── Today's earnings from completed orders ─────────────────────────────────
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const todayOrders = await Order.find({
+      deliveryAgentId: agentId,
+      status:          'delivered',
+      deliveredAt:     { $gte: startOfDay }
+    }).lean();
+
+    const todayDeliveries = todayOrders.length;
+    const todayEarnings   = todayOrders.reduce((sum, o) => {
+      const amt = o.finalAmount > 0 ? o.finalAmount : o.totalAmount;
+      return sum + Math.round(30 + amt * 0.05);
+    }, 0);
+
+    res.json({
+      success: true,
+      data: {
+        totalEarnings,
+        totalDeliveries,
+        todayEarnings,
+        todayDeliveries,
+        earningRate: '₹30 flat + 5% of order value per delivery'
+      }
+    });
+  } catch (error) {
+    console.error('[getAgentEarnings]', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}

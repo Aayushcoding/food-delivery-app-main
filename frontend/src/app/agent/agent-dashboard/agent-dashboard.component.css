@@ -119,6 +119,66 @@
   margin: 0 auto;
 }
 
+/* ── Earnings bar ────────────────────────────────────────────── */
+.earnings-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  max-width: 960px;
+  margin: 14px auto 0;
+  background: #141720;
+  border-radius: 16px;
+  border: 1px solid rgba(163,230,53,0.18);
+  overflow: hidden;
+  position: relative;
+}
+
+.earning-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 16px;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  gap: 6px;
+}
+.earning-stat:last-of-type { border-right: none; }
+
+.earning-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.earning-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #F1F5F9;
+  line-height: 1;
+}
+.earning-value.lime {
+  color: #A3E635;
+  text-shadow: 0 0 20px rgba(163,230,53,0.35);
+}
+
+.earning-rate-note {
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 11px;
+  color: #64748B;
+  padding: 8px 0 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+@media (max-width: 600px) {
+  .earnings-bar { grid-template-columns: 1fr 1fr; }
+  .earning-stat:nth-child(2) { border-right: none; }
+}
+
 .page-intro h2 {
   font-size: 22px;
   font-weight: 700;
@@ -566,3 +626,68 @@
 .history-card { border-color: rgba(104,211,145,0.15); }
 .history-card:hover { border-color: rgba(104,211,145,0.3); }
 .history-date-row { color:#718096; font-style:italic; font-size:12px; }
+
+/* == PROFILE NAV BUTTON == */
+.btn-profile {
+  padding: 8px 16px;
+  background: rgba(255,107,53,0.08);
+  border: 1px solid rgba(255,107,53,0.25);
+  color: #ff6b35;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-profile:hover { background: rgba(255,107,53,0.15); transform: translateY(-1px); }
+
+/* == CITY INFO BAR == */
+.city-info-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(255,107,53,0.06);
+  border: 1px solid rgba(255,107,53,0.2);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #a0aec0;
+  flex-wrap: wrap;
+}
+.city-info-bar.city-info-all {
+  background: rgba(255,255,255,0.03);
+  border-color: #2d3158;
+}
+.ci-icon { font-size: 16px; flex-shrink: 0; }
+.ci-link {
+  margin-left: auto;
+  color: #ff6b35;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ci-link:hover { text-decoration: underline; }
+
+/* == EARNING PREVIEW ROW == */
+.earn-preview {
+  background: rgba(163,230,53,0.06);
+  border: 1px solid rgba(163,230,53,0.18);
+  border-radius: 8px;
+  padding: 8px 12px !important;
+  margin-top: 4px;
+  font-size: 13px;
+  color: #94A3B8;
+}
+.earn-amount {
+  color: #A3E635;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'Syne', sans-serif;
+}
+
+/* == CITY INFO BAR — updated to lime theme == */
+.city-info-bar { border-color: rgba(163,230,53,0.2); background: rgba(163,230,53,0.05); }
+.ci-link { color: #A3E635; }

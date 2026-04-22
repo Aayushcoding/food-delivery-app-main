@@ -72,23 +72,26 @@ export class CustomerMenuComponent implements OnInit {
     });
   }
 
-  // Load existing cart to know current quantities per item
+  // Load existing cart for THIS restaurant to know current quantities per item
   loadCart(): void {
     const user = this.authService.getUser();
-    if (!user) return;
-    this.customerService.getCart(user.id).subscribe({
+    if (!user || !this.restaurantId) return;
+    this.customerService.getCartByRestaurant(user.id, this.restaurantId).subscribe({
       next: (res) => {
         if (res.success && res.data) {
           this.cartId = res.data.id;
           const quantities: { [menuId: string]: number } = {};
           (res.data.items || []).forEach((item: any) => {
-            // itemId in cart === menuId in menu — store under both just to be safe
             if (item.itemId) quantities[item.itemId] = item.quantity;
           });
-          this.cartQuantities = { ...quantities }; // new object → triggers change detection
+          this.cartQuantities = { ...quantities };
+        } else {
+          // No cart for this restaurant yet — that's fine
+          this.cartId = '';
+          this.cartQuantities = {};
         }
       },
-      error: () => {} // 404 = no cart yet, fine
+      error: () => {} // silent
     });
   }
 
@@ -103,7 +106,11 @@ export class CustomerMenuComponent implements OnInit {
 
   increase(item: any): void {
     const user = this.authService.getUser();
-    if (!user) { this.router.navigate(['/login']); return; }
+    if (!user) {
+      this.showToast('⚠ Please login to add items to cart.', true);
+      setTimeout(() => this.router.navigate(['/auth']), 1500);
+      return;
+    }
     if (this.inFlight[item.menuId]) return;
 
     const currentQty = this.qtyOf(item.menuId);
@@ -125,7 +132,13 @@ export class CustomerMenuComponent implements OnInit {
         },
         error: (err) => {
           this.inFlight = { ...this.inFlight, [item.menuId]: false };
-          this.showToast(err?.error?.message || 'Error adding item.', true);
+          const msg = err?.error?.message || 'Error adding item.';
+          // Friendlier message for cross-restaurant conflict
+          if (msg.toLowerCase().includes('another restaurant')) {
+            this.showToast('🛒 Clear your cart first — it has items from another restaurant.', true);
+          } else {
+            this.showToast(msg, true);
+          }
         }
       });
     } else {

@@ -49,25 +49,27 @@
 
 .hero-badge {
   display: inline-block;
-  background: linear-gradient(90deg, #ff6a00, #ee0979);
+  background: linear-gradient(90deg, #A3E635, #4ade80);
+  color: #0D0F14;
   padding: 6px 20px;
   border-radius: 30px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.5px;
   margin-bottom: 24px;
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 106, 0, 0.4); }
-  50% { box-shadow: 0 0 0 10px rgba(255, 106, 0, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(163,230,53,0.5); }
+  50% { box-shadow: 0 0 0 10px rgba(163,230,53,0); }
 }
 
 .brand {
+  font-family: 'Syne', sans-serif;
   font-size: clamp(52px, 8vw, 88px);
   font-weight: 800;
-  background: linear-gradient(135deg, #ff6a00, #ffb347, #ff6a00);
+  background: linear-gradient(135deg, #A3E635, #4ade80, #A3E635);
   background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -162,12 +164,12 @@
 
 /* Customer — orange */
 .customer-card {
-  background: linear-gradient(145deg, rgba(255,106,0,0.15), rgba(255,106,0,0.05));
+  background: linear-gradient(145deg, rgba(163,230,53,0.12), rgba(163,230,53,0.04));
   animation-delay: 0.1s;
 }
-.customer-card:hover { box-shadow: 0 20px 60px rgba(255,106,0,0.3); border-color: rgba(255,106,0,0.4); }
-.customer-card .card-glow { background: radial-gradient(circle, #ff6a00, transparent); }
-.customer-card .card-btn { background: linear-gradient(90deg, #ff6a00, #ffb347); }
+.customer-card:hover { box-shadow: 0 20px 60px rgba(163,230,53,0.25); border-color: rgba(163,230,53,0.4); }
+.customer-card .card-glow { background: radial-gradient(circle, #A3E635, transparent); }
+.customer-card .card-btn { background: linear-gradient(90deg, #A3E635, #4ade80); color: #0D0F14; }
 
 /* Owner — purple */
 .owner-card {
@@ -268,7 +270,7 @@
 .stat-num {
   font-size: 28px;
   font-weight: 800;
-  background: linear-gradient(90deg, #ff6a00, #ffb347);
+  background: linear-gradient(90deg, #A3E635, #4ade80);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

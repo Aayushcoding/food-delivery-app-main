@@ -74,8 +74,29 @@ export class CustomerService {
   }
 
   // ── CART ───────────────────────────────────────────────────────────
-  getCart(userId: string): Observable<any> {
+  /** Returns ALL carts for a user (one per restaurant) */
+  getCartsByUser(userId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/cart/user/${userId}`, { headers: this.authService.getAuthHeaders() });
+  }
+
+  /** Legacy alias — kept for backward compat (returns first cart or null) */
+  getCart(userId: string): Observable<any> {
+    return this.getCartsByUser(userId);
+  }
+
+  /** Returns the specific cart for a user + restaurant (from the all-carts array) */
+  getCartByRestaurant(userId: string, restaurantId: string): Observable<any> {
+    return new Observable((obs) => {
+      this.getCartsByUser(userId).subscribe({
+        next: (res: any) => {
+          const all: any[] = Array.isArray(res.data) ? res.data : [];
+          const match = all.find((c: any) => c.restaurantId === restaurantId) || null;
+          obs.next({ success: true, data: match });
+          obs.complete();
+        },
+        error: (e: any) => obs.error(e)
+      });
+    });
   }
 
   // Price is NEVER sent — backend always uses DB price for security

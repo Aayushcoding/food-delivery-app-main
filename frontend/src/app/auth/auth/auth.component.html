@@ -109,12 +109,13 @@
         <div class="addr-section-label">📍 Your Address</div>
 
         <div class="field-group">
-          <label for="auth-street">Street / Area <span class="optional">(optional)</span></label>
+          <label for="auth-street">Street / Area</label>
           <input id="auth-street"
                  type="text"
                  [(ngModel)]="street"
                  name="street"
-                 placeholder="e.g. FC Road, Deccan">
+                 placeholder="e.g. FC Road, Deccan"
+                 required>
         </div>
 
         <div class="addr-row">
@@ -127,13 +128,14 @@
                    placeholder="e.g. Pune" required>
           </div>
           <div class="field-group">
-            <label for="auth-pincode">Pincode <span class="optional">(optional)</span></label>
+            <label for="auth-pincode">Pincode</label>
             <input id="auth-pincode"
                    type="text"
                    [(ngModel)]="pincode"
                    name="pincode"
                    placeholder="411001"
-                   maxlength="6">
+                   maxlength="6"
+                   required>
           </div>
         </div>
       </ng-container>

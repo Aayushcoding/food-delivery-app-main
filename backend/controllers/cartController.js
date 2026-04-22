@@ -31,18 +31,18 @@ const getCart = async (req, res) => {
   }
 };
 
-// GET CART BY USER
+// GET ALL CARTS FOR A USER (returns array — supports multiple restaurant carts)
 const getCartByUser = async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.params.userId }).sort({ createdAt: -1 }).lean();
-    if (!cart) return res.status(404).json({ success: false, message: 'Cart not found' });
-    res.json({ success: true, data: cart });
+    const carts = await Cart.find({ userId: req.params.userId }).lean();
+    // Return all carts; empty array is fine (not a 404)
+    res.json({ success: true, data: carts });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// ADD ITEM TO CART
+// ADD ITEM TO CART (one cart per restaurant per user)
 const addItemToCart = async (req, res) => {
   try {
     const { userId, itemId, quantity } = req.body;
@@ -67,7 +67,9 @@ const addItemToCart = async (req, res) => {
     }
 
     const restaurantId = menuItem.restaurantId;
-    let cart = await Cart.findOne({ userId }).sort({ createdAt: -1 });
+
+    // ── Find or create a cart for THIS user + THIS restaurant ──────────
+    let cart = await Cart.findOne({ userId, restaurantId });
 
     if (!cart) {
       cart = new Cart({
@@ -79,12 +81,8 @@ const addItemToCart = async (req, res) => {
         createdAt:    new Date().toISOString(),
         updatedAt:    new Date().toISOString()
       });
-    } else if (cart.restaurantId !== restaurantId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Your cart has items from another restaurant. Clear your cart first.'
-      });
     }
+    // No cross-restaurant block — each restaurant has its own cart now.
 
     const existingIndex = cart.items.findIndex(i => i.itemId === itemId);
     if (existingIndex !== -1) {

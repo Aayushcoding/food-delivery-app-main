@@ -54,17 +54,29 @@
               # {{ order.id }} &nbsp;·&nbsp; {{ order.createdAt | date:'MMM d, y, h:mm a' }}
             </div>
           </div>
-          <span class="status-badge" [class]="order.status || 'default'">
-            {{ order.status || 'pending' }}
+          <!-- Status badge: special label when searching for agent -->
+          <span class="status-badge"
+                [class]="isSearching(order) ? 'searching' : (order.status || 'default')">
+            {{ isSearching(order) ? '🔍 Searching...' : (order.status || 'pending') }}
           </span>
         </div>
 
-        <!-- ══ LIVE DELIVERY TIMELINE (shown for all delivery-phase statuses) ══ -->
-        <div *ngIf="isInDelivery(order)" class="delivery-timeline-wrap">
+        <!-- ══ SEARCHING FOR AGENT banner (out_for_delivery + no agent yet) ══ -->
+        <div *ngIf="isSearching(order)" class="searching-banner">
+          <div class="searching-pulse">🔍</div>
+          <div class="searching-text">
+            <strong>Searching for a delivery partner</strong>
+            <span>Your order is ready — we're finding the closest agent</span>
+          </div>
+          <div class="searching-dots"><span></span><span></span><span></span></div>
+        </div>
+
+        <!-- ══ LIVE DELIVERY TIMELINE (only once agent is assigned) ══ -->
+        <div *ngIf="isInDelivery(order) && !isSearching(order)" class="delivery-timeline-wrap">
 
           <!-- Banner message -->
           <div class="delivery-banner">
-            <span *ngIf="order.status === 'out_for_delivery'">🟡 Waiting for a delivery agent...</span>
+            <span *ngIf="order.status === 'out_for_delivery'">🛵 Agent is heading to the restaurant!</span>
             <span *ngIf="order.status === 'picked_up'">📦 Agent has picked up your order!</span>
             <span *ngIf="order.status === 'on_the_way'">🛵 Your order is on the way!</span>
             <span *ngIf="order.status === 'arriving'">📍 Your delivery agent is arriving!</span>

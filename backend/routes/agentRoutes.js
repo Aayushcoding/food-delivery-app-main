@@ -8,7 +8,10 @@ const {
   getMyOrders,
   getMyDeliveryHistory,
   acceptOrderByAgent,
-  updateStatusByAgent
+  updateStatusByAgent,
+  getAgentProfile,
+  updateAgentProfile,
+  getAgentEarnings
 } = require('../controllers/deliveryController');
 
 // ── GET /api/agent/available-orders ─────────────────────────────────────────
@@ -35,5 +38,17 @@ router.post('/update-status/:orderId', agentAuth, updateStatusByAgent);
 // ── GET /api/agent/history ────────────────────────────────────────────────────
 // Returns all DELIVERED orders by this agent, enriched with restaurantName & customerName.
 router.get('/history', agentAuth, getMyDeliveryHistory);
+
+// ── GET /api/agent/profile ───────────────────────────────────────────────────
+// Returns the authenticated agent's profile (username, phoneNo, email, cities).
+router.get('/profile', agentAuth, getAgentProfile);
+
+// ── PUT /api/agent/profile ───────────────────────────────────────────────────
+// Updates the authenticated agent's profile (username, phoneNo, cities).
+router.put('/profile', agentAuth, updateAgentProfile);
+
+// ── GET /api/agent/earnings ───────────────────────────────────────────────────
+// Returns total earnings, total deliveries, today's earnings & count.
+router.get('/earnings', agentAuth, getAgentEarnings);
 
 module.exports = router;

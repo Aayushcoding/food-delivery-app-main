@@ -9,13 +9,25 @@ const { getNextSequence } = require('../utils/counter');
 // CREATE ORDER
 const createOrder = async (req, res) => {
   try {
-    const { userId, addressId, deliveryAddress } = req.body;
+    const { userId, addressId, deliveryAddress, clientOrderId, restaurantId: reqRestaurantId } = req.body;
 
     if (!userId || !userId.trim()) {
       return res.status(400).json({ success: false, message: 'userId is required' });
     }
 
-    // ── Address: addressId is the preferred (required) field ──────────────────
+    // ── #1 IDEMPOTENCY: return existing order if clientOrderId already used ──────────
+    // Protects against double-tap, network retry, or accidental re-submit.
+    if (clientOrderId && clientOrderId.trim()) {
+      const duplicate = await Order.findOne({ userId, clientOrderId: clientOrderId.trim() }).lean();
+      if (duplicate) {
+        console.log(`[createOrder] Duplicate clientOrderId=${clientOrderId} — returning existing order ${duplicate.id}`);
+        return res.status(200).json({ success: true, message: 'Order already placed', data: duplicate });
+      }
+    }
+
+    // Multiple orders allowed — customers can order from different restaurants simultaneously.
+
+    // ── Address ──────────────────────────────────────────────────────────────
     if (!addressId && !deliveryAddress) {
       return res.status(400).json({ success: false, message: 'addressId is required' });
     }
@@ -66,7 +78,14 @@ const createOrder = async (req, res) => {
 
 
     // ── Cart ──────────────────────────────────────────────────────────────────
-    const cart = await Cart.findOne({ userId }).sort({ createdAt: -1 }).lean();
+    // Look up the cart for this specific restaurant (multi-cart support)
+    let cart;
+    if (reqRestaurantId) {
+      cart = await Cart.findOne({ userId, restaurantId: reqRestaurantId }).lean();
+    } else {
+      // Fallback for legacy calls without restaurantId
+      cart = await Cart.findOne({ userId }).sort({ createdAt: -1 }).lean();
+    }
     if (!cart || !cart.items || cart.items.length === 0) {
       return res.status(400).json({ success: false, message: 'Cart is empty. Add items before placing an order.' });
     }
@@ -92,6 +111,15 @@ const createOrder = async (req, res) => {
 
     const totalAmount = enrichedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
+    // Minimum order amount
+    const MIN_ORDER_AMOUNT = 49;
+    if (totalAmount < MIN_ORDER_AMOUNT) {
+      return res.status(400).json({
+        success: false,
+        message: `Minimum order amount is ₹${MIN_ORDER_AMOUNT}. Your cart total is ₹${totalAmount}.`
+      });
+    }
+
     // Resolve restaurantId: prefer cart-level field, fall back to first item's restaurantId
     const resolvedRestaurantId = cart.restaurantId || enrichedItems[0]?.restaurantId || '';
     console.log(`[createOrder] restaurantId: "${resolvedRestaurantId}"`);
@@ -102,10 +130,11 @@ const createOrder = async (req, res) => {
       restaurantId:    resolvedRestaurantId,
       items:           enrichedItems,
       totalAmount,
-      finalAmount:     totalAmount,   // always initialised — updated by apply-offer
+      finalAmount:     totalAmount,
       discountAmount:  0,
       deliveryAddress: resolvedAddress,
       status:          'pending',
+      clientOrderId:   clientOrderId?.trim() || null,   // store for future dedup checks
       createdAt:       new Date().toISOString()
     }).save();
 
@@ -140,13 +169,30 @@ const getUserOrders = async (req, res) => {
 };
 
 // GET SINGLE ORDER
+// Also auto-expires stale pending orders (> 5 min) on every fetch.
 const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     if (!id) return res.status(400).json({ success: false, message: 'Order ID is required' });
 
-    const order = await Order.findOne({ id }).lean();
+    let order = await Order.findOne({ id }).lean();
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    // ── #7 AUTO EXPIRY ────────────────────────────────────────────────────────
+    // If the order has been sitting in 'pending' for more than 5 minutes with no
+    // action from the restaurant, auto-cancel it so the user isn't stuck waiting.
+    const PENDING_EXPIRY_MS = 5 * 60 * 1000;   // 5 minutes
+    if (order.status === 'pending') {
+      const ageMs = Date.now() - new Date(order.createdAt).getTime();
+      if (ageMs > PENDING_EXPIRY_MS) {
+        order = await Order.findOneAndUpdate(
+          { id, status: 'pending' },            // guard: only if not already progressed
+          { status: 'cancelled' },
+          { new: true }
+        ).lean();
+        console.log(`[autoExpiry] Order ${id} auto-cancelled (pending > 5 min)`);
+      }
+    }
 
     return res.json({ success: true, data: order });
   } catch (error) {
@@ -180,40 +226,51 @@ const getOrdersByRestaurant = async (req, res) => {
   }
 };
 
+// STATUS TRANSITION MAP — defines every legal state progression
+// Owner controls: pending → confirmed → preparing
+// Agent controls: confirmed/preparing → out_for_delivery → picked_up → on_the_way → arriving → delivered
+const OWNER_TRANSITIONS = {
+  pending:   ['confirmed', 'cancelled'],
+  confirmed: ['preparing', 'cancelled']
+  // preparing has no owner-controlled next step — agent must accept the order
+};
+
 // UPDATE ORDER STATUS — Restaurant owner only
-// Owners can set: pending, confirmed, preparing, out_for_delivery, cancelled
-// picked_up / on_the_way / arriving / delivered are AGENT-ONLY via delivery routes
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!id) return res.status(400).json({ success: false, message: 'Order ID is required' });
-    if (!status || !status.trim()) return res.status(400).json({ success: false, message: 'Status is required' });
+    if (!id)     return res.status(400).json({ success: false, message: 'Order ID is required' });
+    if (!status) return res.status(400).json({ success: false, message: 'Status is required' });
 
-    // Restaurant can ONLY control up to out_for_delivery
-    const ownerStatuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
-    if (!ownerStatuses.includes(status)) {
-      return res.status(403).json({
+    // Fetch current order so we can validate the transition
+    const order = await Order.findOne({ id }).lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    // Enforce strict status transition
+    const allowed = OWNER_TRANSITIONS[order.status];
+    if (!allowed || !allowed.includes(status)) {
+      return res.status(400).json({
         success: false,
-        message: `Restaurants cannot set status to '${status}'. Only delivery agents can progress past out_for_delivery.`
+        message: `Invalid status change: '${order.status}' → '${status}'. Allowed: ${allowed ? allowed.join(', ') : 'none'}`
       });
     }
 
-    console.log(`[updateOrderStatus] Order: ${id} → status: ${status} (by owner)`);
+    console.log(`[updateOrderStatus] Order: ${id} | ${order.status} → ${status} (by owner)`);
 
-    const order = await Order.findOneAndUpdate({ id }, { status }, { new: true }).lean();
-    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const updated = await Order.findOneAndUpdate({ id }, { status }, { new: true }).lean();
+    console.log(`[updateOrderStatus] ✅ Order ${id} updated to '${status}'`);
 
-    console.log(`[updateOrderStatus] ✅ Order ${id} updated | status: ${order.status} | agentId: ${order.deliveryAgentId}`);
-
-    return res.json({ success: true, message: 'Order status updated', data: order });
+    return res.json({ success: true, message: 'Order status updated', data: updated });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// CANCEL ORDER — only within 5 minutes, only if pending
+// CANCEL ORDER
+// Allowed from: pending (within 5 min) OR confirmed (within 5 min)
+// Once preparing or beyond → cannot cancel
 const cancelOrder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -222,19 +279,20 @@ const cancelOrder = async (req, res) => {
     const order = await Order.findOne({ id }).lean();
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    if (order.status !== 'pending') {
+    const cancellableStatuses = ['pending', 'confirmed'];
+    if (!cancellableStatuses.includes(order.status)) {
       return res.status(400).json({
         success: false,
-        message: `Cannot cancel order with status: ${order.status}. Only pending orders can be cancelled.`
+        message: `Cannot cancel order with status '${order.status}'. Only pending or confirmed orders can be cancelled.`
       });
     }
 
-    const orderTime = new Date(order.createdAt);
-    const diffInMinutes = (Date.now() - orderTime.getTime()) / (1000 * 60);
-    if (diffInMinutes > 5) {
+    const orderTime   = new Date(order.createdAt);
+    const ageMinutes  = (Date.now() - orderTime.getTime()) / (1000 * 60);
+    if (ageMinutes > 5) {
       return res.status(400).json({
         success: false,
-        message: 'You can only cancel an order within 5 minutes of placing it.'
+        message: 'Cancellation window expired. Orders can only be cancelled within 5 minutes of placing.'
       });
     }
 

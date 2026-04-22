@@ -23,15 +23,8 @@ app.use('/api/restaurants', require('./routes/restaurantRoutes'));
 app.use('/api/menu',        require('./routes/menuRoutes'));
 app.use('/api/cart',        require('./routes/cartRoutes'));
 app.use('/api/orders',      require('./routes/orderRoutes'));
-app.use('/api/delivery',    require('./routes/deliveryRoutes'));
 app.use('/api/agent',       require('./routes/agentRoutes'));
-app.use('/api/payment',     require('./routes/paymentRoutes'));
 app.use('/api/reviews',     require('./routes/reviewRoutes'));
-
-// ── TEMP DEBUG ROUTES (remove before production) ──────────────────────────────
-const { debugMakeAvailable } = require('./controllers/deliveryController');
-app.post('/debug/make-available/:orderId', debugMakeAvailable);
-
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server running' }));

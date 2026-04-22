@@ -33,8 +33,12 @@ const userSchema = new mongoose.Schema({
   },
   password:  { type: String, required: true },
   addresses: { type: [addressSchema], default: [] },   // multiple saved addresses; each has an _id
-  role:      { type: String, enum: ['Customer', 'Owner', 'DeliveryAgent', 'Admin'], default: 'Customer' },
-  createdAt: { type: String, default: () => new Date().toISOString() }
+  cities:    { type: [String], default: [] },            // delivery agent: cities where they operate
+  role:           { type: String, enum: ['Customer', 'Owner', 'DeliveryAgent', 'Admin'], default: 'Customer' },
+  // Delivery agent earnings tracking
+  totalEarnings:  { type: Number, default: 0 },   // cumulative rupees earned
+  totalDeliveries:{ type: Number, default: 0 },   // total completed deliveries
+  createdAt:      { type: String, default: () => new Date().toISOString() }
 }, {
   versionKey: false,
   toJSON: {
