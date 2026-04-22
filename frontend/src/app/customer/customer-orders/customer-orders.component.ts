@@ -65,7 +65,7 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
 
   loadOrders(): void {
     const user = this.authService.getUser();
-    if (!user) { this.router.navigate(['/login']); return; }
+    if (!user) { this.router.navigate(['/auth']); return; }
 
     this.loading      = true;
     this.errorMessage = '';
@@ -158,7 +158,7 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
   // ── Cancel ──────────────────────────────────────────────
 
   canCancel(order: any): boolean {
-    if (order.status !== 'pending') return false;
+    if (!['pending', 'confirmed'].includes(order.status)) return false;
     return (Date.now() - new Date(order.createdAt).getTime()) <= 5 * 60 * 1000;
   }
 

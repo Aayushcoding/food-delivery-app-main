@@ -694,9 +694,7 @@ module.exports = {
   updateStatusByAgent,
   getAgentProfile,
   updateAgentProfile,
-  getAgentEarnings,
-  // debug (temp — remove in production)
-  debugMakeAvailable
+  getAgentEarnings
 };
 
 /**

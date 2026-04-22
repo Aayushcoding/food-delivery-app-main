@@ -34,7 +34,7 @@ const getAllRestaurants = async (req, res) => {
 
     let restaurants = await Restaurant.find(filter).lean();
     console.log(`[getAllRestaurants] Found ${restaurants.length} restaurant(s) | city filter: "${filter.city || 'none'}"`);
-    restaurants.forEach(r => console.log(`  → ${r.restaurantName} | city: "${r.city}"`))
+
 
     if (search) {
       const q = search.toLowerCase();

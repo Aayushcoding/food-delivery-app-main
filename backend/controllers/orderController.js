@@ -124,17 +124,26 @@ const createOrder = async (req, res) => {
     const resolvedRestaurantId = cart.restaurantId || enrichedItems[0]?.restaurantId || '';
     console.log(`[createOrder] restaurantId: "${resolvedRestaurantId}"`);
 
+    // ── Honour client-side discount (already validated in frontend) ──────────
+    // The frontend computes and validates the coupon; we trust the result but
+    // clamp it so finalAmount never goes below 0 and discount never exceeds total.
+    const rawDiscount   = Number(req.body.discountAmount) || 0;
+    const couponCode    = (req.body.couponCode || '').trim().toUpperCase() || null;
+    const discountAmount = Math.min(Math.max(0, rawDiscount), totalAmount);
+    const finalAmount    = Math.max(0, totalAmount - discountAmount);
+
     const order = await new Order({
       id:              await getNextSequence('ord'),
       userId,
       restaurantId:    resolvedRestaurantId,
       items:           enrichedItems,
       totalAmount,
-      finalAmount:     totalAmount,
-      discountAmount:  0,
+      finalAmount,
+      discountAmount,
+      offerApplied:    couponCode || null,
       deliveryAddress: resolvedAddress,
       status:          'pending',
-      clientOrderId:   clientOrderId?.trim() || null,   // store for future dedup checks
+      clientOrderId:   clientOrderId?.trim() || null,
       createdAt:       new Date().toISOString()
     }).save();
 
@@ -544,14 +553,9 @@ const updateDeliveryStatus = async (req, res) => {
 
     const updated = await Order.findOneAndUpdate({ id }, patch, { new: true }).lean();
 
-    // Revenue accumulation on delivery via this route
-    if (status === 'delivered' && updated.restaurantId) {
-      const orderAmount = updated.finalAmount > 0 ? updated.finalAmount : updated.totalAmount;
-      await Restaurant.findOneAndUpdate(
-        { restaurantId: updated.restaurantId },
-        { $inc: { totalRevenue: orderAmount } }
-      );
-    }
+    // NOTE: Revenue accumulation for 'delivered' is handled exclusively by the
+    // agent route (deliveryController.updateStatusByAgent) which is the canonical
+    // path agents use. Accumulating here too would double-count revenue.
 
     return res.json({
       success: true,
@@ -591,12 +595,14 @@ const applyOffer = async (req, res) => {
 
     const code = rawCode.trim().toUpperCase();
 
-    // Validate code is one of the supported offers
-    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50'];
+    // All valid offer codes (must match frontend ALL_OFFERS list)
+    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50', 'FIRST70', 'FREEDEL',
+                         'BOGO1', 'WKND40', 'SAVE60', 'RICE50', 'UPI150',
+                         'PREM20', 'LATE50', 'HEALTH30', 'BIG200'];
     if (!VALID_CODES.includes(code)) {
       return res.status(400).json({
         success: false,
-        message: `Invalid offer code '${rawCode}'. Valid codes: ${VALID_CODES.join(', ')}`
+        message: `Invalid offer code '${rawCode}'.`
       });
     }
 
@@ -622,35 +628,77 @@ const applyOffer = async (req, res) => {
 
     switch (code) {
       case 'FLAT100':
-        if (order.totalAmount >= 299) {
-          discount = 100;
-        } else {
-          return res.status(400).json({
-            success: false,
-            message: `FLAT100 requires a minimum order of ₹299 (your total: ₹${order.totalAmount})`
-          });
-        }
+        if (order.totalAmount >= 299) { discount = 100; }
+        else return res.status(400).json({ success: false, message: `FLAT100 requires a minimum order of ₹299 (your total: ₹${order.totalAmount})` });
         break;
+
+      case 'SAVE60':
+        if (order.totalAmount >= 199) { discount = 60; }
+        else return res.status(400).json({ success: false, message: `SAVE60 requires a minimum order of ₹199` });
+        break;
+
+      case 'BIG200': {
+        const day = new Date().getDay();
+        const isWeekend = day === 0 || day === 6;
+        if (!isWeekend) return res.status(400).json({ success: false, message: 'BIG200 is only valid on weekends (Sat/Sun).' });
+        if (order.totalAmount < 599) return res.status(400).json({ success: false, message: 'BIG200 requires a minimum order of ₹599.' });
+        discount = 200;
+        break;
+      }
 
       case 'PERC20':
         discount = Math.min(Math.round(order.totalAmount * 0.2), 150);
         break;
 
-      case 'FIRST50': {
-        // First order check: exclude the current order itself
-        const prevOrders = await Order.countDocuments({
-          userId: order.userId,
-          id:     { $ne: orderId }
-        });
-        if (prevOrders > 0) {
-          return res.status(400).json({
-            success: false,
-            message: 'FIRST50 is only valid on your first order'
-          });
-        }
-        discount = Math.min(Math.round(order.totalAmount * 0.5), 50);
+      case 'PREM20':
+        // Premium restaurant check must have been done on frontend;
+        // backend persists whatever discount the frontend computed
+        discount = Math.min(Math.round(order.totalAmount * 0.2), 100);
+        break;
+
+      case 'RICE50':
+        discount = Math.min(Math.round(order.totalAmount * 0.5), 75);
+        break;
+
+      case 'HEALTH30':
+        discount = Math.min(Math.round(order.totalAmount * 0.3), 60);
+        break;
+
+      case 'WKND40': {
+        const day = new Date().getDay();
+        if (day !== 0 && day !== 6) return res.status(400).json({ success: false, message: 'WKND40 is only valid on weekends (Sat/Sun).' });
+        discount = Math.min(Math.round(order.totalAmount * 0.4), 80);
         break;
       }
+
+      case 'FIRST70':
+      case 'FIRST50': {
+        const prevOrders = await Order.countDocuments({ userId: order.userId, id: { $ne: orderId } });
+        if (prevOrders > 0) return res.status(400).json({ success: false, message: `${code} is only valid on your first order.` });
+        if (code === 'FIRST70') discount = Math.min(Math.round(order.totalAmount * 0.7), 50);
+        else                    discount = Math.min(Math.round(order.totalAmount * 0.5), 50);
+        break;
+      }
+
+      case 'LATE50': {
+        const hour = new Date().getHours();
+        if (hour < 22 && hour >= 2) return res.status(400).json({ success: false, message: 'LATE50 is only valid between 10 PM and 2 AM.' });
+        discount = 50;
+        break;
+      }
+
+      case 'UPI150':
+        discount = Math.min(150, order.totalAmount);
+        break;
+
+      case 'BOGO1':
+        discount = Math.min(Math.round(order.totalAmount * 0.5), 200);
+        break;
+
+      case 'FREEDEL':
+        // Free delivery — discount is 0 (delivery fee waived externally)
+        discount = 0;
+        break;
     }
 
     // Cap discount so finalAmount never goes below 0

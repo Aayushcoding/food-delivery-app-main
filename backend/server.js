@@ -29,19 +29,6 @@ app.use('/api/reviews',     require('./routes/reviewRoutes'));
 // Health check
 app.get('/api/health', (req, res) => res.json({ success: true, message: 'Server running' }));
 
-// Diagnostic: show restaurants with missing city (no auth needed — useful for debugging)
-app.get('/api/health/cities', async (req, res) => {
-  const Restaurant = require('./models/Restaurant');
-  const all   = await Restaurant.find({}).select('restaurantName city ownerId').lean();
-  const missing = all.filter(r => !r.city || !r.city.trim());
-  res.json({
-    success: true,
-    total: all.length,
-    missingCity: missing.length,
-    restaurants: all.map(r => ({ name: r.restaurantName, city: r.city || '(empty)', ownerId: r.ownerId })),
-    fix: 'Owner must edit each restaurant with missing city and save it.'
-  });
-});
 
 // 404
 app.use((req, res) => res.status(404).json({ success: false, message: 'Route not found' }));
