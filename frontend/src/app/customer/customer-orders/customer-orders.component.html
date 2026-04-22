@@ -129,6 +129,44 @@
               <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
             </li>
           </ul>
+
+          <!-- ── RESTAURANT CONTACT CARD ── -->
+          <div class="contact-card restaurant-contact" *ngIf="contactInfo[order.id]?.restaurant as rest">
+            <div class="contact-card-header">🍽 Restaurant Contact</div>
+            <div class="contact-row" *ngIf="rest.phone">
+              <span class="contact-label">📞 Phone</span>
+              <a class="contact-value contact-link" [href]="'tel:+91' + rest.phone">{{ rest.phone }}</a>
+            </div>
+            <div class="contact-row" *ngIf="rest.address || rest.city">
+              <span class="contact-label">📍 Address</span>
+              <span class="contact-value">{{ rest.address }}{{ rest.city ? ', ' + (rest.city | titlecase) : '' }}</span>
+            </div>
+            <div class="contact-row" *ngIf="rest.email">
+              <span class="contact-label">✉️ Email</span>
+              <a class="contact-value contact-link" [href]="'mailto:' + rest.email">{{ rest.email }}</a>
+            </div>
+            <div *ngIf="!rest.phone && !rest.address && !rest.email" class="contact-na">
+              Contact details not available
+            </div>
+          </div>
+
+          <!-- ── DELIVERY AGENT CONTACT (only when agent is assigned) ── -->
+          <div class="contact-card agent-contact"
+               *ngIf="isInDelivery(order) && !isSearching(order) && contactInfo[order.id]?.agent as agent">
+            <div class="contact-card-header">🛵 Delivery Agent</div>
+            <div class="contact-row">
+              <span class="contact-label">👤 Name</span>
+              <span class="contact-value">{{ agent.name }}</span>
+            </div>
+            <div class="contact-row" *ngIf="agent.phone">
+              <span class="contact-label">📞 Phone</span>
+              <a class="contact-value contact-link agent-call" [href]="'tel:+91' + agent.phone">
+                📲 Call {{ agent.phone }}
+              </a>
+            </div>
+            <div *ngIf="!agent.phone" class="contact-na">Agent phone not available</div>
+          </div>
+
         </div>
 
         <!-- FOOTER -->

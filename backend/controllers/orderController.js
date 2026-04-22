@@ -353,6 +353,56 @@ const getInvoice = async (req, res) => {
 
 module.exports = { createOrder, getUserOrders, getOrderById, getAllOrders, getOrdersByRestaurant, updateOrderStatus, cancelOrder, getInvoice };
 
+// ─────────────────────────────────────────────────────────────────────────────────
+// GET /api/orders/:id/contact-info
+// Returns restaurant contact + delivery agent phone for the order.
+// Safe: never exposes password, token, or address list.
+// ─────────────────────────────────────────────────────────────────────────────────
+const getContactInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) return res.status(400).json({ success: false, message: 'Order ID is required' });
+
+    const order = await Order.findOne({ id }).lean();
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    // ─ Restaurant details ──────────────────────────────────────────────
+    let restaurant = null;
+    if (order.restaurantId) {
+      const r = await Restaurant.findOne({ restaurantId: order.restaurantId }).lean();
+      if (r) {
+        restaurant = {
+          name:    r.restaurantName  || '',
+          phone:   r.restaurantContactNo || '',
+          address: r.address         || '',
+          city:    r.city            || '',
+          email:   r.email           || ''
+        };
+      }
+    }
+
+    // ─ Delivery agent details (only if assigned) ─────────────────────
+    let agent = null;
+    if (order.deliveryAgentId) {
+      const u = await User.findOne({ id: order.deliveryAgentId }).lean();
+      if (u) {
+        agent = {
+          name:  u.username || '',
+          phone: u.phoneNo  || ''
+        };
+      }
+    }
+
+    return res.json({
+      success: true,
+      data: { restaurant, agent }
+    });
+  } catch (error) {
+    console.error('[getContactInfo]', error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PART 2 — NEW DELIVERY ENDPOINTS (additive, non-breaking)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -645,6 +695,7 @@ module.exports = {
   acceptDelivery,
   updateDeliveryStatus,
   // ── Offer system ──────────────────────────────────────────
-  applyOffer
+  applyOffer,
+  getContactInfo
 };
 

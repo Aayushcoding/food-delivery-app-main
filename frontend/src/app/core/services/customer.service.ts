@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
 
@@ -42,12 +42,6 @@ export class CustomerService {
     return this.http.delete(`${this.baseUrl}/restaurants/${id}`, { headers: this.authService.getAuthHeaders() });
   }
 
-  // ── MENUS (PUBLIC — available items only) ─────────────────────────
-  getMenu(restaurantId?: string): Observable<any> {
-    let url = `${this.baseUrl}/menu`;
-    if (restaurantId) { url += `?restaurantId=${restaurantId}`; }
-    return this.http.get(url);
-  }
 
   getMenuByRestaurant(restaurantId: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/menu/restaurant/${restaurantId}`);
@@ -79,10 +73,6 @@ export class CustomerService {
     return this.http.get(`${this.baseUrl}/cart/user/${userId}`, { headers: this.authService.getAuthHeaders() });
   }
 
-  /** Legacy alias — kept for backward compat (returns first cart or null) */
-  getCart(userId: string): Observable<any> {
-    return this.getCartsByUser(userId);
-  }
 
   /** Returns the specific cart for a user + restaurant (from the all-carts array) */
   getCartByRestaurant(userId: string, restaurantId: string): Observable<any> {
@@ -143,11 +133,9 @@ export class CustomerService {
     return this.http.put(`${this.baseUrl}/orders/${orderId}/status`, { status }, { headers: this.authService.getAuthHeaders() });
   }
 
-  // ── PAYMENT ────────────────────────────────────────────────────────
-  processPayment(orderId: string, userId: string): Observable<any> {
-    return this.http.post(`${this.baseUrl}/payment/pay`, {
-      orderId, userId
-    }, { headers: this.authService.getAuthHeaders() });
+  /** Restaurant contact details + delivery agent phone for a given order */
+  getOrderContactInfo(orderId: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/orders/${orderId}/contact-info`, { headers: this.authService.getAuthHeaders() });
   }
 
   // ── OWNER DASHBOARD ────────────────────────────────────────────────

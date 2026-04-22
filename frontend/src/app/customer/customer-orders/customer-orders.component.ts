@@ -18,8 +18,10 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
   cancellingId: string   = '';
   toastMessage: string   = '';
   toastError:   boolean  = false;
-  /** restaurantId → restaurantName lookup, populated after orders load */
+  /** restaurantId → restaurantName lookup */
   restaurantNames: Record<string, string> = {};
+  /** orderId → { restaurant: {...}, agent: {...} } */
+  contactInfo: Record<string, any> = {};
   private toastTimer: any;
   private pollTimer:  any;
 
@@ -76,8 +78,9 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
           this.orders
             .filter(o => o.status === 'delivered')
             .forEach(o => this.checkReviewed(o.id));
-          // Enrich with restaurant names
+          // Enrich with restaurant names and contact info
           this.loadRestaurantNames();
+          this.loadContactInfo();
         } else {
           this.errorMessage = res.message || 'Could not load orders.';
         }
@@ -106,6 +109,19 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
         });
       },
       error: () => {} // silently ignore — fall back to restaurantId
+    });
+  }
+
+  /** Fetch contact info (restaurant phone + agent phone) for each order */
+  private loadContactInfo(): void {
+    this.orders.forEach(order => {
+      if (this.contactInfo[order.id]) return; // already loaded
+      this.customerService.getOrderContactInfo(order.id).subscribe({
+        next: (res: any) => {
+          if (res.success) this.contactInfo[order.id] = res.data;
+        },
+        error: () => {}
+      });
     });
   }
 

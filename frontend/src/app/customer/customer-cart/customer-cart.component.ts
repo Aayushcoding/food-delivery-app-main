@@ -10,6 +10,8 @@ interface CartView {
   cartId:        string;
   restaurantId:  string;
   restaurantName: string;
+  restaurantRating: number;     // cached from API
+  restaurantReviewCount: number; // cached from API
   items:         any[];
   // coupon state per cart
   couponCode:    string;
@@ -85,6 +87,8 @@ export class CustomerCartComponent implements OnInit {
       cartId:        raw.id,
       restaurantId:  raw.restaurantId,
       restaurantName: raw.restaurantId, // overwritten by loadRestaurantName
+      restaurantRating: 0,
+      restaurantReviewCount: 0,
       items: (raw.items || []).map((item: any) => ({
         ...item,
         itemName: item.name || item.itemName || item.itemId
@@ -105,7 +109,11 @@ export class CustomerCartComponent implements OnInit {
   private loadRestaurantName(cv: CartView): void {
     this.customerService.getRestaurantById(cv.restaurantId).subscribe({
       next: (res) => {
-        if (res.success && res.data) cv.restaurantName = res.data.restaurantName || cv.restaurantId;
+        if (res.success && res.data) {
+          cv.restaurantName        = res.data.restaurantName || cv.restaurantId;
+          cv.restaurantRating      = res.data.rating      || 0;
+          cv.restaurantReviewCount = res.data.reviewCount || 0;
+        }
       },
       error: () => {}
     });
@@ -139,7 +147,12 @@ export class CustomerCartComponent implements OnInit {
   applyCoupon(cv: CartView): void {
     const code = cv.couponCode.trim().toUpperCase();
     if (!code) return;
-    if (code === 'FIRST70') {
+
+    if (code === 'PREM20') {
+      // Need restaurant rating & reviewCount — use cached values (set by loadRestaurantName)
+      const isPremium = cv.restaurantRating > 4.5 && cv.restaurantReviewCount > 200;
+      this._applyWithContext(cv, code, { isFirstOrder: false, isPremiumRestaurant: isPremium });
+    } else if (code === 'FIRST70') {
       const user = this.authService.getUser();
       this.http.get<any>(`${this.baseUrl}/orders/user/${user?.id}`, {
         headers: this.authService.getAuthHeaders()

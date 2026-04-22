@@ -71,20 +71,19 @@ get cartTotal():number{
 return this.cartItems.reduce((sum,item)=>sum+(item.price||0)*(item.quantity||1),0);
 }
 
-// Load the backend cart count to display badge
+// Load the backend cart count to display badge (sums across all restaurant carts)
 loadCartCount(){
 const user=this.authService.getUser();
 if(!user) return;
 
-this.customerService.getCart(user.id).subscribe({
-next:(res)=>{
-if(res.success && res.data){
-this.cartItems=res.data.items||[];
-this.cartCount=this.cartItems.length;
-}
+this.customerService.getCartsByUser(user.id).subscribe({
+next:(res: any)=>{
+const carts: any[] = Array.isArray(res.data) ? res.data : [];
+// Flatten items from all carts for the count badge
+this.cartItems = carts.flatMap((c: any) => c.items || []);
+this.cartCount = this.cartItems.reduce((sum: number, i: any) => sum + (i.quantity || 1), 0);
 },
 error:()=>{
-// 404 = no cart yet, that's fine
 this.cartItems=[];
 this.cartCount=0;
 }

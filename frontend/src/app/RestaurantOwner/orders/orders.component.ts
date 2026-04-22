@@ -20,8 +20,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   private toastTimer: any;
   private pollTimer:  any;
 
-  // Owner can ONLY set these statuses — out_for_delivery and beyond are agent-controlled
-  readonly statuses      = ['pending', 'confirmed', 'preparing', 'cancelled'];
+  // Owner-settable statuses — out_for_delivery and beyond are agent-controlled
   readonly agentStatuses = ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving', 'delivered'];
 
   constructor(
@@ -102,10 +101,6 @@ export class OrdersComponent implements OnInit, OnDestroy {
     return !!(order.deliveryAgentId) || this.agentStatuses.includes(order.status);
   }
 
-  updateStatus(order: any, event: Event): void {
-    const status = (event.target as HTMLSelectElement).value;
-    this.setStatus(order, status);
-  }
 
   setStatus(order: any, status: string): void {
     if (this.agentStatuses.includes(status)) {
@@ -121,10 +116,9 @@ export class OrdersComponent implements OnInit, OnDestroy {
         if (res.success) {
           order.status = status;
           const msgs: Record<string, string> = {
-            confirmed:        '✅ Order confirmed! Agent can now see it.',
-            preparing:        '👨‍🍳 Marked as preparing. Agent can see it.',
-            out_for_delivery: '🚀 Ready for pickup! Delivery agent will be notified.',
-            cancelled:        '🔴 Order cancelled.'
+            confirmed: '✅ Order confirmed! Agent can now see it.',
+            preparing: '👨‍🍳 Marked as preparing. Waiting for a delivery agent.',
+            cancelled: '🔴 Order cancelled.'
           };
           this.showToast(msgs[status] || '✅ Status updated!', false);
         }

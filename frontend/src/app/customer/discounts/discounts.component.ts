@@ -25,7 +25,7 @@ export const ALL_OFFERS: Offer[] = [
   { id:6,  code:'SAVE60',   title:'Flat ₹60 OFF',   description:'On orders ₹199+',                           type:'flat',    value:60,  cap:60,  minOrder:199, emoji:'🏷', color:'#fd9644' },
   { id:7,  code:'RICE50',   title:'50% OFF',        description:'On biryani & rice specials up to ₹75',      type:'percent', value:50,  cap:75,  minOrder:0,   emoji:'🍛', color:'#e84393' },
   { id:8,  code:'UPI150',   title:'₹150 Cashback',  description:'Paid via UPI — credited in 24 hrs',         type:'flat',    value:150, cap:150, minOrder:0,   emoji:'💳', color:'#26de81' },
-  { id:9,  code:'PREM20',   title:'20% OFF',        description:'At premium restaurants, up to ₹100',        type:'percent', value:20,  cap:100, minOrder:0,   emoji:'⭐', color:'#778ca3' },
+  { id:9,  code:'PREM20',   title:'20% OFF',        description:'At top-rated restaurants (4.5★ & 200+ reviews)',  type:'percent', value:20,  cap:100, minOrder:0,   emoji:'⭐', color:'#778ca3' },
   { id:10, code:'LATE50',   title:'Flat ₹50 OFF',   description:'Late night cravings — 10 PM to 2 AM',       type:'flat',    value:50,  cap:50,  minOrder:0,   emoji:'🌙', color:'#4b7bec' },
   { id:11, code:'HEALTH30', title:'30% OFF',        description:'Healthy food category today only',           type:'percent', value:30,  cap:60,  minOrder:0,   emoji:'🥗', color:'#20bf6b' },
   { id:12, code:'BIG200',   title:'Flat ₹200 OFF',  description:'Orders above ₹599 on weekends',             type:'flat',    value:200, cap:200, minOrder:599, emoji:'🚀', color:'#eb3b5a' },
@@ -33,7 +33,8 @@ export const ALL_OFFERS: Offer[] = [
 
 
 export interface CouponContext {
-  isFirstOrder: boolean;  // true = user has no delivered orders yet
+  isFirstOrder: boolean;         // true = user has no delivered orders yet
+  isPremiumRestaurant?: boolean; // true = restaurant has rating>4.5 & reviewCount>200
 }
 
 /** Get current context (time & day) from the client clock */
@@ -53,6 +54,7 @@ export function offerConditionHint(code: string): string {
     case 'BIG200':  return '📅 Weekends + cart ≥ ₹599';
     case 'FLAT100': return '🛒 Min cart ₹299';
     case 'SAVE60':  return '🛒 Min cart ₹199';
+    case 'PREM20':  return '⭐ Only at 4.5★+ restaurants with 200+ reviews';
     default: return '';
   }
 }
@@ -110,6 +112,13 @@ export function computeDiscount(
         reason: '❌ BIG200 is only valid on weekends (Sat/Sun).' };
     }
     // minOrder check already handles ₹599 minimum
+  }
+
+  if (offer.code === 'PREM20') {
+    if (!ctx.isPremiumRestaurant) {
+      return { discount: 0, message: '', valid: false,
+        reason: '❌ PREM20 is only valid at premium restaurants with a rating above 4.5 and more than 200 reviews.' };
+    }
   }
 
   // ── Calculate discount ──────────────────────────────────────────────

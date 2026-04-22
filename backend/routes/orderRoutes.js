@@ -16,8 +16,11 @@ const {
   acceptDelivery,
   updateDeliveryStatus,
   // ── Offer system ─────────────────────────────────────
-  applyOffer
+  applyOffer,
+  // ── Contact info ─────────────────────────────────────
+  getContactInfo
 } = require("../controllers/orderController");
+
 
 // ── Static/prefix routes (MUST be before /:id to avoid capture) ──────────────
 
@@ -57,6 +60,9 @@ router.patch("/:id/delivery-status", auth, updateDeliveryStatus);
 
 // Invoice: MUST be before /:id to avoid conflict
 router.get("/:orderId/invoice", auth, getInvoice);
+
+// Contact info: restaurant + agent phone — safe, auth-protected
+router.get("/:id/contact-info", auth, getContactInfo);
 
 // Shared: view single order
 router.get("/:id", auth, getOrderById);
