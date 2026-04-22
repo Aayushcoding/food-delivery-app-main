@@ -14,10 +14,11 @@ const STEPS: DeliveryStep[] = ['picked_up', 'on_the_way', 'arriving', 'delivered
 export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   agent: any = null;
-  activeTab: 'available' | 'active' = 'available';
+  activeTab: 'available' | 'active' | 'history' = 'available';
 
   availableOrders: any[] = [];
   activeOrders:    any[] = [];
+  deliveryHistory: any[] = [];
 
   loading = false;
   actionLoading: { [orderId: string]: boolean } = {};
@@ -52,10 +53,11 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   load(): void {
     if (this.activeTab === 'available') this.loadAvailable();
-    else                                this.loadActive();
+    else if (this.activeTab === 'active') this.loadActive();
+    else this.loadHistory();
   }
 
-  switchTab(tab: 'available' | 'active'): void {
+  switchTab(tab: 'available' | 'active' | 'history'): void {
     this.activeTab = tab;
     this.load();
   }
@@ -79,6 +81,18 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
     ).subscribe({
       next: res => { this.activeOrders = res.data || []; this.loading = false; },
       error: ()  => { this.showToast('Could not load active orders.', true); this.loading = false; }
+    });
+  }
+
+  // ── Delivery history tab ──────────────────────────────────────────────
+
+  loadHistory(): void {
+    this.loading = true;
+    this.http.get<any>('/api/agent/history',
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: res => { this.deliveryHistory = res.data || []; this.loading = false; },
+      error: ()  => { this.showToast('Could not load history.', true); this.loading = false; }
     });
   }
 
@@ -171,6 +185,8 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   statusColor(s: string): string {
     const m: Record<string, string> = {
+      confirmed:        'yellow',
+      preparing:        'purple',
       out_for_delivery: 'orange', picked_up: 'orange',
       on_the_way: 'blue', arriving: 'green', delivered: 'green'
     };
@@ -183,10 +199,22 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
       .join(', ');
   }
 
+  /** Safely format deliveryAddress (object or string) */
+  formatAddress(addr: any): string {
+    if (!addr) return '—';
+    if (typeof addr === 'string') return addr || '—';
+    const parts = [addr.street, addr.city, addr.pincode, addr.landmark].filter(Boolean);
+    return parts.join(', ') || '—';
+  }
+
   showToast(msg: string, error: boolean): void {
     this.toast = { msg, error };
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => this.toast.msg = '', 3500);
+  }
+
+  goHome(): void {
+    this.router.navigate(['/agent/dashboard']);
   }
 
   logout(): void {

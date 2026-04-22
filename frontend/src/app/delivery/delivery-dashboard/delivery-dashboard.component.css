@@ -42,7 +42,7 @@
 }
 
 .nav-right { display: flex; align-items: center; gap: 14px; }
-.agent-name { font-size: 13px; color: rgba(255,255,255,0.55); }
+.agent-name { font-size: 13px; color: #a0aec0; }
 
 .btn-logout {
   background: rgba(255,107,107,0.1);
@@ -74,7 +74,7 @@
   margin-bottom: 8px;
 }
 
-.dash-header p { color: rgba(255,255,255,0.45); font-size: 15px; }
+.dash-header p { color: #a0aec0; font-size: 15px; }
 
 /* ── Toast ────────────────────────────────────────────────── */
 .toast {
@@ -83,7 +83,7 @@
   left: 50%;
   transform: translateX(-50%);
   background: rgba(0,200,120,0.92);
-  color: #072313;
+  color: #fff;
   font-weight: 700;
   padding: 12px 28px;
   border-radius: 30px;
@@ -130,7 +130,7 @@
 /* Advance status — green */
 .advance-btn {
   background: linear-gradient(135deg, #00c878, #00e5a0);
-  color: #072313;
+  color: #fff;
   margin-top: 14px;
 }
 .advance-btn:not(:disabled):hover {

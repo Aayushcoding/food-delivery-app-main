@@ -51,7 +51,7 @@ const createUser = async (req, res) => {
       email:    email.toLowerCase().trim(),
       phoneNo:  phoneNo ? phoneNo.trim() : '',
       password: await bcrypt.hash(password, 10),
-      address:  address || [],
+      addresses: address || [],  // field renamed to 'addresses' in User model
       role:     assignedRole
     }).save();
 
@@ -91,6 +91,20 @@ const updateUser = async (req, res) => {
       }
     }
 
+    // Normalize city in any addresses passed via profile update
+    if (Array.isArray(updates.addresses)) {
+      updates.addresses = updates.addresses.map(a => ({
+        ...a,
+        city:     (a.city     || '').trim().toLowerCase(),
+        street:   (a.street   || '').trim(),
+        pincode:  (a.pincode  || '').trim(),
+        landmark: (a.landmark || '').trim()
+      }));
+      if (updates.addresses.length > 0) {
+        console.log(`[updateUser] Normalized addresses cities: ${updates.addresses.map(a => a.city).join(', ')}`);
+      }
+    }
+
     const updated = await User.findOneAndUpdate({ id }, updates, { new: true }).lean();
     if (!updated) return res.status(404).json({ success: false, message: 'User not found' });
 
@@ -116,4 +130,65 @@ const deleteUser = async (req, res) => {
   }
 };
 
-module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };
+// ADD ADDRESS — POST /api/users/:id/addresses
+const addAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (req.user.id !== id) {
+      return res.status(403).json({ success: false, message: 'You can only update your own profile.' });
+    }
+
+    const { street, city, pincode, landmark } = req.body;
+    if (!street || !street.trim()) {
+      return res.status(400).json({ success: false, message: 'street is required' });
+    }
+    if (!city || !city.trim()) {
+      return res.status(400).json({ success: false, message: 'city is required' });
+    }
+
+    // Normalize city to lowercase for consistent restaurant filtering
+    const normalizedCity = city.trim().toLowerCase();
+    console.log(`[addAddress] User: ${id} | city: "${normalizedCity}"`);
+
+    const updated = await User.findOneAndUpdate(
+      { id },
+      { $push: { addresses: {
+        street:   street.trim(),
+        city:     normalizedCity,
+        pincode:  (pincode  || '').trim(),
+        landmark: (landmark || '').trim()
+      } } },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const { password, _id, ...safe } = updated;
+    res.json({ success: true, message: 'Address added', data: safe });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// DELETE ADDRESS — DELETE /api/users/:id/addresses/:addressId
+const deleteAddress = async (req, res) => {
+  try {
+    const { id, addressId } = req.params;
+    if (req.user.id !== id) {
+      return res.status(403).json({ success: false, message: 'You can only update your own profile.' });
+    }
+
+    const updated = await User.findOneAndUpdate(
+      { id },
+      { $pull: { addresses: { _id: addressId } } },
+      { new: true }
+    ).lean();
+    if (!updated) return res.status(404).json({ success: false, message: 'User not found' });
+
+    const { password, _id, ...safe } = updated;
+    res.json({ success: true, message: 'Address removed', data: safe });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getUsers, getUser, createUser, updateUser, deleteUser, addAddress, deleteAddress };

@@ -1,14 +1,17 @@
-import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { CustomerService } from '../../core/services/customer.service';
 import { AuthService } from '../../core/services/auth.service';
+import { Subscription } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 @Component({
 selector:'app-customer-home',
 templateUrl:'./customer-home.component.html',
 styleUrls:['./customer-home.component.css']
 })
-export class CustomerHomeComponent implements OnInit{
+export class CustomerHomeComponent implements OnInit, OnDestroy {
 
 isLoggedIn=false;
 userName='Guest';
@@ -19,23 +22,41 @@ cartOpen=false;
 profileOpen=false;
 loading=false;
 
+// City filter
+selectedCity: string = '';
+noCitySelected = false;
+
 cuisineTags=['Chinese','Italian','Indian','Mexican','FastFood','Continental'];
 selectedCuisines=new Set<string>();
 
 allRestaurants:any[]=[];
 filteredRestaurants:any[]=[];
+private navSub: Subscription | null = null;
 
 constructor(
 private customerService:CustomerService,
 private authService:AuthService,
-private router:Router
+private router:Router,
+private http: HttpClient
 ){
 this.loadUser();
 }
 
 ngOnInit():void{
-this.loadRestaurants();
-this.loadCartCount();
+  this.loadRestaurants();
+  this.loadCartCount();
+  // Re-read city every time user navigates back to this page
+  // (Angular keeps the component alive, ngOnInit doesn't re-fire)
+  this.navSub = this.router.events
+    .pipe(filter(e => e instanceof NavigationEnd))
+    .subscribe(() => {
+      this.loadRestaurants();
+      this.loadCartCount();
+    });
+}
+
+ngOnDestroy():void{
+  this.navSub?.unsubscribe();
 }
 
 loadUser(){
@@ -71,20 +92,67 @@ this.cartCount=0;
 }
 
 loadRestaurants(){
-this.loading=true;
-this.customerService.getRestaurants().subscribe({
-next:(response)=>{
-if(response.success){
-this.allRestaurants=response.data||[];
-this.filteredRestaurants=[...this.allRestaurants];
+  // Read city from localStorage
+  const raw = localStorage.getItem('selectedCity') || '';
+  this.selectedCity = raw.trim().toLowerCase();
+  if (this.selectedCity) localStorage.setItem('selectedCity', this.selectedCity);
+
+  if (!this.selectedCity) {
+    // City not in localStorage — try fetching from user profile
+    const user = this.authService.getUser();
+    if (user?.id) {
+      this.http.get<any>(`/api/users/${user.id}`, {
+        headers: this.authService.getAuthHeaders()
+      }).subscribe({
+        next: (res) => {
+          const addrs = res?.data?.addresses || [];
+          const city  = (addrs[0]?.city || '').toLowerCase().trim();
+          if (city) {
+            localStorage.setItem('selectedCity', city);
+            this.selectedCity    = city;
+            this.noCitySelected  = false;
+          } else {
+            this.noCitySelected = true;
+          }
+          this._fetchRestaurants();
+        },
+        error: () => {
+          this.noCitySelected = true;
+          this._fetchRestaurants();
+        }
+      });
+      return; // _fetchRestaurants called inside
+    }
+    this.noCitySelected = true;
+  } else {
+    this.noCitySelected = false;
+  }
+  this._fetchRestaurants();
 }
-this.loading=false;
-},
-error:(err)=>{
-console.error('Error loading restaurants:',err);
-this.loading=false;
+
+_fetchRestaurants(){
+  this.loading=true;
+  this.customerService.getRestaurants(undefined, this.selectedCity || undefined).subscribe({
+    next:(response)=>{
+      if(response.success){
+        this.allRestaurants=response.data||[];
+        this.filteredRestaurants=[...this.allRestaurants];
+      }
+      this.loading=false;
+    },
+    error:(err)=>{
+      console.error('Error loading restaurants:',err);
+      this.loading=false;
+    }
+  });
 }
-});
+
+// Clear city filter and reload all restaurants (useful when 0 results in selected city)
+clearCityFilter(){
+  localStorage.removeItem('selectedCity');
+  this.selectedCity = '';
+  this.noCitySelected = true;
+  this.loadRestaurants();
 }
 
 onSearchInput(){
@@ -169,6 +237,11 @@ return item.itemId||'Item';
 goToLogin(){
 this.router.navigate(['/login']);
 }
+
+goHome(){
+this.router.navigate(['/customer/customer-home']);
+}
+
 
 getCuisineString(cuisineArray:any):string{
 if(Array.isArray(cuisineArray)){

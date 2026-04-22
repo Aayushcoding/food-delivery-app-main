@@ -53,15 +53,21 @@ export class CustomerProfileComponent implements OnInit {
 
   startEdit(): void {
     this.editing = true;
-    const addr = Array.isArray(this.user.address) && this.user.address.length > 0
-      ? this.user.address[0]
+    // support both 'addresses' (new) and legacy 'address' field
+    const addrList = Array.isArray(this.user.addresses) && this.user.addresses.length > 0
+      ? this.user.addresses
+      : (Array.isArray(this.user.address) ? this.user.address : []);
+    const addr = addrList.length > 0
+      ? addrList[0]
       : (typeof this.user.address === 'object' ? this.user.address : {});
     this.editData = {
       username: this.user.username || '',
       email: this.user.email || '',
       phoneNo: this.user.phoneNo || '',
       street: addr?.street || '',
-      city: addr?.city || ''
+      city: addr?.city || '',
+      pincode: addr?.pincode || '',
+      landmark: addr?.landmark || ''
     };
   }
 
@@ -80,9 +86,14 @@ export class CustomerProfileComponent implements OnInit {
       username: this.editData.username.trim(),
       phoneNo: this.editData.phoneNo?.trim() || ''
     };
-    // Build address array
+    // Build addresses array using the new field name
     if (this.editData.street || this.editData.city) {
-      payload.address = [{ street: this.editData.street || '', city: this.editData.city || '' }];
+      payload.addresses = [{
+        street:   this.editData.street   || '',
+        city:     this.editData.city     || '',
+        pincode:  this.editData.pincode  || '',
+        landmark: this.editData.landmark || ''
+      }];
     }
 
     this.http.put<any>(
@@ -99,6 +110,10 @@ export class CustomerProfileComponent implements OnInit {
           if (stored) {
             localStorage.setItem('user', JSON.stringify({ ...stored, username: this.user.username }));
           }
+          // Persist selected city so customer-home can filter restaurants
+          if (this.editData.city && this.editData.city.trim()) {
+            localStorage.setItem('selectedCity', this.editData.city.trim().toLowerCase());
+          }
           this.editing = false;
           this.showToast('✅ Profile updated!', false);
         } else {
@@ -113,12 +128,15 @@ export class CustomerProfileComponent implements OnInit {
   }
 
   getAddressString(): string {
-    if (!this.user?.address) return '—';
-    if (Array.isArray(this.user.address) && this.user.address.length > 0) {
-      const a = this.user.address[0];
-      return [a.street, a.city].filter(Boolean).join(', ') || '—';
+    // Support both 'addresses' (new) and legacy 'address' field
+    const list = Array.isArray(this.user?.addresses) && this.user.addresses.length > 0
+      ? this.user.addresses
+      : (Array.isArray(this.user?.address) ? this.user.address : []);
+    if (list.length > 0) {
+      const a = list[0];
+      return [a.street, a.city, a.pincode].filter(Boolean).join(', ') || '—';
     }
-    if (typeof this.user.address === 'string') return this.user.address || '—';
+    if (typeof this.user?.address === 'string') return this.user.address || '—';
     return '—';
   }
 

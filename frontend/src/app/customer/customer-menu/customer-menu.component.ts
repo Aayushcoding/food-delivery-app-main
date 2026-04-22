@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
+import { ReviewService } from '../../core/services/review.service';
 
 @Component({
   selector: 'app-customer-menu',
@@ -29,11 +30,16 @@ export class CustomerMenuComponent implements OnInit {
   toastError: boolean = false;
   private toastTimer: any;
 
+  // Reviews
+  reviews:       any[]    = [];
+  reviewsLoading = false;
+
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private customerService: CustomerService
+    private customerService: CustomerService,
+    private reviewService: ReviewService
   ) {}
 
   ngOnInit(): void {
@@ -42,6 +48,7 @@ export class CustomerMenuComponent implements OnInit {
       this.loadRestaurantName();
       this.loadMenuItems();
       this.loadCart();
+      this.loadReviews();
     });
   }
 
@@ -75,12 +82,13 @@ export class CustomerMenuComponent implements OnInit {
           this.cartId = res.data.id;
           const quantities: { [menuId: string]: number } = {};
           (res.data.items || []).forEach((item: any) => {
-            quantities[item.itemId] = item.quantity;
+            // itemId in cart === menuId in menu — store under both just to be safe
+            if (item.itemId) quantities[item.itemId] = item.quantity;
           });
-          this.cartQuantities = quantities;
+          this.cartQuantities = { ...quantities }; // new object → triggers change detection
         }
       },
-      error: () => {}
+      error: () => {} // 404 = no cart yet, fine
     });
   }
 
@@ -102,35 +110,36 @@ export class CustomerMenuComponent implements OnInit {
 
     if (currentQty === 0) {
       // First add — POST add-item
-      this.inFlight[item.menuId] = true;
+      this.inFlight = { ...this.inFlight, [item.menuId]: true };
       this.customerService.addToCart(user.id, item.menuId, 1).subscribe({
         next: (res) => {
-          this.inFlight[item.menuId] = false;
+          this.inFlight = { ...this.inFlight, [item.menuId]: false };
           if (res.success) {
             this.cartId = res.data.id;
-            this.cartQuantities[item.menuId] = 1;
+            // New object reference → triggers ngOnChanges in child
+            this.cartQuantities = { ...this.cartQuantities, [item.menuId]: 1 };
             this.showToast(`✅ ${item.itemName} added!`, false);
           } else {
             this.showToast(res.message || 'Could not add item.', true);
           }
         },
         error: (err) => {
-          this.inFlight[item.menuId] = false;
+          this.inFlight = { ...this.inFlight, [item.menuId]: false };
           this.showToast(err?.error?.message || 'Error adding item.', true);
         }
       });
     } else {
       // Increase qty — PUT update-quantity
       const newQty = currentQty + 1;
-      this.inFlight[item.menuId] = true;
+      this.inFlight = { ...this.inFlight, [item.menuId]: true };
       this.customerService.updateCartItemQuantity(this.cartId, item.menuId, newQty).subscribe({
         next: (res) => {
-          this.inFlight[item.menuId] = false;
+          this.inFlight = { ...this.inFlight, [item.menuId]: false };
           if (res.success) {
-            this.cartQuantities[item.menuId] = newQty;
+            this.cartQuantities = { ...this.cartQuantities, [item.menuId]: newQty };
           }
         },
-        error: () => { this.inFlight[item.menuId] = false; }
+        error: () => { this.inFlight = { ...this.inFlight, [item.menuId]: false }; }
       });
     }
   }
@@ -143,31 +152,33 @@ export class CustomerMenuComponent implements OnInit {
     const currentQty = this.qtyOf(item.menuId);
     if (currentQty === 0) return;
 
-    this.inFlight[item.menuId] = true;
+    this.inFlight = { ...this.inFlight, [item.menuId]: true };
 
     if (currentQty === 1) {
       // Remove entirely
       this.customerService.removeFromCart(this.cartId, item.menuId).subscribe({
         next: (res) => {
-          this.inFlight[item.menuId] = false;
+          this.inFlight = { ...this.inFlight, [item.menuId]: false };
           if (res.success) {
-            delete this.cartQuantities[item.menuId];
+            const updated = { ...this.cartQuantities };
+            delete updated[item.menuId];
+            this.cartQuantities = updated; // new object → triggers change detection
             this.showToast(`🗑 ${item.itemName} removed.`, false);
           }
         },
-        error: () => { this.inFlight[item.menuId] = false; }
+        error: () => { this.inFlight = { ...this.inFlight, [item.menuId]: false }; }
       });
     } else {
       // Decrease qty
       const newQty = currentQty - 1;
       this.customerService.updateCartItemQuantity(this.cartId, item.menuId, newQty).subscribe({
         next: (res) => {
-          this.inFlight[item.menuId] = false;
+          this.inFlight = { ...this.inFlight, [item.menuId]: false };
           if (res.success) {
-            this.cartQuantities[item.menuId] = newQty;
+            this.cartQuantities = { ...this.cartQuantities, [item.menuId]: newQty };
           }
         },
-        error: () => { this.inFlight[item.menuId] = false; }
+        error: () => { this.inFlight = { ...this.inFlight, [item.menuId]: false }; }
       });
     }
   }
@@ -177,6 +188,23 @@ export class CustomerMenuComponent implements OnInit {
     this.toastError = isError;
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => this.toastMessage = '', 3000);
+  }
+
+  loadReviews(): void {
+    this.reviewsLoading = true;
+    this.reviewService.getReviewsByRestaurant(this.restaurantId).subscribe({
+      next: (res) => {
+        this.reviews        = res.success ? (res.data || []) : [];
+        this.reviewsLoading = false;
+      },
+      error: () => { this.reviewsLoading = false; }
+    });
+  }
+
+  /** Turn a numeric rating into filled/empty star string */
+  starsFor(rating: number): string {
+    const full  = Math.round(rating);
+    return '★'.repeat(full) + '☆'.repeat(5 - full);
   }
 
   goToCart(): void { this.router.navigate(['/customer/cart']); }

@@ -236,6 +236,10 @@ export class DeliveryDashboardComponent implements OnInit, OnDestroy {
     this.toastTimer = setTimeout(() => this.toastMsg = '', 3500);
   }
 
+  goHome(): void {
+    this.router.navigate(['/agent/dashboard']);
+  }
+
   logout(): void {
     this.authService.logout();
     this.router.navigate(['/']);

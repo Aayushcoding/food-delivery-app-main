@@ -52,6 +52,27 @@
 }
 .back-home:hover { color: #ff6a00; border-color: rgba(255,106,0,0.4); }
 
+.header-links {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.go-cart-btn {
+  display: inline-block;
+  color: #0f3460;
+  background: linear-gradient(135deg, #f7b731, #ff6a00);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 7px 20px;
+  border-radius: 20px;
+  transition: opacity 0.2s;
+}
+.go-cart-btn:hover { opacity: 0.85; }
+
 /* ── Applied Banner ───────────────────────────── */
 .applied-banner {
   max-width: 900px;
@@ -211,7 +232,20 @@
 .disc-cap {
   font-size: 11px;
   color: rgba(255,255,255,0.35);
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+}
+
+.disc-condition {
+  display: inline-block;
+  margin: 0 0 14px;
+  padding: 3px 10px;
+  background: rgba(247, 183, 49, 0.15);
+  border: 1px solid rgba(247, 183, 49, 0.35);
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #f7b731;
+  letter-spacing: 0.3px;
 }
 
 .disc-apply-btn {

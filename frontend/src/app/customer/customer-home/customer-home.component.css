@@ -406,6 +406,27 @@
   font-style: italic;
 }
 
+/* ============ NO CITY BANNER ============ */
+.no-city-banner {
+  margin: 12px 24px 0;
+  padding: 12px 16px;
+  background: #fff8e1;
+  border-left: 4px solid var(--secondary-color);
+  border-radius: var(--border-radius);
+  font-size: 13px;
+  color: #5d4037;
+}
+
+.no-city-banner p { margin: 0; }
+
+.no-city-banner a {
+  color: var(--primary-color);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.no-city-banner a:hover { text-decoration: underline; }
+
 /* ============ RESTAURANTS GRID ============ */
 .restaurants-grid {
   display: grid;
@@ -621,4 +642,12 @@
   border-radius: 8px;
   word-break: break-word;
   letter-spacing: 0.3px;
+}
+
+/* == Review count on restaurant card == */
+.review-count {
+  font-size: 11px;
+  color: #888;
+  margin-left: 3px;
+  font-weight: 400;
 }

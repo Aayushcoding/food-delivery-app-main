@@ -19,9 +19,13 @@ export class AuthComponent implements OnInit {
 
   // ── Form fields ─────────────────────────────────────────
   username = '';
-  email = '';
+  email    = '';   // used as email-or-username on login
   password = '';
-  phoneNo = '';
+  phoneNo  = '';
+  // Address (Customer & DeliveryAgent signup)
+  street  = '';
+  city    = '';
+  pincode = '';
 
   showPassword = false;
   isLoading = false;
@@ -78,14 +82,15 @@ export class AuthComponent implements OnInit {
     return true;
   }
 
-  // ── Login ────────────────────────────────────────────────
+  // ── Login (email OR username) ─────────────────────────
   onLogin(): void {
     this.clearMessages();
-    if (!this.email.trim()) { this.errorMessage = 'Email is required.'; return; }
+    const identifier = this.email.trim();
+    if (!identifier) { this.errorMessage = 'Email or username is required.'; return; }
     if (!this.password) { this.errorMessage = 'Password is required.'; return; }
 
     this.isLoading = true;
-    this.loginService.login({ email: this.email.trim(), password: this.password, role: this.role })
+    this.loginService.login({ email: identifier, password: this.password, role: this.role })
       .subscribe({
         next: (res) => {
           this.isLoading = false;
@@ -93,6 +98,12 @@ export class AuthComponent implements OnInit {
           const token = res.token;
           if (!token) { this.errorMessage = 'Login failed — no token received.'; return; }
           this.authService.saveUserAndToken(user, token);
+
+          // Restore saved city so customer-home filters by their city automatically
+          const addrs = user?.addresses || user?.address || [];
+          const savedCity = Array.isArray(addrs) && addrs.length > 0 ? addrs[0].city : '';
+          if (savedCity) localStorage.setItem('selectedCity', savedCity.toLowerCase().trim());
+
           this.redirectByRole(this.role);
         },
         error: (err) => {
@@ -107,29 +118,51 @@ export class AuthComponent implements OnInit {
     this.clearMessages();
 
     if (!this.username.trim()) { this.errorMessage = 'Username is required.'; return; }
-    if (!this.email.trim()) { this.errorMessage = 'Email is required.'; return; }
+    if (!this.email.trim())    { this.errorMessage = 'Email is required.'; return; }
     if (this.password.length < 6) { this.errorMessage = 'Password must be at least 6 characters.'; return; }
-    if (this.phoneNo && !/^\d{10}$/.test(this.phoneNo.trim())) {
+    // Phone required for ALL roles
+    if (!this.phoneNo.trim()) { this.errorMessage = 'Phone number is required.'; return; }
+    if (!/^\d{10}$/.test(this.phoneNo.trim())) {
       this.errorMessage = 'Phone must be exactly 10 digits.'; return;
+    }
+    // City required for Customer and DeliveryAgent
+    if (this.role !== 'Owner' && !this.city.trim()) {
+      this.errorMessage = 'City is required.'; return;
     }
 
     const payload: any = {
       username: this.username.trim(),
-      email: this.email.trim(),
+      email:    this.email.trim(),
       password: this.password,
-      phoneNo: this.phoneNo.trim(),
-      role: this.role
+      phoneNo:  this.phoneNo.trim(),
+      role:     this.role
     };
+
+    // Include addresses for Customer & DeliveryAgent
+    if (this.role !== 'Owner' && (this.street.trim() || this.city.trim())) {
+      payload.addresses = [{
+        street:  this.street.trim(),
+        city:    this.city.trim().toLowerCase(),
+        pincode: this.pincode.trim()
+      }];
+    }
 
     this.isLoading = true;
     this.loginService.register(payload).subscribe({
       next: (res) => {
         this.isLoading = false;
         if (res.success) {
+          // Persist city so customer-home filters correctly right after signup
+          if (this.city.trim()) {
+            localStorage.setItem('selectedCity', this.city.trim().toLowerCase());
+          }
           this.successMessage = '✅ Account created! Please login.';
-          this.mode = 'login';
+          this.mode     = 'login';
           this.password = '';
           this.username = '';
+          this.street   = '';
+          this.city     = '';
+          this.pincode  = '';
         } else {
           this.errorMessage = res.message || 'Registration failed.';
         }

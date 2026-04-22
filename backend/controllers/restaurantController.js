@@ -1,5 +1,6 @@
 // controllers/restaurantController.js
 const Restaurant = require('../models/Restaurant');
+const Order      = require('../models/Order');
 const Menu       = require('../models/Menu');
 const { getNextSequence } = require('../utils/counter');
 
@@ -20,8 +21,21 @@ const resolveImage = (req) => {
 // GET /api/restaurants
 const getAllRestaurants = async (req, res) => {
   try {
-    let restaurants = await Restaurant.find({}).lean();
-    const { search } = req.query;
+    const { search, city } = req.query;
+
+    const filter = {};
+
+    // City-based filtering: strict lowercase exact match
+    if (city && city.trim()) {
+      const normalizedCity = city.trim().toLowerCase();
+      filter.city = normalizedCity;
+      console.log(`[getAllRestaurants] Filtering by city: "${normalizedCity}"`);
+    }
+
+    let restaurants = await Restaurant.find(filter).lean();
+    console.log(`[getAllRestaurants] Found ${restaurants.length} restaurant(s) | city filter: "${filter.city || 'none'}"`);
+    restaurants.forEach(r => console.log(`  → ${r.restaurantName} | city: "${r.city}"`))
+
     if (search) {
       const q = search.toLowerCase();
       restaurants = restaurants.filter(r =>
@@ -44,6 +58,8 @@ const getRestaurantByOwner = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+
 
 // GET /api/restaurants/:id
 const getRestaurantById = async (req, res) => {
@@ -69,7 +85,7 @@ const getRestaurantMenu = async (req, res) => {
 // POST /api/restaurants
 const createRestaurant = async (req, res) => {
   try {
-    const { restaurantName, restaurantContactNo, address, cuisine } = req.body;
+    const { restaurantName, restaurantContactNo, address, city, cuisine } = req.body;
     const ownerId = req.user.id;
 
     if (!restaurantName?.trim()) return res.status(400).json({ success: false, message: 'restaurantName is required' });
@@ -83,6 +99,7 @@ const createRestaurant = async (req, res) => {
       ownerId,
       restaurantContactNo: restaurantContactNo?.trim() || '',
       address:             address || '',
+      city:                (city || '').trim().toLowerCase(),
       cuisine:             normalizeCuisine(cuisine),
       displayImage:        resolveImage(req)
     }).save();
@@ -100,7 +117,7 @@ const updateRestaurant = async (req, res) => {
     if (!existing) return res.status(404).json({ success: false, message: 'Restaurant not found' });
     if (req.user.id !== existing.ownerId) return res.status(403).json({ success: false, message: 'Not your restaurant' });
 
-    const { restaurantName, address, restaurantContactNo, cuisine } = req.body;
+    const { restaurantName, address, city, restaurantContactNo, cuisine } = req.body;
 
     if (restaurantContactNo?.trim() && !PHONE_REGEX.test(restaurantContactNo.trim()))
       return res.status(400).json({ success: false, message: 'Contact must be exactly 10 digits' });
@@ -108,6 +125,7 @@ const updateRestaurant = async (req, res) => {
     const updates = {};
     if (restaurantName?.trim())            updates.restaurantName      = restaurantName.trim();
     if (address !== undefined)             updates.address             = address;
+    if (city    !== undefined)             updates.city                = city.trim().toLowerCase();
     if (restaurantContactNo !== undefined) updates.restaurantContactNo = restaurantContactNo.trim();
     if (cuisine !== undefined)             updates.cuisine             = normalizeCuisine(cuisine);
     if (req.file)                          updates.displayImage        = `/uploads/${req.file.filename}`;
@@ -133,4 +151,51 @@ const deleteRestaurant = async (req, res) => {
   }
 };
 
-module.exports = { getAllRestaurants, getRestaurantById, getRestaurantMenu, getRestaurantByOwner, createRestaurant, updateRestaurant, deleteRestaurant };
+// GET /api/restaurants/dashboard?restaurantId=<id>
+// Owner dashboard — real data only, no fake figures.
+const getRestaurantDashboard = async (req, res) => {
+  try {
+    const restaurantId = req.query.restaurantId || req.params.restaurantId;
+    if (!restaurantId) {
+      return res.status(400).json({ success: false, message: 'restaurantId is required' });
+    }
+
+    const restaurant = await Restaurant.findOne({ restaurantId }).lean();
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    // Active orders = everything that is NOT delivered or cancelled
+    const inactiveStatuses = ['delivered', 'cancelled'];
+
+    const [totalOrders, activeOrders, deliveredOrders] = await Promise.all([
+      Order.countDocuments({ restaurantId }),
+      Order.countDocuments({ restaurantId, status: { $nin: inactiveStatuses } }),
+      Order.find({ restaurantId, status: 'delivered' }, { finalAmount: 1, totalAmount: 1 }).lean()
+    ]);
+
+    // Revenue = sum of finalAmount (or totalAmount as fallback) for delivered orders only
+    const totalRevenue = deliveredOrders.reduce((sum, o) => {
+      const amount = (o.finalAmount && o.finalAmount > 0) ? o.finalAmount : (o.totalAmount || 0);
+      return sum + amount;
+    }, 0);
+
+    console.log(`[dashboard] restaurantId:${restaurantId} | total:${totalOrders} | active:${activeOrders} | revenue:${totalRevenue}`);
+
+    return res.json({
+      success: true,
+      data: {
+        restaurantId,
+        restaurantName: restaurant.restaurantName,
+        totalOrders,
+        pendingOrders:  activeOrders,      // all non-delivered/non-cancelled
+        totalRevenue                        // sum from delivered orders only
+      }
+    });
+  } catch (err) {
+    console.error('[getRestaurantDashboard]', err.message);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { getAllRestaurants, getRestaurantById, getRestaurantMenu, getRestaurantByOwner, createRestaurant, updateRestaurant, deleteRestaurant, getRestaurantDashboard };

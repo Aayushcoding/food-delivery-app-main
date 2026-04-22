@@ -4,7 +4,7 @@
   "description": "Backend for Food Delivery System (Express + MongoDB)",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
+    "start": "nodemon server.js",
     "dev": "nodemon server.js"
   },
   "dependencies": {

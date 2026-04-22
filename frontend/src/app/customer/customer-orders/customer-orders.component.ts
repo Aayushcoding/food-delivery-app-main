@@ -18,6 +18,8 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
   cancellingId: string   = '';
   toastMessage: string   = '';
   toastError:   boolean  = false;
+  /** restaurantId → restaurantName lookup, populated after orders load */
+  restaurantNames: Record<string, string> = {};
   private toastTimer: any;
   private pollTimer:  any;
 
@@ -74,6 +76,8 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
           this.orders
             .filter(o => o.status === 'delivered')
             .forEach(o => this.checkReviewed(o.id));
+          // Enrich with restaurant names
+          this.loadRestaurantNames();
         } else {
           this.errorMessage = res.message || 'Could not load orders.';
         }
@@ -82,6 +86,26 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
         this.loading      = false;
         this.errorMessage = err?.error?.message || 'Failed to load orders. Please try again.';
       }
+    });
+  }
+
+  /** Fetch all restaurants once and build an id→name map */
+  private loadRestaurantNames(): void {
+    const missingIds = [...new Set(
+      this.orders.map(o => o.restaurantId).filter(id => id && !this.restaurantNames[id])
+    )];
+    if (missingIds.length === 0) return;
+
+    this.customerService.getRestaurants().subscribe({
+      next: (res) => {
+        const list: any[] = res.success ? (res.data || []) : [];
+        list.forEach((r: any) => {
+          if (r.restaurantId && r.restaurantName) {
+            this.restaurantNames[r.restaurantId] = r.restaurantName;
+          }
+        });
+      },
+      error: () => {} // silently ignore — fall back to restaurantId
     });
   }
 
@@ -197,5 +221,19 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
     this.toastTimer = setTimeout(() => this.toastMessage = '', 3500);
   }
 
+
   goHome(): void { this.router.navigate(['/customer/customer-home']); }
+
+  /** Safely format deliveryAddress whether it is a string or an object */
+  formatAddress(addr: any): string {
+    if (!addr) return '—';
+    if (typeof addr === 'string') return addr || '—';
+    const parts = [addr.street, addr.city, addr.pincode, addr.landmark].filter(Boolean);
+    return parts.join(', ') || '—';
+  }
+
+  /** Show finalAmount if it's been set and > 0, otherwise fall back to totalAmount */
+  displayAmount(order: any): number {
+    return (order.finalAmount && order.finalAmount > 0) ? order.finalAmount : (order.totalAmount || 0);
+  }
 }

@@ -14,9 +14,11 @@ export class CustomerService {
   constructor(private http: HttpClient, private authService: AuthService) {}
 
   // ── RESTAURANTS ────────────────────────────────────────────────────
-  getRestaurants(search?: string): Observable<any> {
-    let url = `${this.baseUrl}/restaurants`;
-    if (search) { url += `?search=${search}`; }
+  getRestaurants(search?: string, city?: string): Observable<any> {
+    const params: string[] = [];
+    if (search) { params.push(`search=${encodeURIComponent(search)}`); }
+    if (city)   { params.push(`city=${encodeURIComponent(city)}`); }
+    const url = `${this.baseUrl}/restaurants${params.length ? '?' + params.join('&') : ''}`;
     return this.http.get(url);
   }
 
@@ -126,4 +128,14 @@ export class CustomerService {
       orderId, userId
     }, { headers: this.authService.getAuthHeaders() });
   }
-}
+
+  // ── OWNER DASHBOARD ────────────────────────────────────────────────
+  // GET /api/restaurants/dashboard?restaurantId=<id>
+  // Returns { totalOrders, pendingOrders, totalRevenue }
+  getRestaurantDashboard(restaurantId: string): Observable<any> {
+    return this.http.get(
+      `${this.baseUrl}/restaurants/dashboard?restaurantId=${encodeURIComponent(restaurantId)}`,
+      { headers: this.authService.getAuthHeaders() }
+    );
+  }
+}

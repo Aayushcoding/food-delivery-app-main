@@ -3,21 +3,16 @@
   <!-- Header -->
   <div class="disc-header">
     <h1>🏷 Exclusive Offers</h1>
-    <p>Handpicked discounts just for you — pick one and save big!</p>
-    <a routerLink="/customer/customer-home" class="back-home">← Back to Home</a>
-  </div>
-
-  <!-- Applied Banner -->
-  <div class="applied-banner" *ngIf="appliedDiscount">
-    <div class="applied-inner">
-      <span>✅ <strong>{{ appliedDiscount.code }}</strong> applied — {{ appliedMessage }}</span>
-      <button class="remove-btn" (click)="removeDiscount()" id="btn-remove-discount">Remove</button>
+    <p>Tap a coupon to copy the code — then paste it in your cart!</p>
+    <div class="header-links">
+      <a routerLink="/customer/customer-home" class="back-home">← Back to Home</a>
+      <a routerLink="/customer/cart" class="go-cart-btn">🛒 Go to Cart →</a>
     </div>
   </div>
 
-  <!-- Toast -->
+  <!-- Copied Toast -->
   <div class="toast" [class.show]="toastVisible">
-    🎉 Discount applied successfully!
+    📋 {{ toastCode }} copied! Paste it in your cart to save.
   </div>
 
   <!-- Grid -->
@@ -27,7 +22,6 @@
       class="disc-card"
       [class.selected]="d.selected"
       [style.--accent]="d.color"
-      (click)="applyDiscount(d)"
       [id]="'disc-' + d.id">
 
       <div class="disc-glow"></div>
@@ -40,15 +34,14 @@
       <h3 class="disc-title">{{ d.title }}</h3>
       <p class="disc-desc">{{ d.description }}</p>
 
-      <div class="disc-cap" *ngIf="d.cap > 0">
-        Max savings: ₹{{ d.cap }}
-      </div>
-      <div class="disc-cap" *ngIf="d.type === 'free'">
-        No minimum order required
-      </div>
+      <div class="disc-cap" *ngIf="d.cap > 0">Max savings: ₹{{ d.cap }}</div>
+      <div class="disc-cap" *ngIf="d.type === 'free'">No minimum order required</div>
 
-      <button class="disc-apply-btn">
-        {{ d.selected ? '✅ Applied' : 'Apply Offer' }}
+      <!-- Condition hint pill (shown only for restricted offers) -->
+      <div class="disc-condition" *ngIf="hintFor(d.code)">{{ hintFor(d.code) }}</div>
+
+      <button class="disc-apply-btn" (click)="copyCode(d, $event)" [id]="'btn-copy-' + d.id">
+        {{ d.selected ? '✅ Copied!' : '📋 Copy Code' }}
       </button>
 
     </div>

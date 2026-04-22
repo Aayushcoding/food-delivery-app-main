@@ -3,7 +3,7 @@
 <!-- Navbar -->
 <nav class="navbar">
 <div class="navbar-left">
-<h1 class="logo">🍕 ByteBites</h1>
+<h1 class="logo" (click)="goHome()" style="cursor:pointer" title="Go to home">🍕 ByteBites</h1>
 </div>
 
 <div class="search-bar">
@@ -82,9 +82,15 @@
 </div>
 </div>
 
+<!-- No city selected banner -->
+<div *ngIf="noCitySelected && !loading" class="no-city-banner">
+  <p>📍 No city selected — showing all restaurants. <a routerLink="/customer/profile">Set your city in profile →</a></p>
+</div>
+
 <!-- Results Info -->
 <div class="results-info">
-<p *ngIf="!loading">Found <strong>{{filteredRestaurants.length}}</strong> restaurants</p>
+<p *ngIf="!loading && selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants in <strong>{{selectedCity}}</strong></p>
+<p *ngIf="!loading && !selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants</p>
 <p *ngIf="loading" class="loading-text">Loading restaurants...</p>
 </div>
 
@@ -118,7 +124,15 @@
     <p class="rest-address" *ngIf="restaurant.address">📍 {{ restaurant.address }}</p>
     
     <div class="card-meta">
-      <span class="rating">⭐ {{restaurant.rating}}</span>
+      <span class="rating">
+        <ng-container *ngIf="restaurant.reviewCount > 0">
+          ⭐ {{ restaurant.rating | number:'1.1-1' }}
+          <span class="review-count">({{ restaurant.reviewCount }} {{ restaurant.reviewCount === 1 ? 'review' : 'reviews' }})</span>
+        </ng-container>
+        <ng-container *ngIf="!restaurant.reviewCount || restaurant.reviewCount === 0">
+          ☆ No reviews yet
+        </ng-container>
+      </span>
       <span class="tag">Free Delivery</span>
     </div>
 
@@ -137,7 +151,14 @@
 
 <!-- Empty State -->
 <div *ngIf="filteredRestaurants.length===0 && !loading" class="empty-state">
-<p>😕 No restaurants found. Try adjusting your search or filters.</p>
+  <p *ngIf="selectedCity">
+    😕 No restaurants found in <strong>{{selectedCity}}</strong>.
+    <br><small>Restaurants may not have their city set yet.</small>
+  </p>
+  <p *ngIf="!selectedCity">😕 No restaurants found. Try adjusting your search or filters.</p>
+  <button *ngIf="selectedCity" class="btn btn-secondary" (click)="clearCityFilter()" style="margin-top:12px;">
+    🌍 Show All Restaurants
+  </button>
 </div>
 
 <!-- Reviews Section -->

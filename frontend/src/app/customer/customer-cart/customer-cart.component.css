@@ -341,3 +341,96 @@
 
   .item-subtotal { flex: 1; text-align: center; }
 }
+
+/* ── COUPON SECTION ─────────────────────────────────────────────────── */
+.coupon-section {
+  margin: 14px 0 4px;
+  padding: 14px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px dashed #ddd;
+}
+
+.coupon-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.coupon-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #2c3e50;
+  background: #fff;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.coupon-input:focus      { border-color: #ff6b35; }
+.coupon-input.coupon-valid   { border-color: #2e7d32; color: #2e7d32; }
+.coupon-input.coupon-invalid { border-color: #c62828; }
+
+.coupon-btn {
+  padding: 10px 18px;
+  background: #ff6b35;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.coupon-btn:hover:not(:disabled) { background: #e55a2a; }
+.coupon-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.coupon-msg {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+}
+.coupon-success { color: #2e7d32; }
+.coupon-fail    { color: #c62828; }
+
+.browse-offers-link {
+  display: inline-block;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: #ff6b35;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+
+/* ── DISCOUNT ROW ───────────────────────────────────────────────────── */
+.discount-row { color: #2e7d32; font-weight: 700; }
+.discount-value { color: #2e7d32; font-weight: 800; }
+
+/* ── SAVINGS CHIP ───────────────────────────────────────────────────── */
+.savings-chip {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1b5e20;
+  text-align: center;
+  animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.9); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}

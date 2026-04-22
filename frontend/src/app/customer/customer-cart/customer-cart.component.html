@@ -12,7 +12,11 @@
   </div>
 
   <!-- ERROR -->
-  <div *ngIf="errorMessage" class="error-banner">⚠️ {{ errorMessage }}</div>
+  <div *ngIf="errorMessage" class="error-banner">
+    ⚠️ {{ errorMessage }}
+    <a *ngIf="errorMessage.includes('address')" routerLink="/customer/profile"
+       style="margin-left:8px;color:#ff6b35;font-weight:700;">→ Set address in Profile</a>
+  </div>
 
   <!-- LOADING -->
   <div *ngIf="cartLoading" class="state-box">
@@ -53,7 +57,7 @@
               [disabled]="inFlight[item.itemId]">+</button>
           </div>
 
-          <!-- Subtotal -->
+          <!-- Subtotal (live) -->
           <span class="item-subtotal">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
 
           <!-- Remove -->
@@ -70,6 +74,7 @@
       <div class="summary-card">
         <h3 class="summary-title">Order Summary</h3>
 
+        <!-- Live total lines -->
         <div class="summary-lines">
           <div class="summary-row">
             <span>Items</span>
@@ -77,8 +82,39 @@
           </div>
           <div class="summary-row">
             <span>Subtotal</span>
-            <span>₹{{ total | number:'1.0-0' }}</span>
+            <span>₹{{ subtotal | number:'1.0-0' }}</span>
           </div>
+
+          <!-- Coupon Input -->
+          <div class="coupon-section">
+            <div class="coupon-input-row">
+              <input
+                type="text"
+                class="coupon-input"
+                [(ngModel)]="couponCode"
+                (ngModelChange)="onCouponChange()"
+                placeholder="Enter coupon code"
+                id="coupon-input"
+                [class.coupon-valid]="couponApplied"
+                [class.coupon-invalid]="couponError">
+              <button class="coupon-btn"
+                (click)="applyCoupon()"
+                [disabled]="!couponCode.trim()"
+                id="btn-apply-coupon">
+                {{ couponApplied ? '✓' : 'Apply' }}
+              </button>
+            </div>
+            <p class="coupon-msg coupon-success" *ngIf="couponApplied">{{ couponMessage }}</p>
+            <p class="coupon-msg coupon-fail"    *ngIf="couponError">{{ couponError }}</p>
+            <button class="browse-offers-link" (click)="goToOffers()">🏷 Browse Offers</button>
+          </div>
+
+          <!-- Discount row (only when coupon valid) -->
+          <div class="summary-row discount-row" *ngIf="couponApplied && discountAmount > 0">
+            <span>🎉 Discount ({{ couponCode.toUpperCase() }})</span>
+            <span class="discount-value">−₹{{ discountAmount | number:'1.0-0' }}</span>
+          </div>
+
           <div class="summary-row">
             <span>Delivery</span>
             <span class="free-tag">FREE</span>
@@ -86,7 +122,10 @@
           <div class="summary-divider"></div>
           <div class="summary-row total-row">
             <span>Total</span>
-            <span>₹{{ total | number:'1.0-0' }}</span>
+            <span>₹{{ finalTotal | number:'1.0-0' }}</span>
+          </div>
+          <div class="savings-chip" *ngIf="discountAmount > 0">
+            💰 You save ₹{{ discountAmount | number:'1.0-0' }} on this order!
           </div>
         </div>
 

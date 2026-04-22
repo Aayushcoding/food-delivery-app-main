@@ -47,8 +47,12 @@
         <!-- HEADER -->
         <div class="order-card-header">
           <div class="order-id-block">
-            <div class="order-id"># {{ order.id }}</div>
-            <div class="order-date">{{ order.createdAt | date:'MMM d, y, h:mm a' }}</div>
+            <div class="order-restaurant-name">
+              🍽 {{ restaurantNames[order.restaurantId] || order.restaurantId || 'Restaurant' }}
+            </div>
+            <div class="order-date">
+              # {{ order.id }} &nbsp;·&nbsp; {{ order.createdAt | date:'MMM d, y, h:mm a' }}
+            </div>
           </div>
           <span class="status-badge" [class]="order.status || 'default'">
             {{ order.status || 'pending' }}
@@ -92,11 +96,11 @@
           <div class="order-meta">
             <div class="order-meta-item">
               <span class="meta-label">Total Amount</span>
-              <span class="meta-value price">₹{{ order.totalAmount | number:'1.0-0' }}</span>
+              <span class="meta-value price">₹{{ displayAmount(order) | number:'1.0-0' }}</span>
             </div>
             <div class="order-meta-item">
               <span class="meta-label">Delivery Address</span>
-              <span class="meta-value">{{ order.deliveryAddress || '—' }}</span>
+              <span class="meta-value">{{ formatAddress(order.deliveryAddress) }}</span>
             </div>
             <div class="order-meta-item">
               <span class="meta-label">Items</span>

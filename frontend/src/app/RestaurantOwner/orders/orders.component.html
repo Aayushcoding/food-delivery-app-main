@@ -31,19 +31,19 @@
     <!-- ORDERS LIST -->
     <div class="orders-list" *ngIf="!loading && orders.length > 0">
 
-      <div *ngFor="let order of orders" class="order-card">
+      <div *ngFor="let order of orders" class="order-card" [class.order-new]="order.status === 'pending'">
 
         <!-- ORDER HEADER -->
         <div class="order-head">
           <span class="order-id"># {{ order.id }}</span>
           <span class="order-date">{{ order.createdAt | date:'d MMM y, h:mm a' }}</span>
-          <span class="status-pill" [class]="order.status">{{ order.status }}</span>
+          <span class="status-pill" [class]="order.status">{{ order.status | titlecase }}</span>
         </div>
 
         <!-- ITEMS -->
         <div class="order-items">
           <div *ngFor="let item of order.enrichedItems || order.items" class="order-item-row">
-            <span class="item-name">{{ item.itemName || item.itemId }}</span>
+            <span class="item-name">{{ item.itemName || item.name || item.itemId }}</span>
             <span class="item-qty">× {{ item.quantity }}</span>
             <span class="item-price">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
           </div>
@@ -53,25 +53,62 @@
         <div class="order-foot">
           <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
 
-          <!-- If delivery agent is assigned: show read-only badge, owner's job is done -->
+          <!-- ── AGENT ASSIGNED — owner's work is done ── -->
           <div *ngIf="isAssigned(order)" class="agent-assigned-badge">
-            🛵 Assigned to Delivery Agent
+            🛵 Picked up by Delivery Agent
             <span class="agent-status-pill">{{ order.status | titlecase }}</span>
           </div>
 
-          <!-- Owner controls: only visible before agent assignment -->
-          <div *ngIf="!isAssigned(order)" class="status-update">
-            <label>Update Status:</label>
-            <select (change)="updateStatus(order, $event)" [value]="order.status">
-              <option *ngFor="let s of statuses" [value]="s">{{ s }}</option>
-            </select>
-          </div>
-        </div>
+          <!-- ── OWNER ACTION BUTTONS — shown before agent assignment ── -->
+          <div *ngIf="!isAssigned(order)" class="action-btns">
 
+            <!-- PENDING → Confirm -->
+            <button *ngIf="order.status === 'pending'"
+                    class="btn-action btn-confirm"
+                    [disabled]="updatingId === order.id"
+                    (click)="setStatus(order, 'confirmed')">
+              ✅ Confirm Order
+            </button>
+
+            <!-- CONFIRMED → Start Preparing -->
+            <button *ngIf="order.status === 'confirmed'"
+                    class="btn-action btn-prepare"
+                    [disabled]="updatingId === order.id"
+                    (click)="setStatus(order, 'preparing')">
+              👨‍🍳 Start Preparing
+            </button>
+
+            <!-- PREPARING → Ready for Delivery (agents will see this) -->
+            <button *ngIf="order.status === 'preparing'"
+                    class="btn-action btn-dispatch"
+                    [disabled]="updatingId === order.id"
+                    (click)="setStatus(order, 'out_for_delivery')">
+              🚀 Ready for Pickup
+            </button>
+
+            <!-- Cancel — available on pending & confirmed -->
+            <button *ngIf="order.status === 'pending' || order.status === 'confirmed'"
+                    class="btn-action btn-cancel-order"
+                    [disabled]="updatingId === order.id"
+                    (click)="setStatus(order, 'cancelled')">
+              ✕ Cancel
+            </button>
+
+            <!-- Spinner while updating -->
+            <span *ngIf="updatingId === order.id" class="updating-spinner">⏳</span>
+          </div>
+
+          <!-- Helper tip for preparing/confirmed -->
+          <p *ngIf="order.status === 'confirmed' || order.status === 'preparing'"
+             class="delivery-hint">
+            💡 Agents can see this order. Click "Ready for Pickup" when food is ready.
+          </p>
+
+        </div>
 
       </div>
     </div>
 
   </div><!-- /page-body -->
 
-</div>
+</div>

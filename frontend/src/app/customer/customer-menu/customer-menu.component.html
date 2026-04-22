@@ -38,4 +38,35 @@
     <button (click)="goHome()" class="btn-primary">Back to Restaurants</button>
   </div>
 
+  <!-- ════════════ CUSTOMER REVIEWS ════════════ -->
+  <section class="reviews-section">
+    <div class="reviews-header">
+      <h2 class="reviews-title">⭐ Customer Reviews</h2>
+      <span class="reviews-count" *ngIf="reviews.length > 0">{{ reviews.length }} {{ reviews.length === 1 ? 'review' : 'reviews' }}</span>
+    </div>
+
+    <p *ngIf="reviewsLoading" class="reviews-loading">Loading reviews...</p>
+
+    <div *ngIf="!reviewsLoading && reviews.length === 0" class="reviews-empty">
+      😶 No reviews yet — be the first to review after your delivery!
+    </div>
+
+    <div class="reviews-list" *ngIf="!reviewsLoading && reviews.length > 0">
+      <div *ngFor="let rv of reviews" class="review-card">
+        <div class="review-top">
+          <div class="reviewer-info">
+            <span class="reviewer-avatar">{{ rv.username?.charAt(0)?.toUpperCase() || 'U' }}</span>
+            <span class="reviewer-name">{{ rv.username || 'Anonymous' }}</span>
+          </div>
+          <div class="review-right">
+            <span class="review-stars">{{ starsFor(rv.rating) }}</span>
+            <span class="review-date">{{ rv.createdAt | date:'d MMM y' }}</span>
+          </div>
+        </div>
+        <p class="review-comment" *ngIf="rv.comment">{{ rv.comment }}</p>
+        <p class="review-no-comment" *ngIf="!rv.comment"><em>No comment left.</em></p>
+      </div>
+    </div>
+  </section>
+
 </div>

@@ -198,3 +198,113 @@
   .stats { padding: 20px 16px; grid-template-columns: 1fr; }
   .quick-actions { padding: 0 16px 28px; }
 }
+
+/* ── State boxes (loading / error / empty) ───────────────────────── */
+.state-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 32px;
+  color: var(--bb-text-muted);
+  font-size: 15px;
+  gap: 12px;
+}
+
+.state-box.error { color: #fc6060; }
+
+.btn-retry {
+  margin-top: 8px;
+  background: var(--bb-glass);
+  border: 1px solid var(--bb-border);
+  color: var(--bb-text-secondary);
+  padding: 8px 20px;
+  border-radius: var(--bb-radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────── */
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--bb-border);
+  border-top-color: var(--bb-orange);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Restaurant selector (multi-restaurant owners) ───────────────── */
+.restaurant-selector {
+  padding: 16px 32px 0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.selector-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bb-text-muted);
+  white-space: nowrap;
+}
+
+.restaurant-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.r-tab {
+  background: var(--bb-glass);
+  border: 1px solid var(--bb-border);
+  color: var(--bb-text-secondary);
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: var(--bb-transition);
+}
+
+.r-tab:hover,
+.r-tab.active {
+  background: linear-gradient(135deg, var(--bb-orange), var(--bb-orange-light));
+  border-color: transparent;
+  color: #fff;
+}
+
+/* ── Active restaurant banner ────────────────────────────────────── */
+.active-restaurant-bar {
+  padding: 12px 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--bb-border);
+}
+
+.active-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--bb-text-primary);
+}
+
+.active-city {
+  font-size: 12px;
+  color: var(--bb-text-muted);
+  background: var(--bb-glass);
+  border: 1px solid var(--bb-border);
+  padding: 2px 10px;
+  border-radius: 20px;
+}
+
+@media (max-width: 640px) {
+  .restaurant-selector { padding: 16px 16px 0; }
+  .active-restaurant-bar { padding: 12px 16px; }
+}

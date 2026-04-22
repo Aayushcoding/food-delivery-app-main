@@ -2,71 +2,127 @@
 
   <!-- Nav -->
   <nav class="dash-nav">
-    <div class="nav-brand">
+    <div class="nav-brand" (click)="goHome()" style="cursor:pointer" title="Go to home">
       🍴 ByteBites
       <span class="nav-role-badge">Restaurant Owner</span>
     </div>
     <div class="nav-actions">
-      <span class="nav-username" *ngIf="restaurantName">{{ restaurantName }}</span>
+      <span class="nav-username" *ngIf="owner">{{ owner.username }}</span>
       <button class="btn-nav primary" routerLink="/restaurant" id="btn-manage-restaurants">🏪 Manage</button>
-      <button class="btn-nav" routerLink="/owner/orders" id="btn-view-orders">📋 Orders</button>
+      <button class="btn-nav" (click)="goToOrders()" id="btn-view-orders">📋 Orders</button>
     </div>
   </nav>
 
-  <!-- Header -->
-  <div class="page-header">
-    <h1>👋 Welcome back, {{ restaurantName || 'Owner' }}!</h1>
-    <p>Here's a snapshot of your restaurant's performance today.</p>
+  <!-- Loading -->
+  <div *ngIf="loading" class="state-box">
+    <div class="spinner"></div>
+    <p>Loading your restaurants...</p>
   </div>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat-card">
-      <span class="stat-icon">📦</span>
-      <div class="stat-body">
-        <div class="stat-value">{{ stats.orders }}</div>
-        <div class="stat-label">Total Orders</div>
+  <!-- Error -->
+  <div *ngIf="!loading && error" class="state-box error">
+    <p>⚠️ {{ error }}</p>
+    <button class="btn-retry" (click)="loadRestaurants()">Retry</button>
+  </div>
+
+  <!-- No restaurants -->
+  <div *ngIf="!loading && !error && restaurants.length === 0" class="state-box">
+    <p>🏪 You have no restaurants yet.</p>
+    <button class="btn-nav primary" routerLink="/restaurant" style="margin-top:12px">Create Restaurant</button>
+  </div>
+
+  <!-- Main content -->
+  <ng-container *ngIf="!loading && !error && restaurants.length > 0">
+
+    <!-- Header -->
+    <div class="page-header">
+      <h1>👋 Welcome back, {{ owner?.username || 'Owner' }}!</h1>
+      <p>Here's a snapshot of your restaurants' performance.</p>
+    </div>
+
+    <!-- Restaurant selector (only shown when owner has multiple) -->
+    <div class="restaurant-selector" *ngIf="restaurants.length > 1">
+      <label class="selector-label">📍 Viewing stats for:</label>
+      <div class="restaurant-tabs">
+        <button
+          *ngFor="let r of restaurants"
+          class="r-tab"
+          [class.active]="selectedRestaurant?.restaurantId === r.restaurantId"
+          (click)="selectRestaurant(r)"
+          [id]="'tab-' + r.restaurantId">
+          {{ r.restaurantName }}
+        </button>
       </div>
     </div>
 
-    <div class="stat-card">
-      <span class="stat-icon">💰</span>
-      <div class="stat-body">
-        <div class="stat-value">₹{{ stats.revenue }}</div>
-        <div class="stat-label">Revenue</div>
+    <!-- Active restaurant name (single restaurant owners) -->
+    <div class="active-restaurant-bar" *ngIf="selectedRestaurant">
+      <span class="active-label">🏪 {{ selectedRestaurant.restaurantName }}</span>
+      <span class="active-city" *ngIf="selectedRestaurant.city">📍 {{ selectedRestaurant.city }}</span>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats" *ngIf="selectedRestaurant">
+
+      <div class="stat-card" *ngIf="statsLoading">
+        <span class="stat-icon">⏳</span>
+        <div class="stat-body">
+          <div class="stat-value">—</div>
+          <div class="stat-label">Loading...</div>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!statsLoading">
+        <div class="stat-card">
+          <span class="stat-icon">📦</span>
+          <div class="stat-body">
+            <div class="stat-value">{{ stats.totalOrders }}</div>
+            <div class="stat-label">Total Orders</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-icon">💰</span>
+          <div class="stat-body">
+            <div class="stat-value">₹{{ stats.totalRevenue | number:'1.0-0' }}</div>
+            <div class="stat-label">Revenue (Delivered)</div>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-icon">⏳</span>
+          <div class="stat-body">
+            <div class="stat-value">{{ stats.pendingOrders }}</div>
+            <div class="stat-label">Active Orders</div>
+          </div>
+        </div>
+      </ng-container>
+
+    </div>
+
+    <!-- Quick actions -->
+    <div class="quick-actions">
+      <p class="section-heading">Quick Actions</p>
+      <div class="actions-grid">
+        <button class="action-tile" routerLink="/restaurant" id="btn-tile-restaurants">
+          <span class="tile-icon">🏪</span>
+          <span class="tile-label">My Restaurants</span>
+        </button>
+        <button class="action-tile" (click)="goToMenu()" id="btn-tile-menu">
+          <span class="tile-icon">🍽</span>
+          <span class="tile-label">Menu Items</span>
+        </button>
+        <button class="action-tile" (click)="goToOrders()" id="btn-tile-orders">
+          <span class="tile-icon">📋</span>
+          <span class="tile-label">View Orders</span>
+        </button>
+        <button class="action-tile" routerLink="/owner/profile" id="btn-tile-profile">
+          <span class="tile-icon">👤</span>
+          <span class="tile-label">My Profile</span>
+        </button>
       </div>
     </div>
 
-    <div class="stat-card">
-      <span class="stat-icon">⏳</span>
-      <div class="stat-body">
-        <div class="stat-value">{{ stats.pending }}</div>
-        <div class="stat-label">Pending Orders</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick actions -->
-  <div class="quick-actions">
-    <p class="section-heading">Quick Actions</p>
-    <div class="actions-grid">
-      <button class="action-tile" routerLink="/restaurant">
-        <span class="tile-icon">🏪</span>
-        <span class="tile-label">My Restaurants</span>
-      </button>
-      <button class="action-tile" routerLink="/owner/menu">
-        <span class="tile-icon">🍽</span>
-        <span class="tile-label">Menu Items</span>
-      </button>
-      <button class="action-tile" routerLink="/owner/orders">
-        <span class="tile-icon">📋</span>
-        <span class="tile-label">View Orders</span>
-      </button>
-      <button class="action-tile" routerLink="/owner/profile">
-        <span class="tile-icon">👤</span>
-        <span class="tile-label">My Profile</span>
-      </button>
-    </div>
-  </div>
+  </ng-container>
 
 </div>

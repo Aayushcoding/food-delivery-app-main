@@ -3,7 +3,7 @@
   <!-- ── Navbar — same structure as Customer Home ── -->
   <nav class="navbar">
     <div class="nav-left">
-      <h1 class="logo">🛵 ByteBites</h1>
+      <h1 class="logo" (click)="goHome()" style="cursor:pointer" title="Go to dashboard">🛵 ByteBites</h1>
       <span class="role-pill">Delivery Agent</span>
     </div>
     <div class="nav-right">
@@ -32,6 +32,11 @@
             (click)="switchTab('active')" id="tab-active">
       🗺 My Deliveries
       <span class="count-badge count-active" *ngIf="activeOrders.length">{{ activeOrders.length }}</span>
+    </button>
+    <button class="tab" [class.active]="activeTab==='history'"
+            (click)="switchTab('history')" id="tab-history">
+      📋 History
+      <span class="count-badge count-history" *ngIf="deliveryHistory.length">{{ deliveryHistory.length }}</span>
     </button>
   </div>
 
@@ -63,7 +68,17 @@
 
       <div class="info-row" *ngIf="order.deliveryAddress">
         <span class="info-icon">📍</span>
-        <span>{{ order.deliveryAddress }}</span>
+        <span>{{ formatAddress(order.deliveryAddress) }}</span>
+      </div>
+
+      <!-- Status context for confirmed/preparing orders -->
+      <div class="info-row status-note" *ngIf="order.status === 'confirmed'">
+        <span class="info-icon">🟡</span>
+        <span>Restaurant confirmed — food preparation starting soon</span>
+      </div>
+      <div class="info-row status-note" *ngIf="order.status === 'preparing'">
+        <span class="info-icon">👨‍🍳</span>
+        <span>Food is being prepared — head to restaurant now!</span>
       </div>
 
       <div class="info-row">
@@ -115,7 +130,7 @@
 
       <div class="info-row" *ngIf="order.deliveryAddress">
         <span class="info-icon">📍</span>
-        <span>{{ order.deliveryAddress }}</span>
+        <span>{{ formatAddress(order.deliveryAddress) }}</span>
       </div>
 
       <div class="info-row">
@@ -173,6 +188,58 @@
       <!-- Delivered confirmation -->
       <div *ngIf="order.status==='delivered'" class="delivered-banner">
         🎉 Delivered Successfully!
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════
+       HISTORY TAB
+  ════════════════════════════════════════ -->
+  <div *ngIf="!loading && activeTab==='history'" class="orders-grid">
+
+    <div *ngIf="deliveryHistory.length===0" class="empty-state">
+      <span class="empty-icon">📭</span>
+      <p>No deliveries completed yet.</p>
+      <small>Your delivered orders will appear here.</small>
+    </div>
+
+    <div *ngFor="let order of deliveryHistory" class="order-card history-card">
+
+      <div class="card-head">
+        <div>
+          <span class="order-id">Order #{{ order.id }}</span>
+          <span class="chip chip-green">✅ Delivered</span>
+        </div>
+        <span class="amount">₹{{ (order.finalAmount > 0 ? order.finalAmount : order.totalAmount) | number:'1.0-0' }}</span>
+      </div>
+
+      <!-- Restaurant & Customer -->
+      <div class="info-row">
+        <span class="info-icon">🏪</span>
+        <span><strong>{{ order.restaurantName }}</strong></span>
+      </div>
+      <div class="info-row">
+        <span class="info-icon">👤</span>
+        <span>{{ order.customerName }}</span>
+      </div>
+
+      <!-- Address -->
+      <div class="info-row" *ngIf="order.deliveryAddress">
+        <span class="info-icon">📍</span>
+        <span>{{ formatAddress(order.deliveryAddress) }}</span>
+      </div>
+
+      <!-- Items -->
+      <div class="info-row">
+        <span class="info-icon">🍽</span>
+        <span class="item-list">{{ itemList(order) }}</span>
+      </div>
+
+      <!-- Delivery date -->
+      <div class="info-row history-date-row">
+        <span class="info-icon">🕐</span>
+        <span>{{ (order.deliveredAt || order.createdAt) | date:'d MMM y, h:mm a' }}</span>
       </div>
 
     </div>

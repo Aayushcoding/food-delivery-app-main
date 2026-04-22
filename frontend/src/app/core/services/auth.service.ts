@@ -53,9 +53,11 @@ export class AuthService {
   logout(): void {
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    localStorage.removeItem('selectedCity');           // clear city filter for next user
     // Clear owner session state so a new login gets a clean slate
     sessionStorage.removeItem('ownerRestaurantId');
     sessionStorage.removeItem('ownerRestaurantName');
+    sessionStorage.removeItem('lastOrderId');
   }
 
   // ✅ Save user and token (called after successful login)

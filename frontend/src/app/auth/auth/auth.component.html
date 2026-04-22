@@ -62,14 +62,14 @@
                required>
       </div>
 
-      <!-- Email -->
+      <!-- Email / login identifier -->
       <div class="field-group">
-        <label for="auth-email">Email</label>
+        <label for="auth-email">{{ mode === 'login' ? 'Email or Username' : 'Email' }}</label>
         <input id="auth-email"
-               type="email"
+               [type]="mode === 'login' ? 'text' : 'email'"
                [(ngModel)]="email"
                name="email"
-               placeholder="you@example.com"
+               [placeholder]="mode === 'login' ? 'you@example.com or username' : 'you@example.com'"
                autocomplete="email"
                required>
       </div>
@@ -91,17 +91,52 @@
         </div>
       </div>
 
-      <!-- Phone (signup only) -->
+      <!-- Phone (signup only, required for all roles) -->
       <div class="field-group" *ngIf="mode === 'signup'">
-        <label for="auth-phone">Phone <span class="optional">(optional)</span></label>
+        <label for="auth-phone">Phone Number *</label>
         <input id="auth-phone"
                type="tel"
                [(ngModel)]="phoneNo"
                name="phoneNo"
-               placeholder="10-digit number"
+               placeholder="10-digit mobile number"
                autocomplete="tel"
-               maxlength="10">
+               maxlength="10"
+               required>
       </div>
+
+      <!-- Address (signup, Customer & DeliveryAgent only) -->
+      <ng-container *ngIf="mode === 'signup' && role !== 'Owner'">
+        <div class="addr-section-label">📍 Your Address</div>
+
+        <div class="field-group">
+          <label for="auth-street">Street / Area <span class="optional">(optional)</span></label>
+          <input id="auth-street"
+                 type="text"
+                 [(ngModel)]="street"
+                 name="street"
+                 placeholder="e.g. FC Road, Deccan">
+        </div>
+
+        <div class="addr-row">
+          <div class="field-group">
+            <label for="auth-city">City</label>
+            <input id="auth-city"
+                   type="text"
+                   [(ngModel)]="city"
+                   name="city"
+                   placeholder="e.g. Pune" required>
+          </div>
+          <div class="field-group">
+            <label for="auth-pincode">Pincode <span class="optional">(optional)</span></label>
+            <input id="auth-pincode"
+                   type="text"
+                   [(ngModel)]="pincode"
+                   name="pincode"
+                   placeholder="411001"
+                   maxlength="6">
+          </div>
+        </div>
+      </ng-container>
 
       <!-- Submit -->
       <button type="submit"

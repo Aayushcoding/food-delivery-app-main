@@ -1,7 +1,9 @@
 /* ── Agent Dashboard — matches ByteBites dark design system ── */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
 /* ── Root page ──────────────────────────────────────────────── */
 .page {
@@ -94,11 +96,20 @@
   animation: slideUp 0.25s ease;
 }
 
-.toast.toast-error { background: #ef4444; }
+.toast.toast-error {
+  background: #ef4444;
+}
 
 @keyframes slideUp {
-  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 /* ── Page intro ─────────────────────────────────────────────── */
@@ -226,8 +237,15 @@
 }
 
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ── Card head ──────────────────────────────────────────────── */
@@ -391,11 +409,20 @@
 }
 
 @keyframes urgentPulse {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
+  }
 }
 
-.expired { color: #fc8181; }
+.expired {
+  color: #fc8181;
+}
 
 /* ── Stepper ────────────────────────────────────────────────── */
 .stepper {
@@ -457,8 +484,15 @@
 }
 
 @keyframes stepPulse {
-  0%, 100% { box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15); }
-  50%       { box-shadow: 0 0 0 8px rgba(255, 107, 53, 0.07); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 107, 53, 0.07);
+  }
 }
 
 .step-label {
@@ -470,8 +504,13 @@
   white-space: nowrap;
 }
 
-.step.done .step-label  { color: #68d391; }
-.step.current .step-label { color: #ff6b35; }
+.step.done .step-label {
+  color: #68d391;
+}
+
+.step.current .step-label {
+  color: #ff6b35;
+}
 
 /* ── Delivered banner ───────────────────────────────────────── */
 .delivered-banner {
@@ -488,9 +527,42 @@
 
 /* ── Responsive ─────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  .navbar  { padding: 12px 16px; }
-  .page-intro, .tab-bar, .orders-grid { padding-left: 16px; padding-right: 16px; }
-  .stepper { gap: 0; padding: 14px 12px; }
-  .tab     { padding: 8px 14px; font-size: 13px; }
-  .step-label { font-size: 9px; }
+  .navbar {
+    padding: 12px 16px;
+  }
+
+  .page-intro,
+  .tab-bar,
+  .orders-grid {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .stepper {
+    gap: 0;
+    padding: 14px 12px;
+  }
+
+  .tab {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .step-label {
+    font-size: 9px;
+  }
 }
+/* == CONFIRMED / PREPARING chip colors == */
+.chip-yellow { background:rgba(246,173,85,0.12); border:1px solid rgba(246,173,85,0.3); color:#f6ad55; }
+.chip-purple { background:rgba(183,148,246,0.12); border:1px solid rgba(183,148,246,0.3); color:#b794f6; }
+
+/* == Status note row (for confirmed/preparing context) == */
+.status-note { color:#a0aec0; font-style:italic; font-size:12px; background:rgba(255,255,255,0.02); }
+
+/* == HISTORY TAB BADGE == */
+.count-badge.count-history { background: #68d391; }
+
+/* == HISTORY CARD == */
+.history-card { border-color: rgba(104,211,145,0.15); }
+.history-card:hover { border-color: rgba(104,211,145,0.3); }
+.history-date-row { color:#718096; font-style:italic; font-size:12px; }

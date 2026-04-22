@@ -1,8 +1,23 @@
 // controllers/reviewController.js
-const Review = require('../models/Review');
-const Order  = require('../models/Order');
-const User   = require('../models/User');
+const Review      = require('../models/Review');
+const Order       = require('../models/Order');
+const User        = require('../models/User');
+const Restaurant  = require('../models/Restaurant');
 const { getNextSequence } = require('../utils/counter');
+
+/** Recalculate avg rating + reviewCount and persist to Restaurant */
+async function updateRestaurantRating(restaurantId) {
+  if (!restaurantId) return;
+  const reviews = await Review.find({ restaurantId }).lean();
+  const count   = reviews.length;
+  const avg     = count > 0
+    ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10
+    : 0;
+  await Restaurant.findOneAndUpdate(
+    { restaurantId },
+    { rating: avg, reviewCount: count }
+  );
+}
 
 // POST /api/reviews  — submit a review (only for delivered orders)
 const submitReview = async (req, res) => {
@@ -43,6 +58,10 @@ const submitReview = async (req, res) => {
     }).save();
 
     const { _id, __v, ...clean } = review.toObject();
+
+    // Update restaurant rating + review count
+    await updateRestaurantRating(resolvedRestaurantId);
+
     res.status(201).json({ success: true, message: 'Review submitted successfully', data: clean });
   } catch (err) {
     console.error('[submitReview]', err.message);

@@ -11,10 +11,12 @@ const {
   updateOrderStatus,
   cancelOrder,
   getInvoice,
-  // ── Part 2: new delivery endpoints ──────────────────────────
+  // ── Part 2: new delivery endpoints ────────────────────────────
   getAvailableOrdersForAgent,
   acceptDelivery,
-  updateDeliveryStatus
+  updateDeliveryStatus,
+  // ── Offer system ─────────────────────────────────────
+  applyOffer
 } = require("../controllers/orderController");
 
 // ── Static/prefix routes (MUST be before /:id to avoid capture) ──────────────
@@ -36,6 +38,10 @@ router.get("/restaurant/:restaurantId", auth, roleAuth(['Owner']), getOrdersByRe
 // Returns out_for_delivery orders with no agent assigned yet.
 // Also auto-clears 30-minute expired assignments on each call.
 router.get("/available", getAvailableOrdersForAgent);
+
+// Offer system: POST /api/orders/apply-offer
+// Must be before /:id to avoid route collision
+router.post("/apply-offer", auth, applyOffer);
 
 // ── Part 2: Delivery agent — accept order ──────────────────────────────────────
 // PATCH /api/orders/:id/accept-delivery

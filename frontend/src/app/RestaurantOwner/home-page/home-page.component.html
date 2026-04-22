@@ -6,10 +6,11 @@
   <!-- HEADER BAR -->
   <div class="top-bar">
     <div class="top-bar-left">
-      <span class="logo">🍽 ByteBites Owner</span>
+      <span class="logo" (click)="goHome()" style="cursor:pointer" title="Go to home">🍽 ByteBites Owner</span>
       <span class="owner-label">{{ owner?.username }}</span>
     </div>
     <div class="top-bar-right">
+      <button class="btn-dashboard" routerLink="/owner/dashboard" id="btn-nav-dashboard">📊 Dashboard</button>
       <button class="btn-add-rest" (click)="toggleAddForm()">
         {{ showAddForm ? '✕ Cancel' : '➕ Add Restaurant' }}
       </button>
@@ -31,6 +32,11 @@
       <input [(ngModel)]="newRestaurant.restaurantName"
              placeholder="Restaurant Name *"
              class="form-input" id="new-rest-name">
+      <input [(ngModel)]="newRestaurant.city"
+             placeholder="City * (e.g. pune, mysore)"
+             class="form-input" id="new-rest-city">
+    </div>
+    <div class="form-row">
       <input [(ngModel)]="newRestaurant.cuisine"
              placeholder="Cuisines (comma-separated)"
              class="form-input" id="new-rest-cuisine">
@@ -52,6 +58,25 @@
     <button class="btn-save" (click)="addRestaurant()" [disabled]="saving">
       {{ saving ? 'Creating...' : '✅ Create Restaurant' }}
     </button>
+  </div>
+
+  <!-- ⚠️ MISSING CITY BANNER — shown when any restaurant has no city set -->
+  <div *ngIf="!loading && hasMissingCities" class="missing-city-banner">
+    <div class="missing-city-text">
+      <strong>⚠️ Action Required:</strong> Some of your restaurants have no city set — customers searching by city cannot find them!
+    </div>
+    <div *ngIf="!showBulkCityPrompt">
+      <button class="btn-fix-city" (click)="showBulkCityPrompt = true">🏙 Set City for All Restaurants</button>
+    </div>
+    <div *ngIf="showBulkCityPrompt" class="bulk-city-form">
+      <input [(ngModel)]="bulkCityInput"
+             placeholder="e.g. pune"
+             class="bulk-city-input"
+             id="bulk-city-input"
+             (keyup.enter)="bulkSetCity()">
+      <button class="btn-fix-city" (click)="bulkSetCity()">Apply</button>
+      <button class="btn-cancel-city" (click)="showBulkCityPrompt = false; bulkCityInput = ''">Cancel</button>
+    </div>
   </div>
 
   <!-- MAIN CONTENT -->
@@ -90,6 +115,8 @@
           <div class="rest-card-body" *ngIf="renamingId !== rest.restaurantId">
             <h3 class="rest-name" (click)="selectRestaurant(rest)">{{ rest.restaurantName }}</h3>
             <p class="rest-cuisine">🍽 {{ getCuisineString(rest.cuisine) || 'Various' }}</p>
+            <p class="rest-city" *ngIf="rest.city">📍 {{ rest.city }}</p>
+            <p class="rest-city city-missing" *ngIf="!rest.city">⚠️ City not set — customers can't find this!</p>
             <p class="rest-card-address" *ngIf="rest.address">📍 {{ rest.address }}</p>
             <div class="rest-card-actions">
               <button class="btn-select" (click)="selectRestaurant(rest)">
@@ -109,6 +136,7 @@
           <div class="rest-card-body rename-mode" *ngIf="renamingId === rest.restaurantId">
             <p class="edit-mode-label">✏️ Edit Restaurant</p>
             <input [(ngModel)]="renameValue" placeholder="Restaurant name *" class="rename-input" id="rename-name">
+            <input [(ngModel)]="renameCityValue" placeholder="City * (e.g. pune, mysore)" class="rename-input" id="rename-city">
             <input [(ngModel)]="renameCuisineValue" placeholder="Cuisines (comma-separated)" class="rename-input" id="rename-cuisine">
             <input [(ngModel)]="renameAddressValue" placeholder="Address" class="rename-input" id="rename-address">
             <input [(ngModel)]="renameContactValue" placeholder="Contact number" class="rename-input" id="rename-contact">

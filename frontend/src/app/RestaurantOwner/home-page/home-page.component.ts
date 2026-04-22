@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { HttpClient } from '@angular/common/http';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
 
@@ -27,7 +28,7 @@ export class HomePageComponent implements OnInit {
 
   // Add Restaurant form
   showAddForm = false;
-  newRestaurant = { restaurantName: '', cuisine: '' };
+  newRestaurant = { restaurantName: '', cuisine: '', city: '' };
   newRestFile: File | null = null;
   newRestPreview: string | null = null;
 
@@ -36,23 +37,35 @@ export class HomePageComponent implements OnInit {
   renameValue = '';
   renameImageValue = '';   // optional URL (kept for manual URL entry)
   renameCuisineValue = '';
+  renameCityValue    = '';   // ← city field for edit
   renameAddressValue = '';
   renameContactValue = '';
   renameFile: File | null = null;
   renamePreview: string | null = null;
+
+  // Bulk city fix
+  bulkCityInput = '';
+  showBulkCityPrompt = false;
+  private readonly baseUrl = '/api';
 
 
 
   constructor(
     private authService: AuthService,
     private customerService: CustomerService,
-    private router: Router
+    private router: Router,
+    private http: HttpClient
   ) {}
 
   ngOnInit(): void {
     this.owner = this.authService.getUser();
     if (!this.owner) { this.router.navigate(['/login']); return; }
     this.loadRestaurants();
+  }
+
+  // Computed: do any restaurants have no city set?
+  get hasMissingCities(): boolean {
+    return this.restaurants.some(r => !r.city || !r.city.trim());
   }
 
   loadRestaurants(): void {
@@ -88,7 +101,7 @@ export class HomePageComponent implements OnInit {
   get totalEarnings(): number {
     return this.orders
       .filter(o => o.status === 'delivered')
-      .reduce((s, o) => s + (o.totalAmount || 0), 0);
+      .reduce((s, o) => s + ((o.finalAmount && o.finalAmount > 0) ? o.finalAmount : (o.totalAmount || 0)), 0);
   }
   get pendingOrders(): number { return this.orders.filter(o => o.status === 'pending').length; }
 
@@ -112,7 +125,7 @@ export class HomePageComponent implements OnInit {
   // ── Add Restaurant ──────────────────────────────────────────────────
   toggleAddForm(): void {
     this.showAddForm = !this.showAddForm;
-    this.newRestaurant = { restaurantName: '', cuisine: '' };
+    this.newRestaurant = { restaurantName: '', cuisine: '', city: '' };
     this.newRestFile = null;
     this.newRestPreview = null;
   }
@@ -132,6 +145,10 @@ export class HomePageComponent implements OnInit {
       this.showToast('Restaurant name is required.', true);
       return;
     }
+    if (!this.newRestaurant.city.trim()) {
+      this.showToast('City is required so customers can find your restaurant.', true);
+      return;
+    }
     this.saving = true;
     const cuisineArray = this.newRestaurant.cuisine
       ? this.newRestaurant.cuisine.split(',').map(c => c.trim()).filter(Boolean)
@@ -141,6 +158,7 @@ export class HomePageComponent implements OnInit {
     fd.append('restaurantName', this.newRestaurant.restaurantName.trim());
     fd.append('ownerId', this.owner.id);
     fd.append('cuisine', JSON.stringify(cuisineArray));
+    fd.append('city', this.newRestaurant.city.trim().toLowerCase());   // always lowercase
     if (this.newRestFile) {
       fd.append('displayImage', this.newRestFile, this.newRestFile.name);
     }
@@ -151,7 +169,7 @@ export class HomePageComponent implements OnInit {
         if (res.success) {
           this.restaurants.push(res.data);
           this.showAddForm = false;
-          this.newRestaurant = { restaurantName: '', cuisine: '' };
+          this.newRestaurant = { restaurantName: '', cuisine: '', city: '' };
           this.newRestFile = null;
           this.newRestPreview = null;
           this.showToast('✅ Restaurant created!', false);
@@ -169,9 +187,10 @@ export class HomePageComponent implements OnInit {
   // ── Edit Restaurant ─────────────────────────────────────────────────
   startRename(rest: any): void {
     this.renamingId = rest.restaurantId;
-    this.renameValue = rest.restaurantName;
-    this.renameImageValue = '';
+    this.renameValue        = rest.restaurantName;
+    this.renameImageValue   = '';
     this.renameCuisineValue = Array.isArray(rest.cuisine) ? rest.cuisine.join(', ') : (rest.cuisine || '');
+    this.renameCityValue    = rest.city    || '';   // pre-populate current city
     this.renameAddressValue = rest.address || '';
     this.renameContactValue = rest.restaurantContactNo || '';
     this.renameFile    = null;
@@ -200,6 +219,7 @@ export class HomePageComponent implements OnInit {
     const fd = new FormData();
     fd.append('restaurantName',      this.renameValue.trim());
     fd.append('cuisine',             JSON.stringify(cuisineArray));
+    fd.append('city',                this.renameCityValue.trim().toLowerCase());   // always lowercase
     fd.append('address',             this.renameAddressValue.trim());
     fd.append('restaurantContactNo', this.renameContactValue.trim());
     if (this.renameFile) {
@@ -211,6 +231,7 @@ export class HomePageComponent implements OnInit {
         if (res.success) {
           rest.restaurantName      = this.renameValue.trim();
           rest.cuisine             = cuisineArray;
+          rest.city                = this.renameCityValue.trim().toLowerCase();
           rest.address             = this.renameAddressValue.trim();
           rest.restaurantContactNo = this.renameContactValue.trim();
           if (res.data?.displayImage) rest.displayImage = res.data.displayImage;
@@ -272,6 +293,10 @@ export class HomePageComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
+  goHome(): void {
+    this.router.navigate(['/restaurant']);
+  }
+
   goToProfile(): void {
     this.router.navigate(['/owner/profile']);
   }
@@ -281,5 +306,32 @@ export class HomePageComponent implements OnInit {
     this.toastError = isError;
     clearTimeout(this.toastTimer);
     this.toastTimer = setTimeout(() => this.toastMessage = '', 3000);
+  }
+
+  // ── Bulk City Fix ────────────────────────────────────────────────────
+  bulkSetCity(): void {
+    const city = this.bulkCityInput.trim().toLowerCase();
+    if (!city) {
+      this.showToast('Please enter a city name.', true);
+      return;
+    }
+    this.http.patch<any>(
+      `${this.baseUrl}/restaurants/bulk-city`,
+      { city },
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        if (res.success) {
+          // Update local data
+          this.restaurants.forEach(r => { if (!r.city || !r.city.trim()) r.city = city; });
+          this.showBulkCityPrompt = false;
+          this.bulkCityInput = '';
+          this.showToast(`✅ ${res.message}`, false);
+        } else {
+          this.showToast(res.message || 'Failed to update.', true);
+        }
+      },
+      error: (err) => this.showToast(err?.error?.message || 'Error updating city.', true)
+    });
   }
 }

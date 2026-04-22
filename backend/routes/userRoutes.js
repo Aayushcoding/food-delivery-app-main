@@ -7,7 +7,9 @@ const {
   getUser,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  addAddress,
+  deleteAddress
 } = require('../controllers/userController');
 
 // Protected — requires auth (not exposed publicly)
@@ -21,4 +23,10 @@ router.post('/signup', createUser);
 router.put('/:id', auth, updateUser);
 router.delete('/:id', auth, deleteUser);
 
-module.exports = router;
+// ── Address management ──────────────────────────────────────────────────────
+// POST   /api/users/:id/addresses          → add a new saved address
+// DELETE /api/users/:id/addresses/:addressId → remove a saved address
+router.post('/:id/addresses', auth, addAddress);
+router.delete('/:id/addresses/:addressId', auth, deleteAddress);
+
+module.exports = router;

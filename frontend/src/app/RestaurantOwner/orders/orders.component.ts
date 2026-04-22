@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { CustomerService } from '../../core/services/customer.service';
@@ -8,7 +8,7 @@ import { CustomerService } from '../../core/services/customer.service';
   templateUrl: './orders.component.html',
   styleUrls: ['./orders.component.css']
 })
-export class OrdersComponent implements OnInit {
+export class OrdersComponent implements OnInit, OnDestroy {
 
   restaurantName = '';
   orders: any[] = [];
@@ -16,10 +16,12 @@ export class OrdersComponent implements OnInit {
   errorMessage = '';
   toastMessage = '';
   toastError = false;
+  updatingId: string | null = null;   // tracks which order is currently being updated
   private toastTimer: any;
+  private pollTimer:  any;
 
   // Owner can ONLY set these statuses — agent controls the rest
-  readonly statuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
+  readonly statuses      = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'cancelled'];
   readonly agentStatuses = ['picked_up', 'on_the_way', 'arriving', 'delivered'];
 
   constructor(
@@ -51,14 +53,18 @@ export class OrdersComponent implements OnInit {
 
     if (restaurantId) {
       this.loadOrders(restaurantId);
+      // Poll every 20 s so new incoming orders appear automatically
+      this.pollTimer = setInterval(() => this.loadOrders(restaurantId!), 20000);
     } else {
       // 3. Last resort: use first restaurant from API
       this.customerService.getRestaurantByOwner(owner.id).subscribe({
         next: (res) => {
           const list: any[] = res.success ? (res.data || []) : [];
           if (list.length > 0) {
+            restaurantId = list[0].restaurantId;
             this.restaurantName = list[0].restaurantName;
-            this.loadOrders(list[0].restaurantId);
+            this.loadOrders(restaurantId!);
+            this.pollTimer = setInterval(() => this.loadOrders(restaurantId!), 20000);
           } else {
             this.errorMessage = 'No restaurant found.';
             this.loading = false;
@@ -67,6 +73,11 @@ export class OrdersComponent implements OnInit {
         error: () => { this.errorMessage = 'Failed to load restaurant.'; this.loading = false; }
       });
     }
+  }
+
+  ngOnDestroy(): void {
+    clearInterval(this.pollTimer);
+    clearTimeout(this.toastTimer);
   }
 
   loadOrders(restaurantId: string): void {
@@ -93,18 +104,35 @@ export class OrdersComponent implements OnInit {
 
   updateStatus(order: any, event: Event): void {
     const status = (event.target as HTMLSelectElement).value;
+    this.setStatus(order, status);
+  }
+
+  setStatus(order: any, status: string): void {
     if (this.agentStatuses.includes(status)) {
       this.showToast('⛔ Only delivery agents can set that status.', true);
       return;
     }
+    if (status === 'cancelled' && !confirm('Cancel this order?')) return;
+
+    this.updatingId = order.id;
     this.customerService.updateOrderStatus(order.id, status).subscribe({
       next: (res) => {
+        this.updatingId = null;
         if (res.success) {
           order.status = status;
-          this.showToast('✅ Status updated!', false);
+          const msgs: Record<string, string> = {
+            confirmed:        '✅ Order confirmed! Agent can now see it.',
+            preparing:        '👨‍🍳 Marked as preparing. Agent can see it.',
+            out_for_delivery: '🚀 Ready for pickup! Delivery agent will be notified.',
+            cancelled:        '🔴 Order cancelled.'
+          };
+          this.showToast(msgs[status] || '✅ Status updated!', false);
         }
       },
-      error: (err) => this.showToast(err?.error?.message || 'Failed to update status.', true)
+      error: (err) => {
+        this.updatingId = null;
+        this.showToast(err?.error?.message || 'Failed to update status.', true);
+      }
     });
   }
 
@@ -112,7 +140,7 @@ export class OrdersComponent implements OnInit {
   get totalEarnings(): number {
     return this.orders
       .filter(o => o.status === 'delivered')
-      .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+      .reduce((sum, o) => sum + ((o.finalAmount && o.finalAmount > 0) ? o.finalAmount : (o.totalAmount || 0)), 0);
   }
 
 

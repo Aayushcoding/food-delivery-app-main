@@ -16,7 +16,13 @@ const orderSchema = new mongoose.Schema({
   restaurantId:    { type: String, default: '' },
   items:           { type: [orderItemSchema], default: [] },
   totalAmount:     { type: Number, default: 0 },
-  deliveryAddress: { type: String, default: '' },
+  deliveryFee:     { type: Number, default: 40 },                          // flat delivery fee; zeroed by FREEDEL offer
+  deliveryAddress: {                                                         // full address object, REQUIRED
+    type:     mongoose.Schema.Types.Mixed,
+    required: [true, 'Delivery address is required'],
+    default:  undefined
+  },
+
   status:          {
     type: String,
     enum: [
@@ -37,6 +43,11 @@ const orderSchema = new mongoose.Schema({
   acceptedAt:           { type: String, default: null },   // ISO string (Part 1 compat)
   deliveryAcceptedAt:   { type: Date,   default: null },   // Date object for timeout math
   deliveredAt:          { type: Date,   default: null },   // Timestamp on completion
+
+  // Offer / discount
+  offerApplied:     { type: String,  default: null },   // e.g. 'SAVE10'
+  discountAmount:   { type: Number,  default: 0 },       // rupees discounted
+  finalAmount:      { type: Number,  default: 0 },       // totalAmount - discountAmount
 
   transactionId:    { type: String, default: '' },
   invoiceGenerated: { type: Boolean, default: false },

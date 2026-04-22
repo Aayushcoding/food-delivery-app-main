@@ -171,3 +171,129 @@
     gap: 15px;
   }
 }
+
+/* ======================================================
+   CUSTOMER REVIEWS SECTION
+   ====================================================== */
+.reviews-section {
+  margin: 40px 0 32px;
+  padding: 28px 24px;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+}
+
+.reviews-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f5f5f5;
+  padding-bottom: 14px;
+}
+
+.reviews-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin: 0;
+  flex: 1;
+}
+
+.reviews-count {
+  background: #ff6b35;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.reviews-loading,
+.reviews-empty {
+  text-align: center;
+  color: #7f8c8d;
+  font-size: 14px;
+  padding: 24px 0;
+  font-style: italic;
+}
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review-card {
+  background: #f9f9fb;
+  border-radius: 12px;
+  padding: 16px 18px;
+  border-left: 4px solid #ff6b35;
+}
+
+.review-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.reviewer-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reviewer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ff6b35, #e55a2a);
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reviewer-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #2c3e50;
+}
+
+.review-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.review-stars {
+  font-size: 17px;
+  color: #f4a223;
+  letter-spacing: 1px;
+}
+
+.review-date {
+  font-size: 11px;
+  color: #95a5a6;
+}
+
+.review-comment {
+  font-size: 14px;
+  color: #34495e;
+  line-height: 1.6;
+  margin: 0;
+  word-break: break-word;
+}
+
+.review-no-comment {
+  font-size: 13px;
+  color: #aaa;
+  margin: 0;
+}
