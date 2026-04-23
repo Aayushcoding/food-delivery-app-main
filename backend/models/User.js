@@ -11,7 +11,8 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema({
   id:       { type: String, required: true, unique: true, index: true },
-  username: { type: String, required: true, trim: true, unique: true, index: true },
+  name:     { type: String, default: '', trim: true },          // full name (display)
+  username: { type: String, default: '', trim: true },          // kept for backward compat
   // email uniqueness is enforced per role via compound index below
   email: {
     type:      String,
@@ -51,7 +52,10 @@ const userSchema = new mongoose.Schema({
 
 // Same email can exist for different roles
 userSchema.index({ email: 1, role: 1 }, { unique: true });
-// Username must be globally unique (used as login identifier)
-userSchema.index({ username: 1 }, { unique: true });
+// Same phone can exist for different roles, but not same role
+userSchema.index({ phoneNo: 1, role: 1 }, {
+  unique: true,
+  partialFilterExpression: { phoneNo: { $nin: ['', null] } }
+});
 
 module.exports = mongoose.model('User', userSchema);

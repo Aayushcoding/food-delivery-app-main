@@ -7,7 +7,7 @@
       <span class="role-pill">Delivery Agent</span>
     </div>
     <div class="nav-right">
-      <span class="agent-name" *ngIf="agent">{{ agent.username }}</span>
+      <span class="agent-name" *ngIf="agent">{{ agent.name || agent.username }}</span>
       <button class="btn-profile" id="btn-profile" (click)="goProfile()">👤 Profile</button>
       <button class="btn-logout" id="btn-logout" (click)="logout()">Logout</button>
     </div>
@@ -18,7 +18,7 @@
 
   <!-- ── Page intro ── -->
   <div class="page-intro">
-    <h2>Welcome, {{ agent?.username }}! 👋</h2>
+    <h2>Welcome, {{ (agent?.name?.split(' ')[0]) || agent?.username }}! 👋</h2>
     <p>Manage your deliveries below.</p>
   </div>
 
@@ -106,6 +106,12 @@
         <span>{{ formatAddress(order.deliveryAddress) }}</span>
       </div>
 
+      <!-- Customer name (available orders) -->
+      <div class="info-row" *ngIf="order.customerName">
+        <span class="info-icon">👤</span>
+        <span>For: <strong>{{ order.customerName }}</strong></span>
+      </div>
+
       <!-- Status context for confirmed/preparing orders -->
       <div class="info-row status-note" *ngIf="order.status === 'confirmed'">
         <span class="info-icon">🟡</span>
@@ -181,6 +187,12 @@
       <div class="info-row" *ngIf="order.deliveryAddress">
         <span class="info-icon">📍</span>
         <span>{{ formatAddress(order.deliveryAddress) }}</span>
+      </div>
+
+      <!-- Customer name -->
+      <div class="info-row" *ngIf="order.customerName">
+        <span class="info-icon">👤</span>
+        <span>For: <strong>{{ order.customerName }}</strong></span>
       </div>
 
       <div class="info-row">
@@ -305,6 +317,12 @@
       <div class="info-row history-date-row">
         <span class="info-icon">🕐</span>
         <span>{{ (order.deliveredAt || order.createdAt) | date:'d MMM y, h:mm a' }}</span>
+      </div>
+
+      <!-- Earnings for this delivery -->
+      <div class="info-row earn-preview">
+        <span class="info-icon">💰</span>
+        <span>Earned <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> for this delivery</span>
       </div>
 
     </div>

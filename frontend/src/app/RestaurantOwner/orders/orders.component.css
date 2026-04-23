@@ -287,3 +287,33 @@
   color: #FCA5A5;
   font-weight: 700;
 }
+
+/* ── Customer info row ────────────────────────────────── */
+.customer-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(163,230,53,0.05);
+  border-left: 3px solid rgba(163,230,53,0.4);
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.cust-icon { font-size: 14px; }
+.cust-name { font-weight: 700; color: #e2e8f0; }
+.cust-phone { color: #94A3B8; font-size: 12px; }
+
+/* ── Discount badge ───────────────────────────────────────── */
+.discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(74,222,128,0.08);
+  border: 1px solid rgba(74,222,128,0.25);
+  color: #4ADE80;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}

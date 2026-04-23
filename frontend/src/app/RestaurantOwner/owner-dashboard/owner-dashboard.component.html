@@ -7,7 +7,7 @@
       <span class="nav-role-badge">Restaurant Owner</span>
     </div>
     <div class="nav-actions">
-      <span class="nav-username" *ngIf="owner">{{ owner.username }}</span>
+      <span class="nav-username" *ngIf="owner">{{ owner.name || owner.username }}</span>
       <button class="btn-nav primary" routerLink="/restaurant" id="btn-manage-restaurants">🏪 Manage</button>
       <button class="btn-nav" (click)="goToOrders()" id="btn-view-orders">📋 Orders</button>
     </div>
@@ -36,7 +36,7 @@
 
     <!-- Header -->
     <div class="page-header">
-      <h1>👋 Welcome back, {{ owner?.username || 'Owner' }}!</h1>
+      <h1>👋 Welcome back, {{ (owner?.name?.split(' ')[0]) || owner?.username || 'Owner' }}!</h1>
       <p>Here's a snapshot of your restaurants' performance.</p>
     </div>
 

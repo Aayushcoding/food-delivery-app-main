@@ -134,7 +134,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   get totalEarnings(): number {
     return this.orders
       .filter(o => o.status === 'delivered')
-      .reduce((sum, o) => sum + ((o.finalAmount && o.finalAmount > 0) ? o.finalAmount : (o.totalAmount || 0)), 0);
+      .reduce((sum, o) => sum + (o.finalAmount != null ? o.finalAmount : (o.totalAmount || 0)), 0);
   }
 
 

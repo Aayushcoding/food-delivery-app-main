@@ -50,26 +50,26 @@
     <!-- Form -->
     <form (ngSubmit)="onSubmit()" #authForm="ngForm" novalidate>
 
-      <!-- Username (signup only) -->
+      <!-- Full Name (signup only) -->
       <div class="field-group" *ngIf="mode === 'signup'">
-        <label for="auth-username">Username</label>
-        <input id="auth-username"
+        <label for="auth-name">Full Name</label>
+        <input id="auth-name"
                type="text"
-               [(ngModel)]="username"
-               name="username"
-               placeholder="e.g. rahul_2024"
-               autocomplete="username"
+               [(ngModel)]="name"
+               name="name"
+               placeholder="e.g. Rahul Sharma"
+               autocomplete="name"
                required>
       </div>
 
-      <!-- Email / login identifier -->
+      <!-- Email / Phone login identifier -->
       <div class="field-group">
-        <label for="auth-email">{{ mode === 'login' ? 'Email or Username' : 'Email' }}</label>
+        <label for="auth-email">{{ mode === 'login' ? 'Email or Phone Number' : 'Email' }}</label>
         <input id="auth-email"
                [type]="mode === 'login' ? 'text' : 'email'"
                [(ngModel)]="email"
                name="email"
-               [placeholder]="mode === 'login' ? 'you@example.com or username' : 'you@example.com'"
+               [placeholder]="mode === 'login' ? 'you@example.com or 9876543210' : 'you@example.com'"
                autocomplete="email"
                required>
       </div>

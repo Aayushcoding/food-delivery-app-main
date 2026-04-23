@@ -10,10 +10,14 @@ interface CartView {
   cartId:        string;
   restaurantId:  string;
   restaurantName: string;
+  restaurantCity: string;   // actual city of restaurant
+  cityMismatch:  boolean;   // true when restaurant city != selectedCity
   restaurantRating: number;
   restaurantReviewCount: number;
   items:         any[];
   paymentMethod: string;   // 'cod' | 'upi' | 'card' | 'netbanking'
+  selectedAddressIdx: number;
+  contactPhone:  string;   // editable per-cart
   // coupon state per cart
   couponCode:    string;
   couponApplied: boolean;
@@ -38,6 +42,16 @@ export class CustomerCartComponent implements OnInit {
 
   carts: CartView[] = [];
   activeIdx = 0;
+  userAddresses: any[] = [];   // loaded once; shared across all carts
+
+  // ── Inline address form state ────────────────────────────────────────
+  showAddForm   = false;
+  addrSaving    = false;
+  addrError     = '';
+  newStreet     = '';
+  newLandmark   = '';
+  newPincode    = '';
+  deletingAddrId: string | null = null;
 
   cartLoading = false;
   inFlight: { [itemId: string]: boolean } = {};
@@ -54,8 +68,13 @@ export class CustomerCartComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAllCarts();
+    this.loadUserAddresses();
     const saved = localStorage.getItem('couponCode') || '';
     if (saved && this.activeCart) this.activeCart.couponCode = saved;
+  }
+
+  get selectedCity(): string {
+    return localStorage.getItem('selectedCity') || '';
   }
 
   get activeCart(): CartView | null {
@@ -84,10 +103,13 @@ export class CustomerCartComponent implements OnInit {
   }
 
   private buildCartView(raw: any): CartView {
+    const user = this.authService.getUser();
     return {
       cartId:        raw.id,
       restaurantId:  raw.restaurantId,
-      restaurantName: raw.restaurantId, // overwritten by loadRestaurantName
+      restaurantName: raw.restaurantId,
+      restaurantCity: '',
+      cityMismatch:  false,
       restaurantRating: 0,
       restaurantReviewCount: 0,
       items: (raw.items || []).map((item: any) => ({
@@ -95,6 +117,8 @@ export class CustomerCartComponent implements OnInit {
         itemName: item.name || item.itemName || item.itemId
       })),
       paymentMethod: 'cod',
+      selectedAddressIdx: 0,
+      contactPhone:  user?.phoneNo || '',
       couponCode:    '',
       couponApplied: false,
       couponMessage: '',
@@ -108,6 +132,109 @@ export class CustomerCartComponent implements OnInit {
     };
   }
 
+  // ── Load user addresses (once, shared) ───────────────────────────────
+  loadUserAddresses(): void {
+    const user = this.authService.getUser();
+    if (!user) return;
+    this.http.get<any>(`${this.baseUrl}/users/${user.id}`, {
+      headers: this.authService.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        this.userAddresses = res?.data?.addresses || [];
+      },
+      error: () => {}
+    });
+  }
+
+  /** One-line label for an address (street + landmark, city hidden since it's fixed) */
+  addressLabel(addr: any): string {
+    if (!addr) return '—';
+    const parts = [addr.street, addr.landmark].filter(Boolean);
+    return parts.length ? parts.join(', ') : (addr.city || '—');
+  }
+
+  // ── INLINE ADD ADDRESS ───────────────────────────────────────────────
+  openAddForm(): void {
+    this.showAddForm = true;
+    this.addrError   = '';
+    this.newStreet   = '';
+    this.newLandmark = '';
+    this.newPincode  = '';
+  }
+
+  cancelAddForm(): void {
+    this.showAddForm = false;
+    this.addrError   = '';
+  }
+
+  saveNewAddress(): void {
+    const street  = this.newStreet.trim();
+    const pincode = this.newPincode.trim();
+    const city    = (localStorage.getItem('selectedCity') || '').toLowerCase().trim();
+
+    if (!street)  { this.addrError = 'Street / Area is required.'; return; }
+    if (!city)    { this.addrError = 'No city selected — go back and set your city first.'; return; }
+    if (pincode && !/^\d{6}$/.test(pincode)) { this.addrError = 'Pincode must be 6 digits.'; return; }
+
+    const user = this.authService.getUser();
+    if (!user) return;
+
+    this.addrSaving = true;
+    this.addrError  = '';
+    this.http.post<any>(
+      `${this.baseUrl}/users/${user.id}/addresses`,
+      { street, city, pincode, landmark: this.newLandmark.trim() },
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        this.addrSaving = false;
+        if (res.success) {
+          this.userAddresses = res.data?.addresses || [];
+          // Auto-select the newly added address on all carts
+          const newIdx = this.userAddresses.length - 1;
+          this.carts.forEach(cv => cv.selectedAddressIdx = newIdx);
+          this.showAddForm = false;
+        } else {
+          this.addrError = res.message || 'Failed to save address.';
+        }
+      },
+      error: (err) => {
+        this.addrSaving = false;
+        this.addrError  = err?.error?.message || 'Failed to save address.';
+      }
+    });
+  }
+
+  // ── DELETE ADDRESS ───────────────────────────────────────────────────
+  deleteAddress(addr: any, idx: number): void {
+    if (this.deletingAddrId) return;  // prevent double-click
+    const addrId = addr._id;
+    if (!addrId) return;
+
+    const user = this.authService.getUser();
+    if (!user) return;
+
+    this.deletingAddrId = addrId;
+    this.http.delete<any>(
+      `${this.baseUrl}/users/${user.id}/addresses/${addrId}`,
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        this.deletingAddrId = null;
+        if (res.success) {
+          this.userAddresses = res.data?.addresses || [];
+          // Fix selectedAddressIdx on all carts to avoid out-of-bounds
+          this.carts.forEach(cv => {
+            if (cv.selectedAddressIdx >= this.userAddresses.length) {
+              cv.selectedAddressIdx = Math.max(0, this.userAddresses.length - 1);
+            }
+          });
+        }
+      },
+      error: () => { this.deletingAddrId = null; }
+    });
+  }
+
   private loadRestaurantName(cv: CartView): void {
     this.customerService.getRestaurantById(cv.restaurantId).subscribe({
       next: (res) => {
@@ -115,6 +242,11 @@ export class CustomerCartComponent implements OnInit {
           cv.restaurantName        = res.data.restaurantName || cv.restaurantId;
           cv.restaurantRating      = res.data.rating      || 0;
           cv.restaurantReviewCount = res.data.reviewCount || 0;
+          // City mismatch check
+          const restCity = (res.data.city || '').toLowerCase().trim();
+          const selCity  = this.selectedCity.toLowerCase().trim();
+          cv.restaurantCity = restCity;
+          cv.cityMismatch   = !!(restCity && selCity && restCity !== selCity);
         }
       },
       error: () => {}
@@ -291,9 +423,11 @@ export class CustomerCartComponent implements OnInit {
           headers: this.authService.getAuthHeaders()
         }).subscribe({
           next: (profileRes) => {
-            const addresses: any[] = profileRes?.data?.addresses || [];
-            const firstAddr = addresses[0];
-            if (!firstAddr) {
+            const addresses: any[] = this.userAddresses.length
+              ? this.userAddresses
+              : (profileRes?.data?.addresses || []);
+            const addr = addresses[cv.selectedAddressIdx] || addresses[0];
+            if (!addr) {
               cv.loading      = false;
               cv.errorMessage = '📍 No delivery address saved. Please go to Profile and add one first.';
               resolve(null); return;
@@ -302,7 +436,7 @@ export class CustomerCartComponent implements OnInit {
             this.orderService.createOrder({
               userId:         user.id,
               restaurantId:   cv.restaurantId,
-              addressId:      String(firstAddr._id),
+              addressId:      String(addr._id),
               paymentMethod:  cv.paymentMethod,
               couponCode:     cv.couponApplied ? cv.couponCode.toUpperCase() : undefined,
               discountAmount: cv.couponApplied ? cv.discountAmount : 0,

@@ -253,8 +253,8 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
     return parts.join(', ') || '—';
   }
 
-  /** Show finalAmount if it's been set and > 0, otherwise fall back to totalAmount */
+  /** Show finalAmount if set, otherwise fall back to totalAmount */
   displayAmount(order: any): number {
-    return (order.finalAmount && order.finalAmount > 0) ? order.finalAmount : (order.totalAmount || 0);
+    return (order.finalAmount != null) ? order.finalAmount : (order.totalAmount || 0);
   }
 }

@@ -18,8 +18,8 @@ export class AuthComponent implements OnInit {
   role: Role = 'Customer';
 
   // ── Form fields ─────────────────────────────────────────
-  username = '';
-  email    = '';   // used as email-or-username on login
+  name     = '';   // full name (signup)
+  email    = '';   // email or phone on login
   password = '';
   phoneNo  = '';
   // Address (Customer & DeliveryAgent signup)
@@ -77,16 +77,16 @@ export class AuthComponent implements OnInit {
   // ── Validation helper ────────────────────────────────────
   get isFormValid(): boolean {
     if (!this.email.trim() || !this.password) return false;
-    if (this.mode === 'signup' && !this.username.trim()) return false;
+    if (this.mode === 'signup' && !this.name.trim()) return false;
     if (this.mode === 'signup' && this.password.length < 6) return false;
     return true;
   }
 
-  // ── Login (email OR username) ─────────────────────────
+  // ── Login (email OR phone) ────────────────────────────────
   onLogin(): void {
     this.clearMessages();
     const identifier = this.email.trim();
-    if (!identifier) { this.errorMessage = 'Email or username is required.'; return; }
+    if (!identifier) { this.errorMessage = 'Email or phone number is required.'; return; }
     if (!this.password) { this.errorMessage = 'Password is required.'; return; }
 
     this.isLoading = true;
@@ -117,7 +117,7 @@ export class AuthComponent implements OnInit {
   onSignup(): void {
     this.clearMessages();
 
-    if (!this.username.trim()) { this.errorMessage = 'Username is required.'; return; }
+    if (!this.name.trim())  { this.errorMessage = 'Full name is required.'; return; }
     if (!this.email.trim())    { this.errorMessage = 'Email is required.'; return; }
     if (this.password.length < 6) { this.errorMessage = 'Password must be at least 6 characters.'; return; }
     // Phone required for ALL roles
@@ -136,7 +136,7 @@ export class AuthComponent implements OnInit {
     }
 
     const payload: any = {
-      username: this.username.trim(),
+      name:     this.name.trim(),
       email:    this.email.trim(),
       password: this.password,
       phoneNo:  this.phoneNo.trim(),
@@ -164,7 +164,7 @@ export class AuthComponent implements OnInit {
           this.successMessage = '✅ Account created! Please login.';
           this.mode     = 'login';
           this.password = '';
-          this.username = '';
+          this.name     = '';
           this.street   = '';
           this.city     = '';
           this.pincode  = '';

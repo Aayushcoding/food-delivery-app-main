@@ -87,11 +87,36 @@
   <p>📍 No city selected — showing all restaurants. <a routerLink="/customer/profile">Set your city in profile →</a></p>
 </div>
 
-<!-- Results Info -->
+<!-- Results Info + City Change -->
 <div class="results-info">
-<p *ngIf="!loading && selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants in <strong>{{selectedCity}}</strong></p>
-<p *ngIf="!loading && !selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants</p>
-<p *ngIf="loading" class="loading-text">Loading restaurants...</p>
+  <!-- Normal view: show city with edit button -->
+  <ng-container *ngIf="!cityEditMode">
+    <p *ngIf="!loading && selectedCity">
+      Found <strong>{{filteredRestaurants.length}}</strong> restaurants in
+      <strong class="city-chip">{{selectedCity}}</strong>
+      <button class="city-edit-btn" (click)="openCityEdit()" title="Change city">✏️</button>
+    </p>
+    <p *ngIf="!loading && !selectedCity">
+      Found <strong>{{filteredRestaurants.length}}</strong> restaurants
+      <button class="city-edit-btn" (click)="openCityEdit()" title="Set city">📍 Set City</button>
+    </p>
+    <p *ngIf="loading" class="loading-text">Loading restaurants...</p>
+  </ng-container>
+
+  <!-- Edit mode: inline city input -->
+  <div *ngIf="cityEditMode" class="city-edit-row">
+    <span class="city-edit-label">📍 City:</span>
+    <input
+      class="city-edit-input"
+      [(ngModel)]="cityInput"
+      placeholder="e.g. pune, mysore..."
+      (keyup.enter)="changeCity()"
+      autofocus
+    >
+    <button class="city-save-btn" (click)="changeCity()" title="Apply">✓</button>
+    <button class="city-cancel-btn" (click)="cancelCityEdit()" title="Cancel">✕</button>
+    <button class="city-clear-btn" *ngIf="selectedCity" (click)="clearCityFilter()" title="Show all cities">🌍 All Cities</button>
+  </div>
 </div>
 
 <!-- Restaurant List -->

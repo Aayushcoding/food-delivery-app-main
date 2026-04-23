@@ -234,7 +234,21 @@ const getOrdersByRestaurant = async (req, res) => {
     const restaurant = await Restaurant.findOne({ restaurantId }).lean();
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
 
-    const orders = await Order.find({ restaurantId }).sort({ createdAt: -1 }).lean();
+    const rawOrders = await Order.find({ restaurantId }).sort({ createdAt: -1 }).lean();
+
+    // Enrich with customer name + phone for owner display
+    const orders = await Promise.all(rawOrders.map(async (o) => {
+      let customerName  = 'Customer';
+      let customerPhone = '';
+      if (o.userId) {
+        const cu = await User.findOne({ id: o.userId }).lean();
+        if (cu?.name)    customerName  = cu.name;
+        else if (cu?.username) customerName = cu.username;
+        if (cu?.phoneNo) customerPhone = cu.phoneNo;
+      }
+      return { ...o, customerName, customerPhone };
+    }));
+
     return res.json({ success: true, data: orders });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -412,7 +426,7 @@ const getContactInfo = async (req, res) => {
       const u = await User.findOne({ id: order.deliveryAgentId }).lean();
       if (u) {
         agent = {
-          name:  u.username || '',
+          name:  u.name || u.username || 'Delivery Partner',
           phone: u.phoneNo  || ''
         };
       }
@@ -612,7 +626,7 @@ const applyOffer = async (req, res) => {
     const code = rawCode.trim().toUpperCase();
 
     // All valid offer codes (must match frontend ALL_OFFERS list)
-    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50', 'FIRST70', 'FREEDEL',
+    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50', 'FIRST70',
                          'BOGO1', 'WKND40', 'SAVE60', 'RICE50', 'UPI150',
                          'PREM20', 'LATE50', 'HEALTH30', 'BIG200'];
     if (!VALID_CODES.includes(code)) {
@@ -723,10 +737,6 @@ const applyOffer = async (req, res) => {
         discount = Math.min(Math.round(order.totalAmount * 0.5), 200);
         break;
 
-      case 'FREEDEL':
-        // Free delivery — discount is 0 (delivery fee waived externally)
-        discount = 0;
-        break;
     }
 
     // Cap discount so finalAmount never goes below 0
@@ -774,4 +784,3 @@ module.exports = {
   applyOffer,
   getContactInfo
 };
-

@@ -25,6 +25,8 @@ loading=false;
 // City filter
 selectedCity: string = '';
 noCitySelected = false;
+cityEditMode = false;
+cityInput = '';
 
 cuisineTags=['Chinese','Italian','Indian','Mexican','FastFood','Continental'];
 selectedCuisines=new Set<string>();
@@ -63,7 +65,9 @@ loadUser(){
 const user=this.authService.getUser();
 if(user){
 this.isLoggedIn=true;
-this.userName=user.username||user.email||'User';
+// Show first name from 'name' field, fallback to username / email
+const firstName = user.name ? user.name.split(' ')[0] : '';
+this.userName = firstName || user.username || user.email || 'User';
 }
 }
 
@@ -146,12 +150,33 @@ _fetchRestaurants(){
   });
 }
 
-// Clear city filter and reload all restaurants (useful when 0 results in selected city)
+// Clear city filter and reload all restaurants
 clearCityFilter(){
   localStorage.removeItem('selectedCity');
   this.selectedCity = '';
   this.noCitySelected = true;
+  this.cityEditMode = false;
   this.loadRestaurants();
+}
+
+// Inline city edit
+openCityEdit(): void {
+  this.cityInput = this.selectedCity;
+  this.cityEditMode = true;
+}
+
+cancelCityEdit(): void {
+  this.cityEditMode = false;
+}
+
+changeCity(): void {
+  const city = this.cityInput.trim().toLowerCase();
+  if (!city) { this.clearCityFilter(); return; }
+  localStorage.setItem('selectedCity', city);
+  this.selectedCity  = city;
+  this.noCitySelected = false;
+  this.cityEditMode  = false;
+  this._fetchRestaurants();
 }
 
 onSearchInput(){

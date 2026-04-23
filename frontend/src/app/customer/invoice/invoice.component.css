@@ -210,11 +210,27 @@
   color: #a0aec0;
 }
 .total-row .green { color: #68d391; font-weight: 600; }
+.discount-row { color: #4ADE80; }
+.discount-val { color: #4ADE80; font-weight: 700; }
+.coupon-tag {
+  font-size: 10px;
+  background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.3);
+  padding: 1px 6px;
+  border-radius: 5px;
+  margin-left: 4px;
+  font-weight: 700;
+}
+.inv-divider {
+  border: none;
+  border-top: 1px solid #2d3158;
+  width: 100%;
+  margin: 2px 0;
+}
 .total-grand {
   font-size: 18px;
   font-weight: 800;
   color: #e2e8f0;
-  border-top: 1px solid #2d3158;
   padding-top: 10px;
   margin-top: 4px;
 }

@@ -90,7 +90,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   loadActive(): void {
     this.loading = true;
-    this.http.get<any>(`/api/delivery/${this.agent.id}/orders`,
+    this.http.get<any>('/api/agent/my-orders',
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => { this.activeOrders = res.data || []; this.loading = false; },
@@ -131,17 +131,18 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   accept(order: any): void {
     this.actionLoading[order.id] = true;
-    this.http.patch<any>(
-      `/api/orders/${order.id}/accept-delivery`,
-      { agentId: this.agent.id },
+    this.http.post<any>(
+      `/api/agent/accept/${order.id}`,
+      {},
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => {
         this.actionLoading[order.id] = false;
         this.showToast(`✅ Order #${order.id} accepted! Pick up within 30 min.`, false);
         this.availableOrders = this.availableOrders.filter(o => o.id !== order.id);
-        this.activeOrders.push(res.data);
+        // Reload active orders fresh from server so customerName etc. is populated
         this.activeTab = 'active';
+        this.loadActive();
       },
       error: err => {
         this.actionLoading[order.id] = false;
@@ -161,9 +162,9 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   advance(order: any, step: DeliveryStep): void {
     this.actionLoading[order.id] = true;
-    this.http.patch<any>(
-      `/api/orders/${order.id}/delivery-status`,
-      { agentId: this.agent.id, status: step },
+    this.http.post<any>(
+      `/api/agent/update-status/${order.id}`,
+      { status: step },
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: () => {

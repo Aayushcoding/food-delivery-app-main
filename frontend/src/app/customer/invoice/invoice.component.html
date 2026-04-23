@@ -113,9 +113,15 @@
         <span>Delivery Fee</span>
         <span class="green">FREE</span>
       </div>
+      <!-- Discount row — only shown when a coupon was applied -->
+      <div class="total-row discount-row" *ngIf="invoice.discountAmount > 0">
+        <span>🏷 Discount <span class="coupon-tag" *ngIf="invoice.offerApplied">({{ invoice.offerApplied }})</span></span>
+        <span class="discount-val">− ₹{{ invoice.discountAmount | number:'1.0-0' }}</span>
+      </div>
+      <hr class="inv-divider">
       <div class="total-row total-grand">
         <span>Grand Total</span>
-        <span>₹{{ invoice.totalAmount | number:'1.0-0' }}</span>
+        <span>₹{{ (invoice.finalAmount != null ? invoice.finalAmount : invoice.totalAmount) | number:'1.0-0' }}</span>
       </div>
     </div>
 

@@ -40,6 +40,13 @@
           <span class="status-pill" [class]="order.status">{{ order.status | titlecase }}</span>
         </div>
 
+        <!-- CUSTOMER INFO -->
+        <div class="customer-info-row" *ngIf="order.customerName">
+          <span class="cust-icon">👤</span>
+          <span class="cust-name">{{ order.customerName }}</span>
+          <span class="cust-phone" *ngIf="order.customerPhone"> · 📞 {{ order.customerPhone }}</span>
+        </div>
+
         <!-- ITEMS -->
         <div class="order-items">
           <div *ngFor="let item of order.enrichedItems || order.items" class="order-item-row">
@@ -51,7 +58,13 @@
 
         <!-- FOOTER -->
         <div class="order-foot">
-          <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
+          <!-- Discount badge if coupon applied -->
+          <span class="discount-badge" *ngIf="order.discountAmount > 0">
+            🏷 {{ order.offerApplied }} — ₹{{ order.discountAmount | number:'1.0-0' }} off
+          </span>
+          <span class="total-amount">
+            <strong>Total: ₹{{ (order.finalAmount != null ? order.finalAmount : order.totalAmount) | number:'1.0-0' }}</strong>
+          </span>
 
           <!-- Payment badge -->
           <span class="pay-badge pay-badge-paid" *ngIf="order.isPaid">

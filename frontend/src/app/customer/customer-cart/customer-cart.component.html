@@ -30,12 +30,8 @@
 
     <!-- Restaurant Tabs (shown only if more than 1 cart) -->
     <div class="restaurant-tabs" *ngIf="carts.length > 1">
-      <button
-        *ngFor="let cv of carts; let i = index"
-        class="rest-tab"
-        [class.active]="activeIdx === i"
-        [class.tab-placed]="cv.orderPlaced"
-        (click)="activeIdx = i">
+      <button *ngFor="let cv of carts; let i = index" class="rest-tab" [class.active]="activeIdx === i"
+        [class.tab-placed]="cv.orderPlaced" (click)="activeIdx = i">
         <span *ngIf="cv.orderPlaced" class="tab-check">✓</span>
         🍽 {{ cv.restaurantName }}
         <span class="tab-badge">{{ itemCountOf(cv) }}</span>
@@ -48,23 +44,20 @@
         <span class="place-all-label">🛝 {{ carts.length }} restaurant carts ready</span>
         <span class="place-all-hint">Place one at a time — or all at once</span>
       </div>
-      <div *ngIf="placeAllError" class="place-all-msg"
-           [class.place-all-success]="placeAllError.includes('✅')"
-           [class.place-all-fail]="placeAllError.includes('❌') && !placeAllError.includes('✅')">
+      <div *ngIf="placeAllError" class="place-all-msg" [class.place-all-success]="placeAllError.includes('✅')"
+        [class.place-all-fail]="placeAllError.includes('❌') && !placeAllError.includes('✅')">
         {{ placeAllError }}
       </div>
       <div class="place-all-actions">
         <button class="btn-place-single-bar"
-                [disabled]="placeAllLoading || !activeCart || activeCart.loading || activeCart.orderPlaced"
-                (click)="activeCart && placeSingleOrder(activeCart)">
+          [disabled]="placeAllLoading || !activeCart || activeCart.loading || activeCart.orderPlaced"
+          (click)="activeCart && placeSingleOrder(activeCart)">
           <ng-container *ngIf="activeCart?.orderPlaced">✅ Placed — {{ activeCart?.restaurantName }}</ng-container>
           <ng-container *ngIf="!activeCart?.orderPlaced">
             {{ activeCart?.loading ? '⏳ Placing…' : '🛒 Place: ' + (activeCart?.restaurantName || '') }}
           </ng-container>
         </button>
-        <button class="btn-place-all"
-                [disabled]="placeAllLoading"
-                (click)="placeAllOrders()">
+        <button class="btn-place-all" [disabled]="placeAllLoading" (click)="placeAllOrders()">
           {{ placeAllLoading ? '⏳ Placing All…' : '🚀 Place All (' + carts.length + ')' }}
         </button>
       </div>
@@ -77,11 +70,24 @@
       <div *ngIf="cv.errorMessage" class="error-banner">
         ⚠️ {{ cv.errorMessage }}
         <a *ngIf="cv.errorMessage.includes('address')" routerLink="/customer/profile"
-           style="margin-left:8px;color:#A3E635;font-weight:700;">→ Go to Profile</a>
+          style="margin-left:8px;color:#A3E635;font-weight:700;">→ Go to Profile</a>
       </div>
 
       <!-- Price change warning -->
       <div *ngIf="cv.priceWarning" class="price-warning-banner">{{ cv.priceWarning }}</div>
+
+      <!-- ⚠️ CITY MISMATCH BANNER -->
+      <div *ngIf="cv.cityMismatch" class="city-mismatch-banner">
+        <span class="mismatch-icon">🏙️</span>
+        <div class="mismatch-text">
+          <strong>{{ cv.restaurantName }}</strong> is in
+          <span class="mismatch-city">{{ cv.restaurantCity | titlecase }}</span>,
+          not your current city
+          <span class="mismatch-city">{{ selectedCity | titlecase }}</span>.
+          You cannot order from this cart in your current city.
+        </div>
+        <button class="btn-clear-mismatch" (click)="clearCart(cv)">🗑 Clear Cart</button>
+      </div>
 
       <div class="cart-layout">
 
@@ -102,7 +108,7 @@
               <div class="qty-stepper">
                 <button class="qty-btn minus" (click)="decrease(cv, item)" [disabled]="inFlight[item.itemId]">−</button>
                 <span class="qty-value">{{ item.quantity }}</span>
-                <button class="qty-btn plus"  (click)="increase(cv, item)" [disabled]="inFlight[item.itemId]">+</button>
+                <button class="qty-btn plus" (click)="increase(cv, item)" [disabled]="inFlight[item.itemId]">+</button>
               </div>
               <span class="item-subtotal">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
             </div>
@@ -117,18 +123,14 @@
           <div class="coupon-section">
             <p class="summary-title" style="font-size:14px;margin-bottom:12px;">🎟 Coupon Code</p>
             <div class="coupon-input-row">
-              <input class="coupon-input"
-                     [(ngModel)]="cv.couponCode"
-                     (ngModelChange)="onCouponChange(cv)"
-                     placeholder="e.g. FLAT100"
-                     [class.coupon-valid]="cv.couponApplied"
-                     [disabled]="cv.couponApplied">
+              <input class="coupon-input" [(ngModel)]="cv.couponCode" (ngModelChange)="onCouponChange(cv)"
+                placeholder="e.g. FLAT100" [class.coupon-valid]="cv.couponApplied" [disabled]="cv.couponApplied">
               <button class="coupon-btn" *ngIf="!cv.couponApplied" (click)="applyCoupon(cv)">Apply</button>
               <button class="coupon-btn" *ngIf="cv.couponApplied" (click)="removeCoupon(cv)"
-                      style="background:rgba(239,68,68,0.15);color:#FCA5A5;">✕</button>
+                style="background:rgba(239,68,68,0.15);color:#FCA5A5;">✕</button>
             </div>
             <p class="coupon-msg coupon-success" *ngIf="cv.couponApplied">✅ {{ cv.couponMessage }}</p>
-            <p class="coupon-msg coupon-fail"    *ngIf="cv.couponError">{{ cv.couponError }}</p>
+            <p class="coupon-msg coupon-fail" *ngIf="cv.couponError">{{ cv.couponError }}</p>
           </div>
 
           <!-- Summary card -->
@@ -150,40 +152,114 @@
               </div>
             </div>
 
+            <!-- ════ DELIVERY ADDRESS SECTION ════ -->
+            <div class="address-section">
+              <div class="address-section-head">
+                <p class="address-label">📍 Delivery Address</p>
+                <button class="btn-add-addr" (click)="openAddForm()" *ngIf="!showAddForm">
+                  ➕ Add new
+                </button>
+              </div>
+
+              <!-- Saved address pills -->
+              <div class="address-pills" *ngIf="userAddresses.length > 0 && !showAddForm">
+                <label *ngFor="let addr of userAddresses; let i = index" class="addr-pill"
+                  [class.active]="cv.selectedAddressIdx === i">
+                  <input type="radio" [name]="'addr-' + cv.cartId" [value]="i" [(ngModel)]="cv.selectedAddressIdx">
+                  <span class="addr-text">
+                    <strong>{{ addr.street || addr.landmark || 'Address ' + (i+1) }}</strong>
+                    <span *ngIf="addr.landmark && addr.street" class="addr-sub">, {{ addr.landmark }}</span>
+                    <span *ngIf="addr.pincode" class="addr-sub"> — {{ addr.pincode }}</span>
+                    <span *ngIf="addr.city" class="addr-city">{{ addr.city }}</span>
+                  </span>
+                  <!-- Delete button -->
+                  <button class="btn-del-addr" (click)="$event.preventDefault(); deleteAddress(addr, i)"
+                    [disabled]="deletingAddrId === addr._id" title="Remove this address">
+                    {{ deletingAddrId === addr._id ? '…' : '🗑' }}
+                  </button>
+                </label>
+              </div>
+
+              <!-- No address message when form hidden -->
+              <div *ngIf="userAddresses.length === 0 && !showAddForm" class="no-address-warn">
+                No saved addresses — add one below 👇
+              </div>
+
+              <!-- ── INLINE ADD ADDRESS FORM ── -->
+              <div *ngIf="showAddForm" class="add-addr-form">
+                <p class="add-addr-title">New Delivery Address</p>
+
+                <div class="addr-form-fields">
+                  <div class="addr-field">
+                    <label>Street / Area *</label>
+                    <input type="text" [(ngModel)]="newStreet" name="newStreet" placeholder="e.g. FC Road, Deccan">
+                  </div>
+                  <div class="addr-field">
+                    <label>Landmark</label>
+                    <input type="text" [(ngModel)]="newLandmark" name="newLandmark" placeholder="e.g. Near Bus Stand">
+                  </div>
+                  <div class="addr-field addr-field-half">
+                    <label>Pincode</label>
+                    <input type="text" [(ngModel)]="newPincode" name="newPincode" placeholder="411001" maxlength="6">
+                  </div>
+                  <div class="addr-field addr-field-half">
+                    <label>City (auto)</label>
+                    <input type="text" [value]="selectedCity || 'Set in home →'" readonly class="city-readonly">
+                  </div>
+                </div>
+
+                <div *ngIf="addrError" class="addr-error">⚠ {{ addrError }}</div>
+
+                <div class="addr-form-actions">
+                  <button class="btn-save-addr" (click)="saveNewAddress()" [disabled]="addrSaving">
+                    {{ addrSaving ? 'Saving…' : '✓ Save Address' }}
+                  </button>
+                  <button class="btn-cancel-addr" (click)="cancelAddForm()">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Contact phone -->
+              <div class="phone-row">
+                <label class="phone-label">📞 Contact Number</label>
+                <input class="phone-input" type="tel" [(ngModel)]="cv.contactPhone" [name]="'phone-' + cv.cartId"
+                  placeholder="10-digit mobile" maxlength="10">
+                <span class="phone-hint">Delivery agent will call on this number</span>
+              </div>
+            </div>
+
             <!-- Payment Method Selector -->
             <div class="payment-section">
               <p class="payment-label">💳 Payment Method</p>
               <div class="payment-pills">
                 <label class="pay-pill" [class.active]="cv.paymentMethod === 'cod'">
-                  <input type="radio" name="pay-{{cv.cartId}}" value="cod"
-                         [(ngModel)]="cv.paymentMethod"
-                         (ngModelChange)="onCouponChange(cv)"> 💵 Cash on Delivery
+                  <input type="radio" name="pay-{{cv.cartId}}" value="cod" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 💵 Cash on Delivery
                 </label>
                 <label class="pay-pill" [class.active]="cv.paymentMethod === 'upi'">
-                  <input type="radio" name="pay-{{cv.cartId}}" value="upi"
-                         [(ngModel)]="cv.paymentMethod"
-                         (ngModelChange)="onCouponChange(cv)"> 📱 UPI
+                  <input type="radio" name="pay-{{cv.cartId}}" value="upi" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 📱 UPI
                 </label>
                 <label class="pay-pill" [class.active]="cv.paymentMethod === 'card'">
-                  <input type="radio" name="pay-{{cv.cartId}}" value="card"
-                         [(ngModel)]="cv.paymentMethod"
-                         (ngModelChange)="onCouponChange(cv)"> 💳 Card
+                  <input type="radio" name="pay-{{cv.cartId}}" value="card" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 💳 Card
                 </label>
                 <label class="pay-pill" [class.active]="cv.paymentMethod === 'netbanking'">
-                  <input type="radio" name="pay-{{cv.cartId}}" value="netbanking"
-                         [(ngModel)]="cv.paymentMethod"
-                         (ngModelChange)="onCouponChange(cv)"> 🏦 Net Banking
+                  <input type="radio" name="pay-{{cv.cartId}}" value="netbanking" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 🏦 Net Banking
                 </label>
               </div>
               <p class="pay-note" *ngIf="cv.paymentMethod === 'cod'">🔴 Cash will be collected at delivery</p>
-              <p class="pay-note pay-note-paid" *ngIf="cv.paymentMethod !== 'cod'">✅ Pre-paid — no cash needed at door</p>
+              <p class="pay-note pay-note-paid" *ngIf="cv.paymentMethod !== 'cod'">✅ Pre-paid — no cash needed at door
+              </p>
             </div>
 
             <button class="btn-checkout"
-                    [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading"
-                    (click)="placeSingleOrder(cv)">
-              <ng-container *ngIf="cv.orderPlaced">✅ Order Placed!</ng-container>
-              <ng-container *ngIf="!cv.orderPlaced">{{ cv.loading ? 'Placing Order…' : '🚀 Place This Order' }}</ng-container>
+              [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading || cv.cityMismatch"
+              [class.btn-mismatch]="cv.cityMismatch" (click)="placeSingleOrder(cv)">
+              <ng-container *ngIf="cv.cityMismatch">🚫 Wrong City</ng-container>
+              <ng-container *ngIf="!cv.cityMismatch && cv.orderPlaced">✅ Order Placed!</ng-container>
+              <ng-container *ngIf="!cv.cityMismatch && !cv.orderPlaced">{{ cv.loading ? 'Placing Order…' : '🚀 Place
+                This Order' }}</ng-container>
             </button>
 
             <button class="btn-continue" (click)="goHome()">+ Add from another restaurant</button>

@@ -21,7 +21,7 @@ export const ALL_OFFERS: Offer[] = [
   { id:2,  code:'FLAT100',  title:'Flat ₹100 OFF',  description:'On orders above ₹299',                      type:'flat',    value:100, cap:100, minOrder:299, emoji:'💸', color:'#8a2be2' },
   { id:3,  code:'BOGO1',    title:'Buy 1 Get 1',    description:'On selected restaurants today',              type:'bogo',    value:50,  cap:200, minOrder:0,   emoji:'🎁', color:'#00c878' },
   { id:4,  code:'WKND40',   title:'40% OFF',        description:'Weekend special — all cuisines',             type:'percent', value:40,  cap:80,  minOrder:0,   emoji:'🎉', color:'#f7b731' },
-  { id:5,  code:'FREEDEL',  title:'Free Delivery',  description:'On any order, no minimum',                   type:'free',    value:0,   cap:0,   minOrder:0,   emoji:'🛵', color:'#0fbcf9' },
+
   { id:6,  code:'SAVE60',   title:'Flat ₹60 OFF',   description:'On orders ₹199+',                           type:'flat',    value:60,  cap:60,  minOrder:199, emoji:'🏷', color:'#fd9644' },
   { id:7,  code:'RICE50',   title:'50% OFF',        description:'On biryani & rice specials up to ₹75',      type:'percent', value:50,  cap:75,  minOrder:0,   emoji:'🍛', color:'#e84393' },
   { id:8,  code:'UPI150',   title:'₹150 Cashback',  description:'Paid via UPI — credited in 24 hrs',         type:'flat',    value:150, cap:150, minOrder:0,   emoji:'💳', color:'#26de81' },
