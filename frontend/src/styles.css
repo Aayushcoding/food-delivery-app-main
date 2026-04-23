@@ -213,3 +213,46 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; tra
 
 /* ── Selection ──────────────────────────────────────────────────── */
 ::selection { background: var(--bb-lime-glow); color: var(--bb-lime); }
+
+/* ══════════════════════════════════════════════════════════════
+   CROSS-BROWSER COMPATIBILITY — Chrome-specific fixes
+   (Edge renders fine without these; Chrome needs them)
+══════════════════════════════════════════════════════════════ */
+
+/* 1. GPU compositing — prevents Chrome paint-flash / animation glitch
+      on elements that use transform/opacity transitions. */
+.bb-card,
+.bb-btn-primary,
+.bb-btn-ghost,
+button,
+a {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* 2. Gradient text — Chrome requires -webkit-background-clip.
+      Without it the clipped text turns invisible/blank on Chrome. */
+.brand-name,
+.brand,
+.stat-num {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* 3. Sticky positioning — Chrome breaks sticky if any ancestor has
+      overflow: hidden or overflow: auto.  'clip' allows sticky children. */
+app-root,
+.home-container,
+.page-content,
+.profile-page,
+.owner-profile-page {
+  overflow-x: clip;
+}
+
+/* 4. Prevent Chrome sub-pixel hairline gaps between dark containers. */
+.bb-card,
+.cart-sidebar,
+.modal-overlay {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}

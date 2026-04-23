@@ -10,9 +10,10 @@ interface CartView {
   cartId:        string;
   restaurantId:  string;
   restaurantName: string;
-  restaurantRating: number;     // cached from API
-  restaurantReviewCount: number; // cached from API
+  restaurantRating: number;
+  restaurantReviewCount: number;
   items:         any[];
+  paymentMethod: string;   // 'cod' | 'upi' | 'card' | 'netbanking'
   // coupon state per cart
   couponCode:    string;
   couponApplied: boolean;
@@ -93,6 +94,7 @@ export class CustomerCartComponent implements OnInit {
         ...item,
         itemName: item.name || item.itemName || item.itemId
       })),
+      paymentMethod: 'cod',
       couponCode:    '',
       couponApplied: false,
       couponMessage: '',
@@ -147,6 +149,22 @@ export class CustomerCartComponent implements OnInit {
   applyCoupon(cv: CartView): void {
     const code = cv.couponCode.trim().toUpperCase();
     if (!code) return;
+
+    // UPI150 requires UPI payment method — validate on frontend before even calling context
+    if (code === 'UPI150' && cv.paymentMethod !== 'upi') {
+      cv.couponApplied  = false;
+      cv.discountAmount = 0;
+      cv.couponError    = '❌ UPI150 is only valid when paying via UPI. Please select UPI as payment method.';
+      return;
+    }
+
+    // BOGO1 requires Net Banking
+    if (code === 'BOGO1' && cv.paymentMethod !== 'netbanking') {
+      cv.couponApplied  = false;
+      cv.discountAmount = 0;
+      cv.couponError    = '❌ BOGO1 is only valid when paying via Net Banking. Please select Net Banking as payment method.';
+      return;
+    }
 
     if (code === 'PREM20') {
       // Need restaurant rating & reviewCount — use cached values (set by loadRestaurantName)
@@ -285,6 +303,7 @@ export class CustomerCartComponent implements OnInit {
               userId:         user.id,
               restaurantId:   cv.restaurantId,
               addressId:      String(firstAddr._id),
+              paymentMethod:  cv.paymentMethod,
               couponCode:     cv.couponApplied ? cv.couponCode.toUpperCase() : undefined,
               discountAmount: cv.couponApplied ? cv.discountAmount : 0,
               finalAmount:    this.finalTotalOf(cv),

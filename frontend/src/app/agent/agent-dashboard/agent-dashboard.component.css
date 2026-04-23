@@ -691,3 +691,23 @@
 /* == CITY INFO BAR — updated to lime theme == */
 .city-info-bar { border-color: rgba(163,230,53,0.2); background: rgba(163,230,53,0.05); }
 .ci-link { color: #A3E635; }
+
+/* == PAYMENT STATUS BADGES (agent) == */
+.pay-collect-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FCA5A5;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+.pay-prepaid-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4ADE80;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.3);
+  padding: 3px 12px;
+  border-radius: 20px;
+}

@@ -53,6 +53,15 @@
         <div class="order-foot">
           <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
 
+          <!-- Payment badge -->
+          <span class="pay-badge pay-badge-paid" *ngIf="order.isPaid">
+            ✅ Pre-Paid
+            <span class="pay-method-tag">{{ order.paymentMethod === 'upi' ? 'UPI' : order.paymentMethod === 'card' ? 'Card' : 'Net Banking' }}</span>
+          </span>
+          <span class="pay-badge pay-badge-cod" *ngIf="!order.isPaid">
+            🔴 COD — Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }}
+          </span>
+
           <!-- ── AGENT ASSIGNED — owner's work is done ── -->
           <div *ngIf="isAssigned(order)" class="agent-assigned-badge">
             🛵 Picked up by Delivery Agent

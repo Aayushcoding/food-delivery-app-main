@@ -126,6 +126,16 @@
         <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
       </div>
 
+      <!-- Payment status -->
+      <div class="info-row" *ngIf="!order.isPaid">
+        <span class="info-icon">🔴</span>
+        <span class="pay-collect-badge">Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }} cash at door</span>
+      </div>
+      <div class="info-row" *ngIf="order.isPaid">
+        <span class="info-icon">✅</span>
+        <span class="pay-prepaid-badge">Pre-Paid — no cash to collect</span>
+      </div>
+
       <div class="card-actions">
         <button class="btn btn-primary"
                 id="btn-accept-{{ order.id }}"
@@ -181,6 +191,16 @@
       <div class="info-row earn-preview">
         <span class="info-icon">💵</span>
         <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
+      </div>
+
+      <!-- Payment status -->
+      <div class="info-row" *ngIf="!order.isPaid">
+        <span class="info-icon">🔴</span>
+        <span class="pay-collect-badge">Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }} cash at door</span>
+      </div>
+      <div class="info-row" *ngIf="order.isPaid">
+        <span class="info-icon">✅</span>
+        <span class="pay-prepaid-badge">Pre-Paid — no cash to collect</span>
       </div>
 
       <!-- ── Progress stepper ── -->

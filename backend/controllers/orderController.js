@@ -125,12 +125,16 @@ const createOrder = async (req, res) => {
     console.log(`[createOrder] restaurantId: "${resolvedRestaurantId}"`);
 
     // ── Honour client-side discount (already validated in frontend) ──────────
-    // The frontend computes and validates the coupon; we trust the result but
-    // clamp it so finalAmount never goes below 0 and discount never exceeds total.
     const rawDiscount   = Number(req.body.discountAmount) || 0;
     const couponCode    = (req.body.couponCode || '').trim().toUpperCase() || null;
     const discountAmount = Math.min(Math.max(0, rawDiscount), totalAmount);
     const finalAmount    = Math.max(0, totalAmount - discountAmount);
+
+    // ── Payment method ───────────────────────────────────────────────────────
+    const VALID_PAYMENT_METHODS = ['cod', 'upi', 'card', 'netbanking'];
+    const paymentMethod = VALID_PAYMENT_METHODS.includes(req.body.paymentMethod)
+      ? req.body.paymentMethod : 'cod';
+    const isPaid = paymentMethod !== 'cod';   // COD = unpaid until delivered
 
     const order = await new Order({
       id:              await getNextSequence('ord'),
@@ -141,6 +145,8 @@ const createOrder = async (req, res) => {
       finalAmount,
       discountAmount,
       offerApplied:    couponCode || null,
+      paymentMethod,
+      isPaid,
       deliveryAddress: resolvedAddress,
       status:          'pending',
       clientOrderId:   clientOrderId?.trim() || null,
@@ -338,8 +344,16 @@ const getInvoice = async (req, res) => {
       ).lean();
     }
 
+    // Fetch restaurant name for the invoice
+    let restaurantName = '';
+    if (order.restaurantId) {
+      const restaurant = await Restaurant.findOne({ restaurantId: order.restaurantId }).lean();
+      if (restaurant) restaurantName = restaurant.restaurantName || '';
+    }
+
     const invoice = {
       orderId:         order.id,
+      restaurantName:  restaurantName,
       transactionId:   order.transactionId,
       invoiceDate:     new Date().toISOString(),
       orderDate:       order.createdAt,
@@ -350,7 +364,9 @@ const getInvoice = async (req, res) => {
       discountAmount:  order.discountAmount  || 0,
       offerApplied:    order.offerApplied    || null,
       finalAmount:     order.finalAmount     || order.totalAmount,
-      restaurantId:    order.restaurantId    || ''
+      restaurantId:    order.restaurantId    || '',
+      paymentMethod:   order.paymentMethod   || 'cod',
+      isPaid:          order.isPaid          || false
     };
 
     return res.json({ success: true, data: invoice });
@@ -688,10 +704,22 @@ const applyOffer = async (req, res) => {
       }
 
       case 'UPI150':
+        if (order.paymentMethod !== 'upi') {
+          return res.status(400).json({
+            success: false,
+            message: 'UPI150 is only valid when paying via UPI. Please select UPI as your payment method.'
+          });
+        }
         discount = Math.min(150, order.totalAmount);
         break;
 
       case 'BOGO1':
+        if (order.paymentMethod !== 'netbanking') {
+          return res.status(400).json({
+            success: false,
+            message: 'BOGO1 is only valid when paying via Net Banking.'
+          });
+        }
         discount = Math.min(Math.round(order.totalAmount * 0.5), 200);
         break;
 

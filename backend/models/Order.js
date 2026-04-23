@@ -49,6 +49,14 @@ const orderSchema = new mongoose.Schema({
   discountAmount:   { type: Number,  default: 0 },       // rupees discounted
   finalAmount:      { type: Number,  default: 0 },       // totalAmount - discountAmount
 
+  // Payment
+  paymentMethod:    {
+    type: String,
+    enum: ['cod', 'upi', 'card', 'netbanking'],
+    default: 'cod'
+  },
+  isPaid:           { type: Boolean, default: false },   // true for upi/card/netbanking
+
   transactionId:    { type: String, default: '' },
   invoiceGenerated: { type: Boolean, default: false },
   // Idempotency key from frontend — prevents duplicate orders from retries/double-taps

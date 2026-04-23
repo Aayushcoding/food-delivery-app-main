@@ -501,3 +501,72 @@
   color: #4ADE80;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   PAYMENT METHOD SELECTOR
+══════════════════════════════════════════════════════════════ */
+.payment-section {
+  margin: 18px 0 14px;
+  padding: 16px;
+  background: #1C2030;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.payment-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 12px;
+  letter-spacing: 0.3px;
+}
+
+.payment-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pay-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  background: #252A3D;
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+.pay-pill:hover {
+  border-color: rgba(163,230,53,0.25);
+  color: var(--text);
+}
+.pay-pill.active {
+  background: rgba(163,230,53,0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-script-shadow: 0 0 10px rgba(163,230,53,0.12);
+}
+.pay-pill input[type="radio"] {
+  display: none;   /* hide native radio; visual handled by .active class */
+}
+
+.pay-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FCA5A5;
+  padding: 7px 12px;
+  background: rgba(239,68,68,0.07);
+  border-radius: 8px;
+  border-left: 3px solid #EF4444;
+}
+.pay-note-paid {
+  color: #4ADE80;
+  background: rgba(74,222,128,0.07);
+  border-left-color: #4ADE80;
+}

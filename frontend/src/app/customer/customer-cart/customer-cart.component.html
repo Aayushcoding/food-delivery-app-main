@@ -150,6 +150,35 @@
               </div>
             </div>
 
+            <!-- Payment Method Selector -->
+            <div class="payment-section">
+              <p class="payment-label">💳 Payment Method</p>
+              <div class="payment-pills">
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'cod'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="cod"
+                         [(ngModel)]="cv.paymentMethod"
+                         (ngModelChange)="onCouponChange(cv)"> 💵 Cash on Delivery
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'upi'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="upi"
+                         [(ngModel)]="cv.paymentMethod"
+                         (ngModelChange)="onCouponChange(cv)"> 📱 UPI
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'card'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="card"
+                         [(ngModel)]="cv.paymentMethod"
+                         (ngModelChange)="onCouponChange(cv)"> 💳 Card
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'netbanking'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="netbanking"
+                         [(ngModel)]="cv.paymentMethod"
+                         (ngModelChange)="onCouponChange(cv)"> 🏦 Net Banking
+                </label>
+              </div>
+              <p class="pay-note" *ngIf="cv.paymentMethod === 'cod'">🔴 Cash will be collected at delivery</p>
+              <p class="pay-note pay-note-paid" *ngIf="cv.paymentMethod !== 'cod'">✅ Pre-paid — no cash needed at door</p>
+            </div>
+
             <button class="btn-checkout"
                     [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading"
                     (click)="placeSingleOrder(cv)">

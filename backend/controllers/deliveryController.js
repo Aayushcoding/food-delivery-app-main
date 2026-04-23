@@ -354,7 +354,13 @@ const getAvailableOrdersForAgentRoute = async (req, res) => {
       agentCities = agentUser.cities.map(c => c.toLowerCase().trim());
     }
 
-    let query = { status: 'out_for_delivery', deliveryAgentId: null };
+    // Orders ready for pickup: confirmed, preparing, or out_for_delivery (unassigned)
+    // NOTE: Owners move orders: pending → confirmed → preparing
+    // They do NOT set out_for_delivery — agents accept from confirmed/preparing onwards
+    let query = {
+      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
+      deliveryAgentId: null
+    };
 
     // If agent has cities set, filter orders whose deliveryAddress.city matches
     if (agentCities.length > 0) {
