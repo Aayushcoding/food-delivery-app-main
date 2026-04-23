@@ -1,6 +1,6 @@
 ﻿============================================================
 BYTEBITES - FOOD DELIVERY SYSTEM
-Full Project Export - Generated: 2026-04-23 08:55
+Full Project Export - Generated: 2026-04-23 11:46
 Node 24.14.0 | Angular 15.2.11 | MongoDB 8.2.5
 ============================================================
 
@@ -559,7 +559,8 @@ const addressSchema = new mongoose.Schema({
 
 const userSchema = new mongoose.Schema({
   id:       { type: String, required: true, unique: true, index: true },
-  username: { type: String, required: true, trim: true, unique: true, index: true },
+  name:     { type: String, default: '', trim: true },          // full name (display)
+  username: { type: String, default: '', trim: true },          // kept for backward compat
   // email uniqueness is enforced per role via compound index below
   email: {
     type:      String,
@@ -599,8 +600,11 @@ const userSchema = new mongoose.Schema({
 
 // Same email can exist for different roles
 userSchema.index({ email: 1, role: 1 }, { unique: true });
-// Username must be globally unique (used as login identifier)
-userSchema.index({ username: 1 }, { unique: true });
+// Same phone can exist for different roles, but not same role
+userSchema.index({ phoneNo: 1, role: 1 }, {
+  unique: true,
+  partialFilterExpression: { phoneNo: { $nin: ['', null] } }
+});
 
 module.exports = mongoose.model('User', userSchema);
 
@@ -790,6 +794,14 @@ const orderSchema = new mongoose.Schema({
   discountAmount:   { type: Number,  default: 0 },       // rupees discounted
   finalAmount:      { type: Number,  default: 0 },       // totalAmount - discountAmount
 
+  // Payment
+  paymentMethod:    {
+    type: String,
+    enum: ['cod', 'upi', 'card', 'netbanking'],
+    default: 'cod'
+  },
+  isPaid:           { type: Boolean, default: false },   // true for upi/card/netbanking
+
   transactionId:    { type: String, default: '' },
   invoiceGenerated: { type: Boolean, default: false },
   // Idempotency key from frontend — prevents duplicate orders from retries/double-taps
@@ -872,13 +884,19 @@ const { getNextSequence } = require('../utils/counter');
 
 const PHONE_REGEX = /^\d{10}$/;
 
+/** Generate a safe username from name + random suffix */
+function makeUsername(name, id) {
+  const base = (name || 'user').toLowerCase().replace(/\s+/g, '').replace(/[^a-z0-9]/g, '');
+  return `${base || 'user'}_${id}`;
+}
+
 // POST /api/auth/register/customer
 const registerCustomer = async (req, res) => {
   try {
-    const { username, email, password, phoneNo, addresses } = req.body;
-    if (!username?.trim()) return res.status(400).json({ success: false, message: 'username is required' });
-    if (!email?.trim())    return res.status(400).json({ success: false, message: 'email is required' });
-    if (!password)         return res.status(400).json({ success: false, message: 'password is required' });
+    const { name, email, password, phoneNo, addresses } = req.body;
+    if (!name?.trim())     return res.status(400).json({ success: false, message: 'Full name is required' });
+    if (!email?.trim())    return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!password)         return res.status(400).json({ success: false, message: 'Password is required' });
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     if (!phoneNo?.trim())  return res.status(400).json({ success: false, message: 'Phone number is required' });
     if (!PHONE_REGEX.test(phoneNo.trim()))
@@ -887,20 +905,22 @@ const registerCustomer = async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase().trim(), role: 'Customer' });
     if (existing) return res.status(400).json({ success: false, message: 'Customer account with this email already exists' });
 
-    const takenUsername = await User.findOne({ username: username.trim() });
-    if (takenUsername) return res.status(400).json({ success: false, message: 'Username already taken — please choose another' });
+    const phoneExists = await User.findOne({ phoneNo: phoneNo.trim(), role: 'Customer' });
+    if (phoneExists) return res.status(400).json({ success: false, message: 'Customer account with this phone already exists' });
 
     // Normalize city in addresses
     const cleanAddresses = Array.isArray(addresses)
       ? addresses.map(a => ({ ...a, city: (a.city || '').toLowerCase().trim() }))
       : [];
 
+    const newId = await getNextSequence('usr');
     const user = await new User({
-      id:        await getNextSequence('usr'),
-      username:  username.trim(),
+      id:        newId,
+      name:      name.trim(),
+      username:  makeUsername(name, newId),
       email:     email.toLowerCase().trim(),
       password:  await bcrypt.hash(password, 10),
-      phoneNo:   phoneNo?.trim() || '',
+      phoneNo:   phoneNo.trim(),
       role:      'Customer',
       addresses: cleanAddresses
     }).save();
@@ -915,10 +935,10 @@ const registerCustomer = async (req, res) => {
 // POST /api/auth/register/owner
 const registerOwner = async (req, res) => {
   try {
-    const { username, email, password, phoneNo } = req.body;
-    if (!username?.trim()) return res.status(400).json({ success: false, message: 'username is required' });
-    if (!email?.trim())    return res.status(400).json({ success: false, message: 'email is required' });
-    if (!password)         return res.status(400).json({ success: false, message: 'password is required' });
+    const { name, email, password, phoneNo } = req.body;
+    if (!name?.trim())     return res.status(400).json({ success: false, message: 'Full name is required' });
+    if (!email?.trim())    return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!password)         return res.status(400).json({ success: false, message: 'Password is required' });
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     if (!phoneNo?.trim())  return res.status(400).json({ success: false, message: 'Phone number is required' });
     if (!PHONE_REGEX.test(phoneNo.trim()))
@@ -927,15 +947,17 @@ const registerOwner = async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase().trim(), role: 'Owner' });
     if (existing) return res.status(400).json({ success: false, message: 'Owner account with this email already exists' });
 
-    const takenUsername = await User.findOne({ username: username.trim() });
-    if (takenUsername) return res.status(400).json({ success: false, message: 'Username already taken — please choose another' });
+    const phoneExists = await User.findOne({ phoneNo: phoneNo.trim(), role: 'Owner' });
+    if (phoneExists) return res.status(400).json({ success: false, message: 'Owner account with this phone already exists' });
 
+    const newId = await getNextSequence('usr');
     const user = await new User({
-      id:       await getNextSequence('usr'),
-      username: username.trim(),
+      id:       newId,
+      name:     name.trim(),
+      username: makeUsername(name, newId),
       email:    email.toLowerCase().trim(),
       password: await bcrypt.hash(password, 10),
-      phoneNo:  phoneNo?.trim() || '',
+      phoneNo:  phoneNo.trim(),
       role:     'Owner'
     }).save();
 
@@ -947,23 +969,22 @@ const registerOwner = async (req, res) => {
 };
 
 // POST /api/auth/login
+// Accepts email OR 10-digit phone number — NO username login
 const login = async (req, res) => {
   try {
     const { email: identifier, password, role } = req.body;
-    if (!identifier?.trim()) return res.status(400).json({ success: false, message: 'Email or username is required' });
+    if (!identifier?.trim()) return res.status(400).json({ success: false, message: 'Email or phone number is required' });
     if (!password)           return res.status(400).json({ success: false, message: 'Password is required' });
     if (!role)               return res.status(400).json({ success: false, message: 'Role is required' });
 
     const id = identifier.trim();
-
-    // Try email first; if no '@' treat as username
     let user = null;
-    if (id.includes('@')) {
-      user = await User.findOne({ email: id.toLowerCase(), role });
+
+    // 10-digit → phone login; anything with @ → email; else try email anyway
+    if (PHONE_REGEX.test(id)) {
+      user = await User.findOne({ phoneNo: id, role });
     } else {
-      user = await User.findOne({ username: id, role });
-      // fallback: maybe they typed email without @?
-      if (!user) user = await User.findOne({ email: id.toLowerCase(), role });
+      user = await User.findOne({ email: id.toLowerCase(), role });
     }
 
     if (!user) return res.status(401).json({ success: false, message: `No ${role} account found with these credentials` });
@@ -982,10 +1003,10 @@ const login = async (req, res) => {
 // POST /api/auth/register/delivery
 const registerDeliveryAgent = async (req, res) => {
   try {
-    const { username, email, password, phoneNo, addresses } = req.body;
-    if (!username?.trim()) return res.status(400).json({ success: false, message: 'username is required' });
-    if (!email?.trim())    return res.status(400).json({ success: false, message: 'email is required' });
-    if (!password)         return res.status(400).json({ success: false, message: 'password is required' });
+    const { name, email, password, phoneNo, addresses } = req.body;
+    if (!name?.trim())     return res.status(400).json({ success: false, message: 'Full name is required' });
+    if (!email?.trim())    return res.status(400).json({ success: false, message: 'Email is required' });
+    if (!password)         return res.status(400).json({ success: false, message: 'Password is required' });
     if (password.length < 6) return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     if (!phoneNo?.trim())  return res.status(400).json({ success: false, message: 'Phone number is required' });
     if (!PHONE_REGEX.test(phoneNo.trim()))
@@ -994,20 +1015,21 @@ const registerDeliveryAgent = async (req, res) => {
     const existing = await User.findOne({ email: email.toLowerCase().trim(), role: 'DeliveryAgent' });
     if (existing) return res.status(400).json({ success: false, message: 'Delivery agent account with this email already exists' });
 
-    const takenUsername = await User.findOne({ username: username.trim() });
-    if (takenUsername) return res.status(400).json({ success: false, message: 'Username already taken — please choose another' });
+    const phoneExists = await User.findOne({ phoneNo: phoneNo.trim(), role: 'DeliveryAgent' });
+    if (phoneExists) return res.status(400).json({ success: false, message: 'Delivery agent account with this phone already exists' });
 
-    // Normalize city in addresses
     const cleanAddresses = Array.isArray(addresses)
       ? addresses.map(a => ({ ...a, city: (a.city || '').toLowerCase().trim() }))
       : [];
 
+    const newId = await getNextSequence('usr');
     const user = await new User({
-      id:        await getNextSequence('usr'),
-      username:  username.trim(),
+      id:        newId,
+      name:      name.trim(),
+      username:  makeUsername(name, newId),
       email:     email.toLowerCase().trim(),
       password:  await bcrypt.hash(password, 10),
-      phoneNo:   phoneNo?.trim() || '',
+      phoneNo:   phoneNo.trim(),
       role:      'DeliveryAgent',
       addresses: cleanAddresses
     }).save();
@@ -1868,12 +1890,16 @@ const createOrder = async (req, res) => {
     console.log(`[createOrder] restaurantId: "${resolvedRestaurantId}"`);
 
     // ── Honour client-side discount (already validated in frontend) ──────────
-    // The frontend computes and validates the coupon; we trust the result but
-    // clamp it so finalAmount never goes below 0 and discount never exceeds total.
     const rawDiscount   = Number(req.body.discountAmount) || 0;
     const couponCode    = (req.body.couponCode || '').trim().toUpperCase() || null;
     const discountAmount = Math.min(Math.max(0, rawDiscount), totalAmount);
     const finalAmount    = Math.max(0, totalAmount - discountAmount);
+
+    // ── Payment method ───────────────────────────────────────────────────────
+    const VALID_PAYMENT_METHODS = ['cod', 'upi', 'card', 'netbanking'];
+    const paymentMethod = VALID_PAYMENT_METHODS.includes(req.body.paymentMethod)
+      ? req.body.paymentMethod : 'cod';
+    const isPaid = paymentMethod !== 'cod';   // COD = unpaid until delivered
 
     const order = await new Order({
       id:              await getNextSequence('ord'),
@@ -1884,6 +1910,8 @@ const createOrder = async (req, res) => {
       finalAmount,
       discountAmount,
       offerApplied:    couponCode || null,
+      paymentMethod,
+      isPaid,
       deliveryAddress: resolvedAddress,
       status:          'pending',
       clientOrderId:   clientOrderId?.trim() || null,
@@ -1971,7 +1999,21 @@ const getOrdersByRestaurant = async (req, res) => {
     const restaurant = await Restaurant.findOne({ restaurantId }).lean();
     if (!restaurant) return res.status(404).json({ success: false, message: 'Restaurant not found' });
 
-    const orders = await Order.find({ restaurantId }).sort({ createdAt: -1 }).lean();
+    const rawOrders = await Order.find({ restaurantId }).sort({ createdAt: -1 }).lean();
+
+    // Enrich with customer name + phone for owner display
+    const orders = await Promise.all(rawOrders.map(async (o) => {
+      let customerName  = 'Customer';
+      let customerPhone = '';
+      if (o.userId) {
+        const cu = await User.findOne({ id: o.userId }).lean();
+        if (cu?.name)    customerName  = cu.name;
+        else if (cu?.username) customerName = cu.username;
+        if (cu?.phoneNo) customerPhone = cu.phoneNo;
+      }
+      return { ...o, customerName, customerPhone };
+    }));
+
     return res.json({ success: true, data: orders });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -2081,8 +2123,16 @@ const getInvoice = async (req, res) => {
       ).lean();
     }
 
+    // Fetch restaurant name for the invoice
+    let restaurantName = '';
+    if (order.restaurantId) {
+      const restaurant = await Restaurant.findOne({ restaurantId: order.restaurantId }).lean();
+      if (restaurant) restaurantName = restaurant.restaurantName || '';
+    }
+
     const invoice = {
       orderId:         order.id,
+      restaurantName:  restaurantName,
       transactionId:   order.transactionId,
       invoiceDate:     new Date().toISOString(),
       orderDate:       order.createdAt,
@@ -2093,7 +2143,9 @@ const getInvoice = async (req, res) => {
       discountAmount:  order.discountAmount  || 0,
       offerApplied:    order.offerApplied    || null,
       finalAmount:     order.finalAmount     || order.totalAmount,
-      restaurantId:    order.restaurantId    || ''
+      restaurantId:    order.restaurantId    || '',
+      paymentMethod:   order.paymentMethod   || 'cod',
+      isPaid:          order.isPaid          || false
     };
 
     return res.json({ success: true, data: invoice });
@@ -2139,7 +2191,7 @@ const getContactInfo = async (req, res) => {
       const u = await User.findOne({ id: order.deliveryAgentId }).lean();
       if (u) {
         agent = {
-          name:  u.username || '',
+          name:  u.name || u.username || 'Delivery Partner',
           phone: u.phoneNo  || ''
         };
       }
@@ -2339,7 +2391,7 @@ const applyOffer = async (req, res) => {
     const code = rawCode.trim().toUpperCase();
 
     // All valid offer codes (must match frontend ALL_OFFERS list)
-    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50', 'FIRST70', 'FREEDEL',
+    const VALID_CODES = ['FLAT100', 'PERC20', 'FIRST50', 'FIRST70',
                          'BOGO1', 'WKND40', 'SAVE60', 'RICE50', 'UPI150',
                          'PREM20', 'LATE50', 'HEALTH30', 'BIG200'];
     if (!VALID_CODES.includes(code)) {
@@ -2431,17 +2483,25 @@ const applyOffer = async (req, res) => {
       }
 
       case 'UPI150':
+        if (order.paymentMethod !== 'upi') {
+          return res.status(400).json({
+            success: false,
+            message: 'UPI150 is only valid when paying via UPI. Please select UPI as your payment method.'
+          });
+        }
         discount = Math.min(150, order.totalAmount);
         break;
 
       case 'BOGO1':
+        if (order.paymentMethod !== 'netbanking') {
+          return res.status(400).json({
+            success: false,
+            message: 'BOGO1 is only valid when paying via Net Banking.'
+          });
+        }
         discount = Math.min(Math.round(order.totalAmount * 0.5), 200);
         break;
 
-      case 'FREEDEL':
-        // Free delivery — discount is 0 (delivery fee waived externally)
-        discount = 0;
-        break;
     }
 
     // Cap discount so finalAmount never goes below 0
@@ -2489,7 +2549,6 @@ module.exports = {
   applyOffer,
   getContactInfo
 };
-
 
 ============================================================
 FILE (26/123): backend/controllers/deliveryController.js
@@ -2517,12 +2576,10 @@ async function releaseExpiredAssignments() {
   }).lean();
 
   for (const order of expired) {
-    // Free the agent
     await DeliveryAgent.findOneAndUpdate(
       { id: order.deliveryAgentId },
       { isAvailable: true, currentOrderId: null }
     );
-    // Remove assignment from order (stays out_for_delivery, back in pool)
     await Order.findOneAndUpdate(
       { id: order.id },
       { deliveryAgentId: null, acceptedAt: null }
@@ -2644,7 +2701,6 @@ const getAgentOrders = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Delivery agent not found' });
     }
 
-    // Only orders currently assigned to this specific agent, not yet delivered
     const orders = await Order.find({
       deliveryAgentId: id,
       status: { $nin: ['delivered', 'cancelled'] }
@@ -2659,11 +2715,8 @@ const getAgentOrders = async (req, res) => {
 };
 
 // ── GET /api/delivery/orders/available ─────────────────────────────────────
-// Returns out_for_delivery orders with NO agent assigned yet.
-// Also auto-expires stale assignments before returning.
 const getAvailableOrders = async (req, res) => {
   try {
-    // Clear timed-out assignments first
     await releaseExpiredAssignments();
 
     const orders = await Order.find({
@@ -2694,7 +2747,6 @@ const assignOrderToAgent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Delivery agent not found' });
     }
 
-    // Order must be out_for_delivery AND not yet assigned
     const order = await Order.findOne({ id: orderId });
     if (!order) {
       return res.status(404).json({ success: false, message: 'Order not found' });
@@ -2712,7 +2764,6 @@ const assignOrderToAgent = async (req, res) => {
       });
     }
 
-    // Assign agent + record acceptance time. Status stays out_for_delivery until picked up.
     const now = new Date().toISOString();
     const updated = await Order.findOneAndUpdate(
       { id: orderId },
@@ -2720,7 +2771,6 @@ const assignOrderToAgent = async (req, res) => {
       { new: true }
     ).lean();
 
-    // Mark agent busy
     await DeliveryAgent.findOneAndUpdate(
       { id: agentId },
       { isAvailable: false, currentOrderId: orderId }
@@ -2749,18 +2799,15 @@ const rejectOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Only reject if THIS agent owns the assignment
     if (order.deliveryAgentId && order.deliveryAgentId !== agentId) {
       return res.status(403).json({ success: false, message: 'You are not assigned to this order' });
     }
 
-    // Clear assignment — order goes back to available pool
     await Order.findOneAndUpdate(
       { id: orderId },
       { deliveryAgentId: null, acceptedAt: null }
     );
 
-    // Free the agent
     await DeliveryAgent.findOneAndUpdate(
       { id: agentId },
       { isAvailable: true, currentOrderId: null }
@@ -2774,7 +2821,6 @@ const rejectOrder = async (req, res) => {
 };
 
 // ── PUT /api/delivery/:agentId/orders/:orderId/status ───────────────────────
-// Agent progresses the delivery: picked_up → on_the_way → arriving → delivered
 const updateOrderStatusByAgent = async (req, res) => {
   try {
     const { agentId, orderId } = req.params;
@@ -2798,7 +2844,6 @@ const updateOrderStatusByAgent = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Order not found' });
     }
 
-    // Verify this agent is assigned to this order
     if (order.deliveryAgentId !== agentId) {
       return res.status(403).json({ success: false, message: 'You are not assigned to this order' });
     }
@@ -2809,7 +2854,6 @@ const updateOrderStatusByAgent = async (req, res) => {
       { new: true }
     ).lean();
 
-    // On delivered: accumulate revenue to restaurant + free the agent
     if (status === 'delivered') {
       const orderAmount = updated.finalAmount > 0 ? updated.finalAmount : updated.totalAmount;
       if (updated.restaurantId) {
@@ -2836,30 +2880,35 @@ const updateOrderStatusByAgent = async (req, res) => {
 
 /**
  * GET /api/agent/available-orders
- * Returns out_for_delivery orders with no agent assigned.
+ * Returns confirmed/preparing/out_for_delivery orders with no agent assigned.
  * Automatically expires stale assignments first.
  */
 const getAvailableOrdersForAgentRoute = async (req, res) => {
   try {
     await releaseExpiredAssignments();
 
-    // Fetch agent's city list from User collection (agents registered via /api/auth)
+    // Fetch agent's city list from User collection
     let agentCities = [];
     const agentUser = await User.findOne({ id: req.agent.id }).lean();
     if (agentUser && Array.isArray(agentUser.cities) && agentUser.cities.length > 0) {
       agentCities = agentUser.cities.map(c => c.toLowerCase().trim());
     }
 
-    let query = { status: 'out_for_delivery', deliveryAgentId: null };
+    // Orders ready for pickup: confirmed, preparing, or out_for_delivery (unassigned)
+    // NOTE: Owners move orders: pending → confirmed → preparing
+    // They do NOT set out_for_delivery — agents accept from confirmed/preparing onwards
+    let query = {
+      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
+      deliveryAgentId: null
+    };
 
-    // If agent has cities set, filter orders whose deliveryAddress.city matches
     if (agentCities.length > 0) {
       query['deliveryAddress.city'] = { $in: agentCities };
     }
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
 
-    // Enrich each order with restaurantName
+    // Enrich each order with restaurantName + customerName
     const enriched = await Promise.all(orders.map(async (order) => {
       const { _id, __v, ...o } = order;
       let restaurantName = o.restaurantId || 'Unknown Restaurant';
@@ -2867,7 +2916,14 @@ const getAvailableOrdersForAgentRoute = async (req, res) => {
         const rest = await Restaurant.findOne({ restaurantId: o.restaurantId }).lean();
         if (rest?.restaurantName) restaurantName = rest.restaurantName;
       }
-      return { ...o, restaurantName };
+      let customerName = 'Customer';
+      if (o.userId) {
+        const cu = await User.findOne({ id: o.userId }).lean();
+        if (cu?.name) customerName = cu.name;
+        else if (cu?.username) customerName = cu.username;
+        else if (cu?.email) customerName = cu.email;
+      }
+      return { ...o, restaurantName, customerName };
     }));
 
     console.log(`[available-orders] Agent: ${req.agent?.id} | Cities: [${agentCities.join(', ') || 'ALL'}] | Results: ${enriched.length}`);
@@ -2880,7 +2936,6 @@ const getAvailableOrdersForAgentRoute = async (req, res) => {
   }
 };
 
-
 /**
  * GET /api/agent/my-orders
  * Returns all orders currently assigned to the authenticated agent.
@@ -2892,8 +2947,19 @@ const getMyOrders = async (req, res) => {
       deliveryAgentId: agentId,
       status: { $in: ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving'] }
     }).sort({ createdAt: -1 }).lean();
-    const clean = orders.map(({ _id, __v, ...o }) => o);
-    res.json({ success: true, data: clean });
+
+    const enriched = await Promise.all(orders.map(async (order) => {
+      const { _id, __v, ...o } = order;
+      let customerName = 'Customer';
+      if (o.userId) {
+        const cu = await User.findOne({ id: o.userId }).lean();
+        if (cu?.name)          customerName = cu.name;
+        else if (cu?.username) customerName = cu.username;
+      }
+      return { ...o, customerName };
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     console.error('[getMyOrders]', error.message);
     res.status(500).json({ success: false, message: error.message });
@@ -2902,11 +2968,6 @@ const getMyOrders = async (req, res) => {
 
 /**
  * POST /api/agent/accept/:orderId
- * Agent accepts an order:
- *   - Assigns deliveryAgentId
- *   - Changes status → picked_up
- *   - Records acceptedAt timestamps
- *   - Marks agent busy
  */
 const acceptOrderByAgent = async (req, res) => {
   try {
@@ -2915,10 +2976,8 @@ const acceptOrderByAgent = async (req, res) => {
 
     console.log(`[acceptOrder] Agent: ${agentId} → Order: ${orderId}`);
 
-    // Auto-release any expired assignments first
     await releaseExpiredAssignments();
 
-    // Busy-check: agent must not already have an active delivery
     const activeDelivery = await Order.findOne({
       deliveryAgentId: agentId,
       status: { $in: ['out_for_delivery', 'picked_up', 'on_the_way', 'arriving'] }
@@ -2930,18 +2989,12 @@ const acceptOrderByAgent = async (req, res) => {
       });
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // ATOMIC ASSIGNMENT — the condition { deliveryAgentId: null }
-    // guarantees no two agents can accept the same order.
-    // If another agent snuck in between the busy-check and here,
-    // findOneAndUpdate returns null and we return 409.
-    // ─────────────────────────────────────────────────────────────
     const now = new Date();
     const updated = await Order.findOneAndUpdate(
       {
         id:              orderId,
-        status:          'out_for_delivery',   // must still be waiting
-        deliveryAgentId: null                  // must be unassigned
+        status:          { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
+        deliveryAgentId: null
       },
       {
         deliveryAgentId:    agentId,
@@ -2953,14 +3006,12 @@ const acceptOrderByAgent = async (req, res) => {
     ).lean();
 
     if (!updated) {
-      // Either order not found, wrong status, or already taken — all handled
       const existing = await Order.findOne({ id: orderId }).lean();
-      if (!existing)                  return res.status(404).json({ success: false, message: 'Order not found' });
-      if (existing.deliveryAgentId)   return res.status(409).json({ success: false, message: 'Order already accepted by another agent' });
+      if (!existing)                return res.status(404).json({ success: false, message: 'Order not found' });
+      if (existing.deliveryAgentId) return res.status(409).json({ success: false, message: 'Order already accepted by another agent' });
       return res.status(400).json({ success: false, message: `Order is not available for pickup (status: ${existing.status})` });
     }
 
-    // Mark legacy DeliveryAgent collection busy (non-critical, best-effort)
     await DeliveryAgent.findOneAndUpdate(
       { id: agentId },
       { isAvailable: false, currentOrderId: orderId }
@@ -2976,7 +3027,6 @@ const acceptOrderByAgent = async (req, res) => {
 };
 
 // AGENT STATUS TRANSITION MAP
-// Each state only has ONE legal next state — no skipping allowed.
 const AGENT_TRANSITIONS = {
   picked_up:  ['on_the_way'],
   on_the_way: ['arriving'],
@@ -3001,7 +3051,6 @@ const updateStatusByAgent = async (req, res) => {
       return res.status(403).json({ success: false, message: 'You are not assigned to this order' });
     }
 
-    // Enforce strict one-step transition
     const allowed = AGENT_TRANSITIONS[order.status];
     if (!allowed || !allowed.includes(status)) {
       return res.status(400).json({
@@ -3015,11 +3064,9 @@ const updateStatusByAgent = async (req, res) => {
 
     const updated = await Order.findOneAndUpdate({ id: orderId }, patch, { new: true }).lean();
 
-    // Revenue accumulation + agent earnings + free agent on delivery
     if (status === 'delivered') {
       const orderAmount = updated.finalAmount > 0 ? updated.finalAmount : updated.totalAmount;
 
-      // 1. Add to restaurant revenue
       if (updated.restaurantId) {
         await Restaurant.findOneAndUpdate(
           { restaurantId: updated.restaurantId },
@@ -3027,7 +3074,6 @@ const updateStatusByAgent = async (req, res) => {
         );
       }
 
-      // 2. Credit agent's earnings: flat ₹30 + 5% of order value (rounded)
       const agentCut = Math.round(30 + orderAmount * 0.05);
       await User.findOneAndUpdate(
         { id: agentId },
@@ -3035,7 +3081,6 @@ const updateStatusByAgent = async (req, res) => {
       );
       console.log(`[earnings] Agent ${agentId} earned ₹${agentCut} for order ${orderId}`);
 
-      // 3. Free agent for next delivery
       await DeliveryAgent.findOneAndUpdate(
         { id: agentId },
         { isAvailable: true, currentOrderId: null }
@@ -3052,8 +3097,6 @@ const updateStatusByAgent = async (req, res) => {
 
 /**
  * POST /debug/make-available/:orderId  (TEMP — for quick testing)
- * Force-sets an order to status=out_for_delivery and clears deliveryAgentId
- * so it appears in the agent dashboard immediately.
  */
 const debugMakeAvailable = async (req, res) => {
   try {
@@ -3080,7 +3123,6 @@ const debugMakeAvailable = async (req, res) => {
 
 /**
  * GET /api/agent/profile
- * Returns the authenticated agent's profile (from User collection).
  */
 const getAgentProfile = async (req, res) => {
   try {
@@ -3099,8 +3141,6 @@ const getAgentProfile = async (req, res) => {
 
 /**
  * PUT /api/agent/profile
- * Updates the authenticated agent's profile fields: username, phoneNo, cities.
- * cities: array of city strings (lowercase normalized).
  */
 const updateAgentProfile = async (req, res) => {
   try {
@@ -3129,9 +3169,6 @@ const updateAgentProfile = async (req, res) => {
 
 /**
  * GET /api/agent/history
- * Returns all orders DELIVERED by this agent, enriched with:
- * - restaurantName (from Restaurant collection)
- * - customerName   (from User collection)
  */
 const getMyDeliveryHistory = async (req, res) => {
   try {
@@ -3142,23 +3179,21 @@ const getMyDeliveryHistory = async (req, res) => {
       status: 'delivered'
     }).sort({ deliveredAt: -1, createdAt: -1 }).lean();
 
-    // Enrich each order with restaurant and customer names
     const enriched = await Promise.all(orders.map(async (order) => {
       const { _id, __v, ...o } = order;
 
-      // Fetch restaurant name
       let restaurantName = o.restaurantId || 'Unknown Restaurant';
       if (o.restaurantId) {
         const rest = await Restaurant.findOne({ restaurantId: o.restaurantId }).lean();
         if (rest?.restaurantName) restaurantName = rest.restaurantName;
       }
 
-      // Fetch customer name
-      let customerName = o.userId || 'Unknown Customer';
+      let customerName = 'Customer';
       if (o.userId) {
         const user = await User.findOne({ id: o.userId }).lean();
-        if (user?.username) customerName = user.username;
-        else if (user?.email) customerName = user.email;
+        if (user?.name)     customerName = user.name;
+        else if (user?.username) customerName = user.username;
+        else if (user?.email)    customerName = user.email;
       }
 
       return { ...o, restaurantName, customerName };
@@ -3195,29 +3230,35 @@ module.exports = {
 
 /**
  * GET /api/agent/earnings
- * Returns the authenticated agent's total earnings, total deliveries,
- * today's earnings, and today's delivery count.
+ * Computes totals directly from all delivered orders — always accurate
+ * regardless of whether User.totalEarnings was ever backfilled.
  */
 async function getAgentEarnings(req, res) {
   try {
     const agentId = req.agent.id;
 
-    // ── Fetch the agent's cumulative earnings from User record ────────────────
     const agent = await User.findOne({ id: agentId }).lean();
     if (!agent) return res.status(404).json({ success: false, message: 'Agent not found' });
 
-    const totalEarnings   = agent.totalEarnings   || 0;
-    const totalDeliveries = agent.totalDeliveries || 0;
+    // ── ALL-TIME: compute from every delivered order ──────────────────────────
+    const allOrders = await Order.find({
+      deliveryAgentId: agentId,
+      status: 'delivered'
+    }).lean();
 
-    // ── Today's earnings from completed orders ─────────────────────────────────
+    const totalDeliveries = allOrders.length;
+    const totalEarnings   = allOrders.reduce((sum, o) => {
+      const amt = o.finalAmount > 0 ? o.finalAmount : o.totalAmount;
+      return sum + Math.round(30 + amt * 0.05);
+    }, 0);
+
+    // ── TODAY: filter by deliveredAt >= start of day ──────────────────────────
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const todayOrders = await Order.find({
-      deliveryAgentId: agentId,
-      status:          'delivered',
-      deliveredAt:     { $gte: startOfDay }
-    }).lean();
+    const todayOrders = allOrders.filter(o =>
+      o.deliveredAt && new Date(o.deliveredAt) >= startOfDay
+    );
 
     const todayDeliveries = todayOrders.length;
     const todayEarnings   = todayOrders.reduce((sum, o) => {
@@ -4474,6 +4515,49 @@ button { font-family: inherit; cursor: pointer; border: none; outline: none; tra
 /* ── Selection ──────────────────────────────────────────────────── */
 ::selection { background: var(--bb-lime-glow); color: var(--bb-lime); }
 
+/* ══════════════════════════════════════════════════════════════
+   CROSS-BROWSER COMPATIBILITY — Chrome-specific fixes
+   (Edge renders fine without these; Chrome needs them)
+══════════════════════════════════════════════════════════════ */
+
+/* 1. GPU compositing — prevents Chrome paint-flash / animation glitch
+      on elements that use transform/opacity transitions. */
+.bb-card,
+.bb-btn-primary,
+.bb-btn-ghost,
+button,
+a {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* 2. Gradient text — Chrome requires -webkit-background-clip.
+      Without it the clipped text turns invisible/blank on Chrome. */
+.brand-name,
+.brand,
+.stat-num {
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* 3. Sticky positioning — Chrome breaks sticky if any ancestor has
+      overflow: hidden or overflow: auto.  'clip' allows sticky children. */
+app-root,
+.home-container,
+.page-content,
+.profile-page,
+.owner-profile-page {
+  overflow-x: clip;
+}
+
+/* 4. Prevent Chrome sub-pixel hairline gaps between dark containers. */
+.bb-card,
+.cart-sidebar,
+.modal-overlay {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
 
 ============================================================
 FILE (48/123): frontend/src/environments/environment.ts
@@ -4708,8 +4792,8 @@ export class AuthComponent implements OnInit {
   role: Role = 'Customer';
 
   // ── Form fields ─────────────────────────────────────────
-  username = '';
-  email    = '';   // used as email-or-username on login
+  name     = '';   // full name (signup)
+  email    = '';   // email or phone on login
   password = '';
   phoneNo  = '';
   // Address (Customer & DeliveryAgent signup)
@@ -4767,16 +4851,16 @@ export class AuthComponent implements OnInit {
   // ── Validation helper ────────────────────────────────────
   get isFormValid(): boolean {
     if (!this.email.trim() || !this.password) return false;
-    if (this.mode === 'signup' && !this.username.trim()) return false;
+    if (this.mode === 'signup' && !this.name.trim()) return false;
     if (this.mode === 'signup' && this.password.length < 6) return false;
     return true;
   }
 
-  // ── Login (email OR username) ─────────────────────────
+  // ── Login (email OR phone) ────────────────────────────────
   onLogin(): void {
     this.clearMessages();
     const identifier = this.email.trim();
-    if (!identifier) { this.errorMessage = 'Email or username is required.'; return; }
+    if (!identifier) { this.errorMessage = 'Email or phone number is required.'; return; }
     if (!this.password) { this.errorMessage = 'Password is required.'; return; }
 
     this.isLoading = true;
@@ -4807,7 +4891,7 @@ export class AuthComponent implements OnInit {
   onSignup(): void {
     this.clearMessages();
 
-    if (!this.username.trim()) { this.errorMessage = 'Username is required.'; return; }
+    if (!this.name.trim())  { this.errorMessage = 'Full name is required.'; return; }
     if (!this.email.trim())    { this.errorMessage = 'Email is required.'; return; }
     if (this.password.length < 6) { this.errorMessage = 'Password must be at least 6 characters.'; return; }
     // Phone required for ALL roles
@@ -4826,7 +4910,7 @@ export class AuthComponent implements OnInit {
     }
 
     const payload: any = {
-      username: this.username.trim(),
+      name:     this.name.trim(),
       email:    this.email.trim(),
       password: this.password,
       phoneNo:  this.phoneNo.trim(),
@@ -4854,7 +4938,7 @@ export class AuthComponent implements OnInit {
           this.successMessage = '✅ Account created! Please login.';
           this.mode     = 'login';
           this.password = '';
-          this.username = '';
+          this.name     = '';
           this.street   = '';
           this.city     = '';
           this.pincode  = '';
@@ -4950,26 +5034,26 @@ FILE (56/123): frontend/src/app/auth/auth/auth.component.html
     <!-- Form -->
     <form (ngSubmit)="onSubmit()" #authForm="ngForm" novalidate>
 
-      <!-- Username (signup only) -->
+      <!-- Full Name (signup only) -->
       <div class="field-group" *ngIf="mode === 'signup'">
-        <label for="auth-username">Username</label>
-        <input id="auth-username"
+        <label for="auth-name">Full Name</label>
+        <input id="auth-name"
                type="text"
-               [(ngModel)]="username"
-               name="username"
-               placeholder="e.g. rahul_2024"
-               autocomplete="username"
+               [(ngModel)]="name"
+               name="name"
+               placeholder="e.g. Rahul Sharma"
+               autocomplete="name"
                required>
       </div>
 
-      <!-- Email / login identifier -->
+      <!-- Email / Phone login identifier -->
       <div class="field-group">
-        <label for="auth-email">{{ mode === 'login' ? 'Email or Username' : 'Email' }}</label>
+        <label for="auth-email">{{ mode === 'login' ? 'Email or Phone Number' : 'Email' }}</label>
         <input id="auth-email"
                [type]="mode === 'login' ? 'text' : 'email'"
                [(ngModel)]="email"
                name="email"
-               [placeholder]="mode === 'login' ? 'you@example.com or username' : 'you@example.com'"
+               [placeholder]="mode === 'login' ? 'you@example.com or 9876543210' : 'you@example.com'"
                autocomplete="email"
                required>
       </div>
@@ -5677,6 +5761,7 @@ FILE (60/123): frontend/src/app/auth/landing/landing.component.css
   cursor: pointer;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.08);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   animation: slideUp 0.6s ease both;
@@ -6490,7 +6575,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   loadActive(): void {
     this.loading = true;
-    this.http.get<any>(`/api/delivery/${this.agent.id}/orders`,
+    this.http.get<any>('/api/agent/my-orders',
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => { this.activeOrders = res.data || []; this.loading = false; },
@@ -6531,17 +6616,18 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   accept(order: any): void {
     this.actionLoading[order.id] = true;
-    this.http.patch<any>(
-      `/api/orders/${order.id}/accept-delivery`,
-      { agentId: this.agent.id },
+    this.http.post<any>(
+      `/api/agent/accept/${order.id}`,
+      {},
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => {
         this.actionLoading[order.id] = false;
         this.showToast(`✅ Order #${order.id} accepted! Pick up within 30 min.`, false);
         this.availableOrders = this.availableOrders.filter(o => o.id !== order.id);
-        this.activeOrders.push(res.data);
+        // Reload active orders fresh from server so customerName etc. is populated
         this.activeTab = 'active';
+        this.loadActive();
       },
       error: err => {
         this.actionLoading[order.id] = false;
@@ -6561,9 +6647,9 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
 
   advance(order: any, step: DeliveryStep): void {
     this.actionLoading[order.id] = true;
-    this.http.patch<any>(
-      `/api/orders/${order.id}/delivery-status`,
-      { agentId: this.agent.id, status: step },
+    this.http.post<any>(
+      `/api/agent/update-status/${order.id}`,
+      { status: step },
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: () => {
@@ -6678,7 +6764,7 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
       <span class="role-pill">Delivery Agent</span>
     </div>
     <div class="nav-right">
-      <span class="agent-name" *ngIf="agent">{{ agent.username }}</span>
+      <span class="agent-name" *ngIf="agent">{{ agent.name || agent.username }}</span>
       <button class="btn-profile" id="btn-profile" (click)="goProfile()">👤 Profile</button>
       <button class="btn-logout" id="btn-logout" (click)="logout()">Logout</button>
     </div>
@@ -6689,7 +6775,7 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
 
   <!-- ── Page intro ── -->
   <div class="page-intro">
-    <h2>Welcome, {{ agent?.username }}! 👋</h2>
+    <h2>Welcome, {{ (agent?.name?.split(' ')[0]) || agent?.username }}! 👋</h2>
     <p>Manage your deliveries below.</p>
   </div>
 
@@ -6777,6 +6863,12 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
         <span>{{ formatAddress(order.deliveryAddress) }}</span>
       </div>
 
+      <!-- Customer name (available orders) -->
+      <div class="info-row" *ngIf="order.customerName">
+        <span class="info-icon">👤</span>
+        <span>For: <strong>{{ order.customerName }}</strong></span>
+      </div>
+
       <!-- Status context for confirmed/preparing orders -->
       <div class="info-row status-note" *ngIf="order.status === 'confirmed'">
         <span class="info-icon">🟡</span>
@@ -6795,6 +6887,16 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
       <div class="info-row earn-preview">
         <span class="info-icon">💵</span>
         <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
+      </div>
+
+      <!-- Payment status -->
+      <div class="info-row" *ngIf="!order.isPaid">
+        <span class="info-icon">🔴</span>
+        <span class="pay-collect-badge">Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }} cash at door</span>
+      </div>
+      <div class="info-row" *ngIf="order.isPaid">
+        <span class="info-icon">✅</span>
+        <span class="pay-prepaid-badge">Pre-Paid — no cash to collect</span>
       </div>
 
       <div class="card-actions">
@@ -6844,6 +6946,12 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
         <span>{{ formatAddress(order.deliveryAddress) }}</span>
       </div>
 
+      <!-- Customer name -->
+      <div class="info-row" *ngIf="order.customerName">
+        <span class="info-icon">👤</span>
+        <span>For: <strong>{{ order.customerName }}</strong></span>
+      </div>
+
       <div class="info-row">
         <span class="info-icon">🍽</span>
         <span class="item-list">{{ itemList(order) }}</span>
@@ -6852,6 +6960,16 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
       <div class="info-row earn-preview">
         <span class="info-icon">💵</span>
         <span>You'll earn <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> on delivery</span>
+      </div>
+
+      <!-- Payment status -->
+      <div class="info-row" *ngIf="!order.isPaid">
+        <span class="info-icon">🔴</span>
+        <span class="pay-collect-badge">Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }} cash at door</span>
+      </div>
+      <div class="info-row" *ngIf="order.isPaid">
+        <span class="info-icon">✅</span>
+        <span class="pay-prepaid-badge">Pre-Paid — no cash to collect</span>
       </div>
 
       <!-- ── Progress stepper ── -->
@@ -6956,6 +7074,12 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
       <div class="info-row history-date-row">
         <span class="info-icon">🕐</span>
         <span>{{ (order.deliveredAt || order.createdAt) | date:'d MMM y, h:mm a' }}</span>
+      </div>
+
+      <!-- Earnings for this delivery -->
+      <div class="info-row earn-preview">
+        <span class="info-icon">💰</span>
+        <span>Earned <strong class="earn-amount">₹{{ calcEarning(order) }}</strong> for this delivery</span>
       </div>
 
     </div>
@@ -7661,6 +7785,26 @@ FILE (72/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
 .city-info-bar { border-color: rgba(163,230,53,0.2); background: rgba(163,230,53,0.05); }
 .ci-link { color: #A3E635; }
 
+/* == PAYMENT STATUS BADGES (agent) == */
+.pay-collect-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #FCA5A5;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+.pay-prepaid-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #4ADE80;
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.3);
+  padding: 3px 12px;
+  border-radius: 20px;
+}
+
 
 ============================================================
 FILE (73/123): frontend/src/app/agent/agent-profile/agent-profile.component.ts
@@ -8288,6 +8432,8 @@ loading=false;
 // City filter
 selectedCity: string = '';
 noCitySelected = false;
+cityEditMode = false;
+cityInput = '';
 
 cuisineTags=['Chinese','Italian','Indian','Mexican','FastFood','Continental'];
 selectedCuisines=new Set<string>();
@@ -8326,7 +8472,9 @@ loadUser(){
 const user=this.authService.getUser();
 if(user){
 this.isLoggedIn=true;
-this.userName=user.username||user.email||'User';
+// Show first name from 'name' field, fallback to username / email
+const firstName = user.name ? user.name.split(' ')[0] : '';
+this.userName = firstName || user.username || user.email || 'User';
 }
 }
 
@@ -8409,12 +8557,33 @@ _fetchRestaurants(){
   });
 }
 
-// Clear city filter and reload all restaurants (useful when 0 results in selected city)
+// Clear city filter and reload all restaurants
 clearCityFilter(){
   localStorage.removeItem('selectedCity');
   this.selectedCity = '';
   this.noCitySelected = true;
+  this.cityEditMode = false;
   this.loadRestaurants();
+}
+
+// Inline city edit
+openCityEdit(): void {
+  this.cityInput = this.selectedCity;
+  this.cityEditMode = true;
+}
+
+cancelCityEdit(): void {
+  this.cityEditMode = false;
+}
+
+changeCity(): void {
+  const city = this.cityInput.trim().toLowerCase();
+  if (!city) { this.clearCityFilter(); return; }
+  localStorage.setItem('selectedCity', city);
+  this.selectedCity  = city;
+  this.noCitySelected = false;
+  this.cityEditMode  = false;
+  this._fetchRestaurants();
 }
 
 onSearchInput(){
@@ -8606,11 +8775,36 @@ FILE (77/123): frontend/src/app/customer/customer-home/customer-home.component.h
   <p>📍 No city selected — showing all restaurants. <a routerLink="/customer/profile">Set your city in profile →</a></p>
 </div>
 
-<!-- Results Info -->
+<!-- Results Info + City Change -->
 <div class="results-info">
-<p *ngIf="!loading && selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants in <strong>{{selectedCity}}</strong></p>
-<p *ngIf="!loading && !selectedCity">Found <strong>{{filteredRestaurants.length}}</strong> restaurants</p>
-<p *ngIf="loading" class="loading-text">Loading restaurants...</p>
+  <!-- Normal view: show city with edit button -->
+  <ng-container *ngIf="!cityEditMode">
+    <p *ngIf="!loading && selectedCity">
+      Found <strong>{{filteredRestaurants.length}}</strong> restaurants in
+      <strong class="city-chip">{{selectedCity}}</strong>
+      <button class="city-edit-btn" (click)="openCityEdit()" title="Change city">✏️</button>
+    </p>
+    <p *ngIf="!loading && !selectedCity">
+      Found <strong>{{filteredRestaurants.length}}</strong> restaurants
+      <button class="city-edit-btn" (click)="openCityEdit()" title="Set city">📍 Set City</button>
+    </p>
+    <p *ngIf="loading" class="loading-text">Loading restaurants...</p>
+  </ng-container>
+
+  <!-- Edit mode: inline city input -->
+  <div *ngIf="cityEditMode" class="city-edit-row">
+    <span class="city-edit-label">📍 City:</span>
+    <input
+      class="city-edit-input"
+      [(ngModel)]="cityInput"
+      placeholder="e.g. pune, mysore..."
+      (keyup.enter)="changeCity()"
+      autofocus
+    >
+    <button class="city-save-btn" (click)="changeCity()" title="Apply">✓</button>
+    <button class="city-cancel-btn" (click)="cancelCityEdit()" title="Cancel">✕</button>
+    <button class="city-clear-btn" *ngIf="selectedCity" (click)="clearCityFilter()" title="Show all cities">🌍 All Cities</button>
+  </div>
 </div>
 
 <!-- Restaurant List -->
@@ -8730,6 +8924,7 @@ FILE (78/123): frontend/src/app/customer/customer-home/customer-home.component.c
   padding: 0 28px;
   height: 68px;
   background: rgba(13,15,20,0.92);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border);
   position: sticky;
@@ -9019,6 +9214,7 @@ FILE (78/123): frontend/src/app/customer/customer-home/customer-home.component.c
   border: 1px solid rgba(34,197,94,0.3);
   padding: 3px 10px; border-radius: 20px;
   font-size: 11px; font-weight: 700;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
 }
 
@@ -9110,6 +9306,105 @@ FILE (78/123): frontend/src/app/customer/customer-home/customer-home.component.c
 @media (max-width: 480px) {
   .restaurants-grid { grid-template-columns: 1fr; }
 }
+
+/* ── City change inline UI ──────────────────────────────────── */
+.city-chip {
+  color: var(--primary);
+  background: rgba(163,230,53,0.08);
+  border: 1px solid rgba(163,230,53,0.25);
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 4px;
+}
+
+.city-edit-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: var(--muted);
+  transition: var(--transition);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.city-edit-btn:hover {
+  background: rgba(163,230,53,0.1);
+  color: var(--primary);
+}
+
+.city-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  animation: popIn 0.2s ease;
+}
+
+.city-edit-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.city-edit-input {
+  flex: 1;
+  min-width: 140px;
+  max-width: 240px;
+  padding: 8px 14px;
+  background: #1C2030;
+  border: 1.5px solid var(--primary);
+  border-radius: 9px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(163,230,53,0.12);
+  font-family: 'Inter', sans-serif;
+}
+.city-edit-input::placeholder { color: var(--dim); font-weight: 400; }
+
+.city-save-btn {
+  padding: 7px 14px;
+  background: var(--primary);
+  color: #0D0F14;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.city-save-btn:hover { background: var(--primary-dk); transform: translateY(-1px); }
+
+.city-cancel-btn {
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.city-cancel-btn:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+.city-clear-btn {
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--dim);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+.city-clear-btn:hover { color: var(--primary); border-color: rgba(163,230,53,0.3); }
 
 
 ============================================================
@@ -9640,9 +9935,14 @@ interface CartView {
   cartId:        string;
   restaurantId:  string;
   restaurantName: string;
-  restaurantRating: number;     // cached from API
-  restaurantReviewCount: number; // cached from API
+  restaurantCity: string;   // actual city of restaurant
+  cityMismatch:  boolean;   // true when restaurant city != selectedCity
+  restaurantRating: number;
+  restaurantReviewCount: number;
   items:         any[];
+  paymentMethod: string;   // 'cod' | 'upi' | 'card' | 'netbanking'
+  selectedAddressIdx: number;
+  contactPhone:  string;   // editable per-cart
   // coupon state per cart
   couponCode:    string;
   couponApplied: boolean;
@@ -9667,6 +9967,16 @@ export class CustomerCartComponent implements OnInit {
 
   carts: CartView[] = [];
   activeIdx = 0;
+  userAddresses: any[] = [];   // loaded once; shared across all carts
+
+  // ── Inline address form state ────────────────────────────────────────
+  showAddForm   = false;
+  addrSaving    = false;
+  addrError     = '';
+  newStreet     = '';
+  newLandmark   = '';
+  newPincode    = '';
+  deletingAddrId: string | null = null;
 
   cartLoading = false;
   inFlight: { [itemId: string]: boolean } = {};
@@ -9683,8 +9993,13 @@ export class CustomerCartComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadAllCarts();
+    this.loadUserAddresses();
     const saved = localStorage.getItem('couponCode') || '';
     if (saved && this.activeCart) this.activeCart.couponCode = saved;
+  }
+
+  get selectedCity(): string {
+    return localStorage.getItem('selectedCity') || '';
   }
 
   get activeCart(): CartView | null {
@@ -9713,16 +10028,22 @@ export class CustomerCartComponent implements OnInit {
   }
 
   private buildCartView(raw: any): CartView {
+    const user = this.authService.getUser();
     return {
       cartId:        raw.id,
       restaurantId:  raw.restaurantId,
-      restaurantName: raw.restaurantId, // overwritten by loadRestaurantName
+      restaurantName: raw.restaurantId,
+      restaurantCity: '',
+      cityMismatch:  false,
       restaurantRating: 0,
       restaurantReviewCount: 0,
       items: (raw.items || []).map((item: any) => ({
         ...item,
         itemName: item.name || item.itemName || item.itemId
       })),
+      paymentMethod: 'cod',
+      selectedAddressIdx: 0,
+      contactPhone:  user?.phoneNo || '',
       couponCode:    '',
       couponApplied: false,
       couponMessage: '',
@@ -9736,6 +10057,109 @@ export class CustomerCartComponent implements OnInit {
     };
   }
 
+  // ── Load user addresses (once, shared) ───────────────────────────────
+  loadUserAddresses(): void {
+    const user = this.authService.getUser();
+    if (!user) return;
+    this.http.get<any>(`${this.baseUrl}/users/${user.id}`, {
+      headers: this.authService.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        this.userAddresses = res?.data?.addresses || [];
+      },
+      error: () => {}
+    });
+  }
+
+  /** One-line label for an address (street + landmark, city hidden since it's fixed) */
+  addressLabel(addr: any): string {
+    if (!addr) return '—';
+    const parts = [addr.street, addr.landmark].filter(Boolean);
+    return parts.length ? parts.join(', ') : (addr.city || '—');
+  }
+
+  // ── INLINE ADD ADDRESS ───────────────────────────────────────────────
+  openAddForm(): void {
+    this.showAddForm = true;
+    this.addrError   = '';
+    this.newStreet   = '';
+    this.newLandmark = '';
+    this.newPincode  = '';
+  }
+
+  cancelAddForm(): void {
+    this.showAddForm = false;
+    this.addrError   = '';
+  }
+
+  saveNewAddress(): void {
+    const street  = this.newStreet.trim();
+    const pincode = this.newPincode.trim();
+    const city    = (localStorage.getItem('selectedCity') || '').toLowerCase().trim();
+
+    if (!street)  { this.addrError = 'Street / Area is required.'; return; }
+    if (!city)    { this.addrError = 'No city selected — go back and set your city first.'; return; }
+    if (pincode && !/^\d{6}$/.test(pincode)) { this.addrError = 'Pincode must be 6 digits.'; return; }
+
+    const user = this.authService.getUser();
+    if (!user) return;
+
+    this.addrSaving = true;
+    this.addrError  = '';
+    this.http.post<any>(
+      `${this.baseUrl}/users/${user.id}/addresses`,
+      { street, city, pincode, landmark: this.newLandmark.trim() },
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        this.addrSaving = false;
+        if (res.success) {
+          this.userAddresses = res.data?.addresses || [];
+          // Auto-select the newly added address on all carts
+          const newIdx = this.userAddresses.length - 1;
+          this.carts.forEach(cv => cv.selectedAddressIdx = newIdx);
+          this.showAddForm = false;
+        } else {
+          this.addrError = res.message || 'Failed to save address.';
+        }
+      },
+      error: (err) => {
+        this.addrSaving = false;
+        this.addrError  = err?.error?.message || 'Failed to save address.';
+      }
+    });
+  }
+
+  // ── DELETE ADDRESS ───────────────────────────────────────────────────
+  deleteAddress(addr: any, idx: number): void {
+    if (this.deletingAddrId) return;  // prevent double-click
+    const addrId = addr._id;
+    if (!addrId) return;
+
+    const user = this.authService.getUser();
+    if (!user) return;
+
+    this.deletingAddrId = addrId;
+    this.http.delete<any>(
+      `${this.baseUrl}/users/${user.id}/addresses/${addrId}`,
+      { headers: this.authService.getAuthHeaders() }
+    ).subscribe({
+      next: (res) => {
+        this.deletingAddrId = null;
+        if (res.success) {
+          this.userAddresses = res.data?.addresses || [];
+          // Fix selectedAddressIdx on all carts to avoid out-of-bounds
+          this.carts.forEach(cv => {
+            if (cv.selectedAddressIdx >= this.userAddresses.length) {
+              cv.selectedAddressIdx = Math.max(0, this.userAddresses.length - 1);
+            }
+          });
+        }
+      },
+      error: () => { this.deletingAddrId = null; }
+    });
+  }
+
   private loadRestaurantName(cv: CartView): void {
     this.customerService.getRestaurantById(cv.restaurantId).subscribe({
       next: (res) => {
@@ -9743,6 +10167,11 @@ export class CustomerCartComponent implements OnInit {
           cv.restaurantName        = res.data.restaurantName || cv.restaurantId;
           cv.restaurantRating      = res.data.rating      || 0;
           cv.restaurantReviewCount = res.data.reviewCount || 0;
+          // City mismatch check
+          const restCity = (res.data.city || '').toLowerCase().trim();
+          const selCity  = this.selectedCity.toLowerCase().trim();
+          cv.restaurantCity = restCity;
+          cv.cityMismatch   = !!(restCity && selCity && restCity !== selCity);
         }
       },
       error: () => {}
@@ -9777,6 +10206,22 @@ export class CustomerCartComponent implements OnInit {
   applyCoupon(cv: CartView): void {
     const code = cv.couponCode.trim().toUpperCase();
     if (!code) return;
+
+    // UPI150 requires UPI payment method — validate on frontend before even calling context
+    if (code === 'UPI150' && cv.paymentMethod !== 'upi') {
+      cv.couponApplied  = false;
+      cv.discountAmount = 0;
+      cv.couponError    = '❌ UPI150 is only valid when paying via UPI. Please select UPI as payment method.';
+      return;
+    }
+
+    // BOGO1 requires Net Banking
+    if (code === 'BOGO1' && cv.paymentMethod !== 'netbanking') {
+      cv.couponApplied  = false;
+      cv.discountAmount = 0;
+      cv.couponError    = '❌ BOGO1 is only valid when paying via Net Banking. Please select Net Banking as payment method.';
+      return;
+    }
 
     if (code === 'PREM20') {
       // Need restaurant rating & reviewCount — use cached values (set by loadRestaurantName)
@@ -9903,9 +10348,11 @@ export class CustomerCartComponent implements OnInit {
           headers: this.authService.getAuthHeaders()
         }).subscribe({
           next: (profileRes) => {
-            const addresses: any[] = profileRes?.data?.addresses || [];
-            const firstAddr = addresses[0];
-            if (!firstAddr) {
+            const addresses: any[] = this.userAddresses.length
+              ? this.userAddresses
+              : (profileRes?.data?.addresses || []);
+            const addr = addresses[cv.selectedAddressIdx] || addresses[0];
+            if (!addr) {
               cv.loading      = false;
               cv.errorMessage = '📍 No delivery address saved. Please go to Profile and add one first.';
               resolve(null); return;
@@ -9914,7 +10361,8 @@ export class CustomerCartComponent implements OnInit {
             this.orderService.createOrder({
               userId:         user.id,
               restaurantId:   cv.restaurantId,
-              addressId:      String(firstAddr._id),
+              addressId:      String(addr._id),
+              paymentMethod:  cv.paymentMethod,
               couponCode:     cv.couponApplied ? cv.couponCode.toUpperCase() : undefined,
               discountAmount: cv.couponApplied ? cv.discountAmount : 0,
               finalAmount:    this.finalTotalOf(cv),
@@ -10065,12 +10513,8 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
 
     <!-- Restaurant Tabs (shown only if more than 1 cart) -->
     <div class="restaurant-tabs" *ngIf="carts.length > 1">
-      <button
-        *ngFor="let cv of carts; let i = index"
-        class="rest-tab"
-        [class.active]="activeIdx === i"
-        [class.tab-placed]="cv.orderPlaced"
-        (click)="activeIdx = i">
+      <button *ngFor="let cv of carts; let i = index" class="rest-tab" [class.active]="activeIdx === i"
+        [class.tab-placed]="cv.orderPlaced" (click)="activeIdx = i">
         <span *ngIf="cv.orderPlaced" class="tab-check">✓</span>
         🍽 {{ cv.restaurantName }}
         <span class="tab-badge">{{ itemCountOf(cv) }}</span>
@@ -10083,23 +10527,20 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
         <span class="place-all-label">🛝 {{ carts.length }} restaurant carts ready</span>
         <span class="place-all-hint">Place one at a time — or all at once</span>
       </div>
-      <div *ngIf="placeAllError" class="place-all-msg"
-           [class.place-all-success]="placeAllError.includes('✅')"
-           [class.place-all-fail]="placeAllError.includes('❌') && !placeAllError.includes('✅')">
+      <div *ngIf="placeAllError" class="place-all-msg" [class.place-all-success]="placeAllError.includes('✅')"
+        [class.place-all-fail]="placeAllError.includes('❌') && !placeAllError.includes('✅')">
         {{ placeAllError }}
       </div>
       <div class="place-all-actions">
         <button class="btn-place-single-bar"
-                [disabled]="placeAllLoading || !activeCart || activeCart.loading || activeCart.orderPlaced"
-                (click)="activeCart && placeSingleOrder(activeCart)">
+          [disabled]="placeAllLoading || !activeCart || activeCart.loading || activeCart.orderPlaced"
+          (click)="activeCart && placeSingleOrder(activeCart)">
           <ng-container *ngIf="activeCart?.orderPlaced">✅ Placed — {{ activeCart?.restaurantName }}</ng-container>
           <ng-container *ngIf="!activeCart?.orderPlaced">
             {{ activeCart?.loading ? '⏳ Placing…' : '🛒 Place: ' + (activeCart?.restaurantName || '') }}
           </ng-container>
         </button>
-        <button class="btn-place-all"
-                [disabled]="placeAllLoading"
-                (click)="placeAllOrders()">
+        <button class="btn-place-all" [disabled]="placeAllLoading" (click)="placeAllOrders()">
           {{ placeAllLoading ? '⏳ Placing All…' : '🚀 Place All (' + carts.length + ')' }}
         </button>
       </div>
@@ -10112,11 +10553,24 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
       <div *ngIf="cv.errorMessage" class="error-banner">
         ⚠️ {{ cv.errorMessage }}
         <a *ngIf="cv.errorMessage.includes('address')" routerLink="/customer/profile"
-           style="margin-left:8px;color:#A3E635;font-weight:700;">→ Go to Profile</a>
+          style="margin-left:8px;color:#A3E635;font-weight:700;">→ Go to Profile</a>
       </div>
 
       <!-- Price change warning -->
       <div *ngIf="cv.priceWarning" class="price-warning-banner">{{ cv.priceWarning }}</div>
+
+      <!-- ⚠️ CITY MISMATCH BANNER -->
+      <div *ngIf="cv.cityMismatch" class="city-mismatch-banner">
+        <span class="mismatch-icon">🏙️</span>
+        <div class="mismatch-text">
+          <strong>{{ cv.restaurantName }}</strong> is in
+          <span class="mismatch-city">{{ cv.restaurantCity | titlecase }}</span>,
+          not your current city
+          <span class="mismatch-city">{{ selectedCity | titlecase }}</span>.
+          You cannot order from this cart in your current city.
+        </div>
+        <button class="btn-clear-mismatch" (click)="clearCart(cv)">🗑 Clear Cart</button>
+      </div>
 
       <div class="cart-layout">
 
@@ -10137,7 +10591,7 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
               <div class="qty-stepper">
                 <button class="qty-btn minus" (click)="decrease(cv, item)" [disabled]="inFlight[item.itemId]">−</button>
                 <span class="qty-value">{{ item.quantity }}</span>
-                <button class="qty-btn plus"  (click)="increase(cv, item)" [disabled]="inFlight[item.itemId]">+</button>
+                <button class="qty-btn plus" (click)="increase(cv, item)" [disabled]="inFlight[item.itemId]">+</button>
               </div>
               <span class="item-subtotal">₹{{ (item.price * item.quantity) | number:'1.0-0' }}</span>
             </div>
@@ -10152,18 +10606,14 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
           <div class="coupon-section">
             <p class="summary-title" style="font-size:14px;margin-bottom:12px;">🎟 Coupon Code</p>
             <div class="coupon-input-row">
-              <input class="coupon-input"
-                     [(ngModel)]="cv.couponCode"
-                     (ngModelChange)="onCouponChange(cv)"
-                     placeholder="e.g. FLAT100"
-                     [class.coupon-valid]="cv.couponApplied"
-                     [disabled]="cv.couponApplied">
+              <input class="coupon-input" [(ngModel)]="cv.couponCode" (ngModelChange)="onCouponChange(cv)"
+                placeholder="e.g. FLAT100" [class.coupon-valid]="cv.couponApplied" [disabled]="cv.couponApplied">
               <button class="coupon-btn" *ngIf="!cv.couponApplied" (click)="applyCoupon(cv)">Apply</button>
               <button class="coupon-btn" *ngIf="cv.couponApplied" (click)="removeCoupon(cv)"
-                      style="background:rgba(239,68,68,0.15);color:#FCA5A5;">✕</button>
+                style="background:rgba(239,68,68,0.15);color:#FCA5A5;">✕</button>
             </div>
             <p class="coupon-msg coupon-success" *ngIf="cv.couponApplied">✅ {{ cv.couponMessage }}</p>
-            <p class="coupon-msg coupon-fail"    *ngIf="cv.couponError">{{ cv.couponError }}</p>
+            <p class="coupon-msg coupon-fail" *ngIf="cv.couponError">{{ cv.couponError }}</p>
           </div>
 
           <!-- Summary card -->
@@ -10185,11 +10635,114 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
               </div>
             </div>
 
+            <!-- ════ DELIVERY ADDRESS SECTION ════ -->
+            <div class="address-section">
+              <div class="address-section-head">
+                <p class="address-label">📍 Delivery Address</p>
+                <button class="btn-add-addr" (click)="openAddForm()" *ngIf="!showAddForm">
+                  ➕ Add new
+                </button>
+              </div>
+
+              <!-- Saved address pills -->
+              <div class="address-pills" *ngIf="userAddresses.length > 0 && !showAddForm">
+                <label *ngFor="let addr of userAddresses; let i = index" class="addr-pill"
+                  [class.active]="cv.selectedAddressIdx === i">
+                  <input type="radio" [name]="'addr-' + cv.cartId" [value]="i" [(ngModel)]="cv.selectedAddressIdx">
+                  <span class="addr-text">
+                    <strong>{{ addr.street || addr.landmark || 'Address ' + (i+1) }}</strong>
+                    <span *ngIf="addr.landmark && addr.street" class="addr-sub">, {{ addr.landmark }}</span>
+                    <span *ngIf="addr.pincode" class="addr-sub"> — {{ addr.pincode }}</span>
+                    <span *ngIf="addr.city" class="addr-city">{{ addr.city }}</span>
+                  </span>
+                  <!-- Delete button -->
+                  <button class="btn-del-addr" (click)="$event.preventDefault(); deleteAddress(addr, i)"
+                    [disabled]="deletingAddrId === addr._id" title="Remove this address">
+                    {{ deletingAddrId === addr._id ? '…' : '🗑' }}
+                  </button>
+                </label>
+              </div>
+
+              <!-- No address message when form hidden -->
+              <div *ngIf="userAddresses.length === 0 && !showAddForm" class="no-address-warn">
+                No saved addresses — add one below 👇
+              </div>
+
+              <!-- ── INLINE ADD ADDRESS FORM ── -->
+              <div *ngIf="showAddForm" class="add-addr-form">
+                <p class="add-addr-title">New Delivery Address</p>
+
+                <div class="addr-form-fields">
+                  <div class="addr-field">
+                    <label>Street / Area *</label>
+                    <input type="text" [(ngModel)]="newStreet" name="newStreet" placeholder="e.g. FC Road, Deccan">
+                  </div>
+                  <div class="addr-field">
+                    <label>Landmark</label>
+                    <input type="text" [(ngModel)]="newLandmark" name="newLandmark" placeholder="e.g. Near Bus Stand">
+                  </div>
+                  <div class="addr-field addr-field-half">
+                    <label>Pincode</label>
+                    <input type="text" [(ngModel)]="newPincode" name="newPincode" placeholder="411001" maxlength="6">
+                  </div>
+                  <div class="addr-field addr-field-half">
+                    <label>City (auto)</label>
+                    <input type="text" [value]="selectedCity || 'Set in home →'" readonly class="city-readonly">
+                  </div>
+                </div>
+
+                <div *ngIf="addrError" class="addr-error">⚠ {{ addrError }}</div>
+
+                <div class="addr-form-actions">
+                  <button class="btn-save-addr" (click)="saveNewAddress()" [disabled]="addrSaving">
+                    {{ addrSaving ? 'Saving…' : '✓ Save Address' }}
+                  </button>
+                  <button class="btn-cancel-addr" (click)="cancelAddForm()">Cancel</button>
+                </div>
+              </div>
+
+              <!-- Contact phone -->
+              <div class="phone-row">
+                <label class="phone-label">📞 Contact Number</label>
+                <input class="phone-input" type="tel" [(ngModel)]="cv.contactPhone" [name]="'phone-' + cv.cartId"
+                  placeholder="10-digit mobile" maxlength="10">
+                <span class="phone-hint">Delivery agent will call on this number</span>
+              </div>
+            </div>
+
+            <!-- Payment Method Selector -->
+            <div class="payment-section">
+              <p class="payment-label">💳 Payment Method</p>
+              <div class="payment-pills">
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'cod'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="cod" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 💵 Cash on Delivery
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'upi'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="upi" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 📱 UPI
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'card'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="card" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 💳 Card
+                </label>
+                <label class="pay-pill" [class.active]="cv.paymentMethod === 'netbanking'">
+                  <input type="radio" name="pay-{{cv.cartId}}" value="netbanking" [(ngModel)]="cv.paymentMethod"
+                    (ngModelChange)="onCouponChange(cv)"> 🏦 Net Banking
+                </label>
+              </div>
+              <p class="pay-note" *ngIf="cv.paymentMethod === 'cod'">🔴 Cash will be collected at delivery</p>
+              <p class="pay-note pay-note-paid" *ngIf="cv.paymentMethod !== 'cod'">✅ Pre-paid — no cash needed at door
+              </p>
+            </div>
+
             <button class="btn-checkout"
-                    [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading"
-                    (click)="placeSingleOrder(cv)">
-              <ng-container *ngIf="cv.orderPlaced">✅ Order Placed!</ng-container>
-              <ng-container *ngIf="!cv.orderPlaced">{{ cv.loading ? 'Placing Order…' : '🚀 Place This Order' }}</ng-container>
+              [disabled]="cv.loading || cv.items.length === 0 || cv.orderPlaced || placeAllLoading || cv.cityMismatch"
+              [class.btn-mismatch]="cv.cityMismatch" (click)="placeSingleOrder(cv)">
+              <ng-container *ngIf="cv.cityMismatch">🚫 Wrong City</ng-container>
+              <ng-container *ngIf="!cv.cityMismatch && cv.orderPlaced">✅ Order Placed!</ng-container>
+              <ng-container *ngIf="!cv.cityMismatch && !cv.orderPlaced">{{ cv.loading ? 'Placing Order…' : '🚀 Place
+                This Order' }}</ng-container>
             </button>
 
             <button class="btn-continue" (click)="goHome()">+ Add from another restaurant</button>
@@ -10202,7 +10755,6 @@ FILE (83/123): frontend/src/app/customer/customer-cart/customer-cart.component.h
   </div>
 
 </div>
-
 
 ============================================================
 FILE (84/123): frontend/src/app/customer/customer-cart/customer-cart.component.css
@@ -10288,6 +10840,54 @@ FILE (84/123): frontend/src/app/customer/customer-cart/customer-cart.component.c
   font-size: 14px;
   font-weight: 600;
   animation: popIn 0.3s ease;
+}
+
+/* ── City mismatch banner ─────────────────────────────────── */
+.city-mismatch-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(239,68,68,0.06);
+  border: 1.5px solid rgba(239,68,68,0.35);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  animation: popIn 0.3s ease;
+}
+.mismatch-icon { font-size: 22px; flex-shrink: 0; }
+.mismatch-text {
+  flex: 1;
+  font-size: 13px;
+  color: #FCA5A5;
+  line-height: 1.5;
+}
+.mismatch-city {
+  font-weight: 800;
+  color: #F87171;
+  background: rgba(239,68,68,0.12);
+  padding: 1px 6px;
+  border-radius: 5px;
+}
+.btn-clear-mismatch {
+  flex-shrink: 0;
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.35);
+  color: #FCA5A5;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-clear-mismatch:hover { background: rgba(239,68,68,0.28); }
+
+/* Disabled checkout button for mismatch state */
+.btn-checkout.btn-mismatch {
+  background: rgba(239,68,68,0.15) !important;
+  color: #FCA5A5 !important;
+  cursor: not-allowed;
+  opacity: 0.8;
 }
 
 /* ── State boxes ─────────────────────────────────────────── */
@@ -10376,7 +10976,19 @@ FILE (84/123): frontend/src/app/customer/customer-cart/customer-cart.component.c
 .remove-btn:disabled { opacity: 0.25; cursor: not-allowed; }
 
 /* ── Summary column ──────────────────────────────────────── */
-.summary-column { position: sticky; top: 24px; }
+.summary-column {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Subtle scrollbar for dark theme */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99,179,237,0.3) transparent;
+}
+.summary-column::-webkit-scrollbar { width: 4px; }
+.summary-column::-webkit-scrollbar-thumb { background: rgba(99,179,237,0.25); border-radius: 4px; }
+.summary-column::-webkit-scrollbar-track { background: transparent; }
 
 .summary-card {
   background: var(--card-bg);
@@ -10710,6 +11322,354 @@ FILE (84/123): frontend/src/app/customer/customer-cart/customer-cart.component.c
   color: #4ADE80;
 }
 
+/* ══════════════════════════════════════════════════════════════
+   PAYMENT METHOD SELECTOR
+══════════════════════════════════════════════════════════════ */
+.payment-section {
+  margin: 18px 0 14px;
+  padding: 16px;
+  background: #1C2030;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.payment-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0 0 12px;
+  letter-spacing: 0.3px;
+}
+
+.payment-pills {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.pay-pill {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 12px;
+  background: #252A3D;
+  border: 1.5px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: var(--transition);
+  user-select: none;
+}
+.pay-pill:hover {
+  border-color: rgba(163,230,53,0.25);
+  color: var(--text);
+}
+.pay-pill.active {
+  background: rgba(163,230,53,0.1);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-script-shadow: 0 0 10px rgba(163,230,53,0.12);
+}
+.pay-pill input[type="radio"] {
+  display: none;   /* hide native radio; visual handled by .active class */
+}
+
+.pay-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #FCA5A5;
+  padding: 7px 12px;
+  background: rgba(239,68,68,0.07);
+  border-radius: 8px;
+  border-left: 3px solid #EF4444;
+}
+.pay-note-paid {
+  color: #4ADE80;
+  background: rgba(74,222,128,0.07);
+  border-left-color: #4ADE80;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   DELIVERY ADDRESS SELECTOR
+══════════════════════════════════════════════════════════════ */
+.address-section {
+  margin: 18px 0 14px;
+  padding: 16px;
+  background: #1C2030;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.address-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  margin: 0;
+  letter-spacing: 0.3px;
+}
+
+/* Header row: label + add-new button */
+.address-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.btn-add-addr {
+  background: rgba(163,230,53,0.12);
+  border: 1px solid rgba(163,230,53,0.35);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.btn-add-addr:hover {
+  background: rgba(163,230,53,0.22);
+  transform: scale(1.03);
+}
+
+.no-address-warn {
+  font-size: 13px;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+.address-pills {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.addr-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-size: 13px;
+  background: rgba(255,255,255,0.02);
+}
+.addr-pill:hover {
+  border-color: rgba(99,179,237,0.4);
+  background: rgba(99,179,237,0.05);
+}
+.addr-pill.active {
+  border-color: #63B3ED;
+  background: rgba(99,179,237,0.08);
+}
+.addr-pill input[type="radio"] {
+  margin-top: 0;
+  accent-color: #63B3ED;
+  flex-shrink: 0;
+}
+.addr-text {
+  flex: 1;
+  line-height: 1.5;
+  color: var(--text);
+  font-weight: 600;
+}
+.addr-sub {
+  font-weight: 400;
+  color: var(--muted);
+  font-size: 12px;
+}
+.addr-city {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #63B3ED;
+  background: rgba(99,179,237,0.1);
+  padding: 1px 6px;
+  border-radius: 8px;
+}
+
+/* Delete address button */
+.btn-del-addr {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0.45;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: opacity 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.btn-del-addr:hover:not(:disabled) {
+  opacity: 1;
+  background: rgba(239,68,68,0.12);
+}
+.btn-del-addr:disabled { opacity: 0.25; cursor: default; }
+
+/* ── Inline add-address form ─────────────────────────────────── */
+.add-addr-form {
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid rgba(99,179,237,0.25);
+  border-radius: 12px;
+  padding: 14px 16px;
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(-4px); } to { opacity:1; transform:translateY(0); } }
+
+.add-addr-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #63B3ED;
+  margin: 0 0 12px;
+}
+
+.addr-form-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.addr-field {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.addr-field-half { grid-column: auto; }
+
+.addr-field label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.addr-field input {
+  padding: 10px 12px;
+  background: #1a1f2e;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  width: 100%;
+  box-sizing: border-box;
+  /* Force dark text for autofill */
+  -webkit-text-fill-color: #e2e8f0 !important;
+}
+.addr-field input:focus {
+  border-color: #63B3ED;
+  box-shadow: 0 0 0 3px rgba(99,179,237,0.12);
+}
+/* Override browser autofill yellow/white background */
+.addr-field input:-webkit-autofill,
+.addr-field input:-webkit-autofill:hover,
+.addr-field input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1a1f2e inset !important;
+  -webkit-text-fill-color: #e2e8f0 !important;
+  border-color: #63B3ED;
+  transition: background-color 9999s ease-in-out 0s;
+}
+.city-readonly {
+  color: #63B3ED !important;
+  -webkit-text-fill-color: #63B3ED !important;
+  font-weight: 700 !important;
+  background: #12192e !important;
+  -webkit-box-shadow: 0 0 0 1000px #12192e inset !important;
+  cursor: default;
+  opacity: 1;
+}
+
+.addr-error {
+  font-size: 12px;
+  color: #FCA5A5;
+  background: rgba(239,68,68,0.08);
+  border-left: 3px solid #EF4444;
+  border-radius: 0 6px 6px 0;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.addr-form-actions {
+  display: flex;
+  gap: 8px;
+}
+.btn-save-addr {
+  background: var(--primary);
+  color: #0a0d12;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.15s;
+}
+.btn-save-addr:hover:not(:disabled) { opacity: 0.88; transform: scale(1.02); }
+.btn-save-addr:disabled { opacity: 0.4; cursor: default; }
+.btn-cancel-addr {
+  background: rgba(255,255,255,0.05);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.btn-cancel-addr:hover { background: rgba(255,255,255,0.09); }
+
+/* ── Contact phone field ─────────────────────────────────────── */
+.phone-row {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.phone-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+}
+.phone-input {
+  padding: 9px 12px;
+  background: #1a1f2e;
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: #e2e8f0;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  max-width: 200px;
+  -webkit-text-fill-color: #e2e8f0 !important;
+}
+.phone-input:-webkit-autofill,
+.phone-input:-webkit-autofill:hover,
+.phone-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1a1f2e inset !important;
+  -webkit-text-fill-color: #e2e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+.phone-input:focus { border-color: #63B3ED; box-shadow: 0 0 0 3px rgba(99,179,237,0.1); }
+.phone-hint {
+  font-size: 11px;
+  color: var(--dim, #64748B);
+}
 
 
 ============================================================
@@ -10970,9 +11930,9 @@ export class CustomerOrdersComponent implements OnInit, OnDestroy {
     return parts.join(', ') || '—';
   }
 
-  /** Show finalAmount if it's been set and > 0, otherwise fall back to totalAmount */
+  /** Show finalAmount if set, otherwise fall back to totalAmount */
   displayAmount(order: any): number {
-    return (order.finalAmount && order.finalAmount > 0) ? order.finalAmount : (order.totalAmount || 0);
+    return (order.finalAmount != null) ? order.finalAmount : (order.totalAmount || 0);
   }
 }
 
@@ -11933,6 +12893,7 @@ FILE (87/123): frontend/src/app/customer/customer-orders/customer-orders.compone
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.72);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -12585,6 +13546,7 @@ FILE (90/123): frontend/src/app/customer/customer-profile/customer-profile.compo
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: background 0.2s;
 }
@@ -13285,7 +14247,7 @@ export const ALL_OFFERS: Offer[] = [
   { id:2,  code:'FLAT100',  title:'Flat ₹100 OFF',  description:'On orders above ₹299',                      type:'flat',    value:100, cap:100, minOrder:299, emoji:'💸', color:'#8a2be2' },
   { id:3,  code:'BOGO1',    title:'Buy 1 Get 1',    description:'On selected restaurants today',              type:'bogo',    value:50,  cap:200, minOrder:0,   emoji:'🎁', color:'#00c878' },
   { id:4,  code:'WKND40',   title:'40% OFF',        description:'Weekend special — all cuisines',             type:'percent', value:40,  cap:80,  minOrder:0,   emoji:'🎉', color:'#f7b731' },
-  { id:5,  code:'FREEDEL',  title:'Free Delivery',  description:'On any order, no minimum',                   type:'free',    value:0,   cap:0,   minOrder:0,   emoji:'🛵', color:'#0fbcf9' },
+
   { id:6,  code:'SAVE60',   title:'Flat ₹60 OFF',   description:'On orders ₹199+',                           type:'flat',    value:60,  cap:60,  minOrder:199, emoji:'🏷', color:'#fd9644' },
   { id:7,  code:'RICE50',   title:'50% OFF',        description:'On biryani & rice specials up to ₹75',      type:'percent', value:50,  cap:75,  minOrder:0,   emoji:'🍛', color:'#e84393' },
   { id:8,  code:'UPI150',   title:'₹150 Cashback',  description:'Paid via UPI — credited in 24 hrs',         type:'flat',    value:150, cap:150, minOrder:0,   emoji:'💳', color:'#26de81' },
@@ -13896,8 +14858,8 @@ FILE (101/123): frontend/src/app/customer/invoice/invoice.component.html
     <div class="inv-meta">
       <div class="meta-col">
         <div class="meta-row">
-          <span class="meta-label">Order ID</span>
-          <span class="meta-value mono">#{{ invoice.orderId }}</span>
+          <span class="meta-label">Restaurant</span>
+          <span class="meta-value">{{ invoice.restaurantName || '—' }}</span>
         </div>
         <div class="meta-row">
           <span class="meta-label">Transaction ID</span>
@@ -13919,7 +14881,17 @@ FILE (101/123): frontend/src/app/customer/invoice/invoice.component.html
         </div>
         <div class="meta-row">
           <span class="meta-label">Payment Mode</span>
-          <span class="meta-value">Cash on Delivery</span>
+          <span class="meta-value">
+            <ng-container *ngIf="invoice.paymentMethod === 'cod'">💵 Cash on Delivery</ng-container>
+            <ng-container *ngIf="invoice.paymentMethod === 'upi'">📱 UPI</ng-container>
+            <ng-container *ngIf="invoice.paymentMethod === 'card'">💳 Card</ng-container>
+            <ng-container *ngIf="invoice.paymentMethod === 'netbanking'">🏦 Net Banking</ng-container>
+            <ng-container *ngIf="!invoice.paymentMethod">💵 Cash on Delivery</ng-container>
+            &nbsp;<span [style.color]="invoice.isPaid ? '#4ADE80' : '#F59E0B'"
+                        [style.font-size]="'11px'" [style.font-weight]="'700'">
+              {{ invoice.isPaid ? '✅ Paid' : '⏳ Pay on Delivery' }}
+            </span>
+          </span>
         </div>
       </div>
     </div>
@@ -13956,9 +14928,15 @@ FILE (101/123): frontend/src/app/customer/invoice/invoice.component.html
         <span>Delivery Fee</span>
         <span class="green">FREE</span>
       </div>
+      <!-- Discount row — only shown when a coupon was applied -->
+      <div class="total-row discount-row" *ngIf="invoice.discountAmount > 0">
+        <span>🏷 Discount <span class="coupon-tag" *ngIf="invoice.offerApplied">({{ invoice.offerApplied }})</span></span>
+        <span class="discount-val">− ₹{{ invoice.discountAmount | number:'1.0-0' }}</span>
+      </div>
+      <hr class="inv-divider">
       <div class="total-row total-grand">
         <span>Grand Total</span>
-        <span>₹{{ invoice.totalAmount | number:'1.0-0' }}</span>
+        <span>₹{{ (invoice.finalAmount != null ? invoice.finalAmount : invoice.totalAmount) | number:'1.0-0' }}</span>
       </div>
     </div>
 
@@ -14188,11 +15166,27 @@ FILE (102/123): frontend/src/app/customer/invoice/invoice.component.css
   color: #a0aec0;
 }
 .total-row .green { color: #68d391; font-weight: 600; }
+.discount-row { color: #4ADE80; }
+.discount-val { color: #4ADE80; font-weight: 700; }
+.coupon-tag {
+  font-size: 10px;
+  background: rgba(74,222,128,0.12);
+  border: 1px solid rgba(74,222,128,0.3);
+  padding: 1px 6px;
+  border-radius: 5px;
+  margin-left: 4px;
+  font-weight: 700;
+}
+.inv-divider {
+  border: none;
+  border-top: 1px solid #2d3158;
+  width: 100%;
+  margin: 2px 0;
+}
 .total-grand {
   font-size: 18px;
   font-weight: 800;
   color: #e2e8f0;
-  border-top: 1px solid #2d3158;
   padding-top: 10px;
   margin-top: 4px;
 }
@@ -16470,7 +17464,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   get totalEarnings(): number {
     return this.orders
       .filter(o => o.status === 'delivered')
-      .reduce((sum, o) => sum + ((o.finalAmount && o.finalAmount > 0) ? o.finalAmount : (o.totalAmount || 0)), 0);
+      .reduce((sum, o) => sum + (o.finalAmount != null ? o.finalAmount : (o.totalAmount || 0)), 0);
   }
 
 
@@ -16529,6 +17523,13 @@ FILE (113/123): frontend/src/app/RestaurantOwner/orders/orders.component.html
           <span class="status-pill" [class]="order.status">{{ order.status | titlecase }}</span>
         </div>
 
+        <!-- CUSTOMER INFO -->
+        <div class="customer-info-row" *ngIf="order.customerName">
+          <span class="cust-icon">👤</span>
+          <span class="cust-name">{{ order.customerName }}</span>
+          <span class="cust-phone" *ngIf="order.customerPhone"> · 📞 {{ order.customerPhone }}</span>
+        </div>
+
         <!-- ITEMS -->
         <div class="order-items">
           <div *ngFor="let item of order.enrichedItems || order.items" class="order-item-row">
@@ -16540,7 +17541,22 @@ FILE (113/123): frontend/src/app/RestaurantOwner/orders/orders.component.html
 
         <!-- FOOTER -->
         <div class="order-foot">
-          <span class="total-amount"><strong>Total: ₹{{ order.totalAmount | number:'1.0-0' }}</strong></span>
+          <!-- Discount badge if coupon applied -->
+          <span class="discount-badge" *ngIf="order.discountAmount > 0">
+            🏷 {{ order.offerApplied }} — ₹{{ order.discountAmount | number:'1.0-0' }} off
+          </span>
+          <span class="total-amount">
+            <strong>Total: ₹{{ (order.finalAmount != null ? order.finalAmount : order.totalAmount) | number:'1.0-0' }}</strong>
+          </span>
+
+          <!-- Payment badge -->
+          <span class="pay-badge pay-badge-paid" *ngIf="order.isPaid">
+            ✅ Pre-Paid
+            <span class="pay-method-tag">{{ order.paymentMethod === 'upi' ? 'UPI' : order.paymentMethod === 'card' ? 'Card' : 'Net Banking' }}</span>
+          </span>
+          <span class="pay-badge pay-badge-cod" *ngIf="!order.isPaid">
+            🔴 COD — Collect ₹{{ (order.finalAmount || order.totalAmount) | number:'1.0-0' }}
+          </span>
 
           <!-- ── AGENT ASSIGNED — owner's work is done ── -->
           <div *ngIf="isAssigned(order)" class="agent-assigned-badge">
@@ -16864,6 +17880,63 @@ FILE (114/123): frontend/src/app/RestaurantOwner/orders/orders.component.css
   50%       { border-color: rgba(99,179,237,0.5); }
 }
 
+/* ── Payment badges ───────────────────────────────────────── */
+.pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.pay-badge-paid {
+  background: rgba(74,222,128,0.1);
+  border: 1px solid rgba(74,222,128,0.3);
+  color: #4ADE80;
+}
+.pay-method-tag {
+  background: rgba(74,222,128,0.15);
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+.pay-badge-cod {
+  background: rgba(239,68,68,0.1);
+  border: 1px solid rgba(239,68,68,0.3);
+  color: #FCA5A5;
+  font-weight: 700;
+}
+
+/* ── Customer info row ────────────────────────────────── */
+.customer-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(163,230,53,0.05);
+  border-left: 3px solid rgba(163,230,53,0.4);
+  border-radius: 0 6px 6px 0;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+.cust-icon { font-size: 14px; }
+.cust-name { font-weight: 700; color: #e2e8f0; }
+.cust-phone { color: #94A3B8; font-size: 12px; }
+
+/* ── Discount badge ───────────────────────────────────────── */
+.discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(74,222,128,0.08);
+  border: 1px solid rgba(74,222,128,0.25);
+  color: #4ADE80;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
 
 
 ============================================================
@@ -17266,6 +18339,7 @@ FILE (117/123): frontend/src/app/RestaurantOwner/profile/profile.component.css
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   transition: background 0.2s;
   flex-shrink: 0;
@@ -17625,7 +18699,7 @@ FILE (119/123): frontend/src/app/RestaurantOwner/owner-dashboard/owner-dashboard
       <span class="nav-role-badge">Restaurant Owner</span>
     </div>
     <div class="nav-actions">
-      <span class="nav-username" *ngIf="owner">{{ owner.username }}</span>
+      <span class="nav-username" *ngIf="owner">{{ owner.name || owner.username }}</span>
       <button class="btn-nav primary" routerLink="/restaurant" id="btn-manage-restaurants">🏪 Manage</button>
       <button class="btn-nav" (click)="goToOrders()" id="btn-view-orders">📋 Orders</button>
     </div>
@@ -17654,7 +18728,7 @@ FILE (119/123): frontend/src/app/RestaurantOwner/owner-dashboard/owner-dashboard
 
     <!-- Header -->
     <div class="page-header">
-      <h1>👋 Welcome back, {{ owner?.username || 'Owner' }}!</h1>
+      <h1>👋 Welcome back, {{ (owner?.name?.split(' ')[0]) || owner?.username || 'Owner' }}!</h1>
       <p>Here's a snapshot of your restaurants' performance.</p>
     </div>
 
