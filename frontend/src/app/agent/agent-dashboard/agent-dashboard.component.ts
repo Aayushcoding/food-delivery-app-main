@@ -20,6 +20,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
   activeOrders:    any[] = [];
   deliveryHistory: any[] = [];
   agentCities:     string[] = [];   // cities this agent delivers in (from profile)
+  noCitiesConfigured = false;        // true when agent has set zero cities
 
   // ── Earnings ──────────────────────────────────────────────────
   totalEarnings    = 0;
@@ -78,8 +79,9 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => {
-        this.availableOrders = res.data || [];
-        this.agentCities     = res.agentCities || [];
+        this.availableOrders      = res.data || [];
+        this.agentCities          = res.agentCities || [];
+        this.noCitiesConfigured   = !!res.noCitiesConfigured;
         this.loading = false;
       },
       error: () => { this.showToast('Could not load orders.', true); this.loading = false; }

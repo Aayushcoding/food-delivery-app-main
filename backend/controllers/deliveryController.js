@@ -342,14 +342,21 @@ const getAvailableOrdersForAgentRoute = async (req, res) => {
     // Orders ready for pickup: confirmed, preparing, or out_for_delivery (unassigned)
     // NOTE: Owners move orders: pending → confirmed → preparing
     // They do NOT set out_for_delivery — agents accept from confirmed/preparing onwards
-    let query = {
-      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
-      deliveryAgentId: null
-    };
 
-    if (agentCities.length > 0) {
-      query['deliveryAddress.city'] = { $in: agentCities };
+    // ── CITY GUARD: agents MUST configure their cities first ─────────────────
+    // If no cities are set, return an empty list with a clear message so agents
+    // are prompted to configure their profile — we must NOT fall through and
+    // show orders from every city.
+    if (agentCities.length === 0) {
+      console.log(`[available-orders] Agent ${req.agent?.id} has no cities configured — returning empty`);
+      return res.json({ success: true, data: [], agentCities: [], noCitiesConfigured: true });
     }
+
+    const query = {
+      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
+      deliveryAgentId: null,
+      'deliveryAddress.city': { $in: agentCities }
+    };
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
 

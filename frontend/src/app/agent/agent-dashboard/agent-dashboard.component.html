@@ -77,12 +77,17 @@
       <span>Showing orders in: <strong>{{ agentCities.join(', ') }}</strong></span>
       <a class="ci-link" (click)="goProfile()" id="lnk-manage-cities">Manage cities →</a>
     </div>
-    <div class="city-info-bar city-info-all" *ngIf="agentCities.length === 0">
-      <span class="ci-icon">🌐</span>
-      <span>Showing orders from <strong>all cities</strong>. <a class="ci-link" (click)="goProfile()" id="lnk-add-cities">Add your cities →</a></span>
+
+    <!-- ⚠️ No cities configured — block orders until agent sets up their cities -->
+    <div class="city-info-bar city-info-warn" *ngIf="noCitiesConfigured">
+      <span class="ci-icon">⚠️</span>
+      <span>
+        You haven't set your delivery cities yet. Orders are only shown for your selected cities.
+        <a class="ci-link" (click)="goProfile()" id="lnk-add-cities"><strong>Set up cities now →</strong></a>
+      </span>
     </div>
 
-    <div *ngIf="availableOrders.length===0" class="empty-state">
+    <div *ngIf="availableOrders.length === 0 && !noCitiesConfigured" class="empty-state">
       <p>😕 No orders available right now. Check back shortly!</p>
     </div>
 

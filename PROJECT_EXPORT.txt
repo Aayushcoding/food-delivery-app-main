@@ -1,6 +1,6 @@
 ﻿============================================================
 BYTEBITES - FOOD DELIVERY SYSTEM
-Full Project Export - Generated: 2026-04-23 11:46
+Full Project Export - Generated: 2026-04-24 10:01
 Node 24.14.0 | Angular 15.2.11 | MongoDB 8.2.5
 ============================================================
 
@@ -2897,14 +2897,21 @@ const getAvailableOrdersForAgentRoute = async (req, res) => {
     // Orders ready for pickup: confirmed, preparing, or out_for_delivery (unassigned)
     // NOTE: Owners move orders: pending → confirmed → preparing
     // They do NOT set out_for_delivery — agents accept from confirmed/preparing onwards
-    let query = {
-      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
-      deliveryAgentId: null
-    };
 
-    if (agentCities.length > 0) {
-      query['deliveryAddress.city'] = { $in: agentCities };
+    // ── CITY GUARD: agents MUST configure their cities first ─────────────────
+    // If no cities are set, return an empty list with a clear message so agents
+    // are prompted to configure their profile — we must NOT fall through and
+    // show orders from every city.
+    if (agentCities.length === 0) {
+      console.log(`[available-orders] Agent ${req.agent?.id} has no cities configured — returning empty`);
+      return res.json({ success: true, data: [], agentCities: [], noCitiesConfigured: true });
     }
+
+    const query = {
+      status: { $in: ['confirmed', 'preparing', 'out_for_delivery'] },
+      deliveryAgentId: null,
+      'deliveryAddress.city': { $in: agentCities }
+    };
 
     const orders = await Order.find(query).sort({ createdAt: -1 }).lean();
 
@@ -6505,6 +6512,7 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
   activeOrders:    any[] = [];
   deliveryHistory: any[] = [];
   agentCities:     string[] = [];   // cities this agent delivers in (from profile)
+  noCitiesConfigured = false;        // true when agent has set zero cities
 
   // ── Earnings ──────────────────────────────────────────────────
   totalEarnings    = 0;
@@ -6563,8 +6571,9 @@ export class AgentDashboardComponent implements OnInit, OnDestroy {
       { headers: this.authService.getAuthHeaders() }
     ).subscribe({
       next: res => {
-        this.availableOrders = res.data || [];
-        this.agentCities     = res.agentCities || [];
+        this.availableOrders      = res.data || [];
+        this.agentCities          = res.agentCities || [];
+        this.noCitiesConfigured   = !!res.noCitiesConfigured;
         this.loading = false;
       },
       error: () => { this.showToast('Could not load orders.', true); this.loading = false; }
@@ -6834,12 +6843,17 @@ FILE (71/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
       <span>Showing orders in: <strong>{{ agentCities.join(', ') }}</strong></span>
       <a class="ci-link" (click)="goProfile()" id="lnk-manage-cities">Manage cities →</a>
     </div>
-    <div class="city-info-bar city-info-all" *ngIf="agentCities.length === 0">
-      <span class="ci-icon">🌐</span>
-      <span>Showing orders from <strong>all cities</strong>. <a class="ci-link" (click)="goProfile()" id="lnk-add-cities">Add your cities →</a></span>
+
+    <!-- ⚠️ No cities configured — block orders until agent sets up their cities -->
+    <div class="city-info-bar city-info-warn" *ngIf="noCitiesConfigured">
+      <span class="ci-icon">⚠️</span>
+      <span>
+        You haven't set your delivery cities yet. Orders are only shown for your selected cities.
+        <a class="ci-link" (click)="goProfile()" id="lnk-add-cities"><strong>Set up cities now →</strong></a>
+      </span>
     </div>
 
-    <div *ngIf="availableOrders.length===0" class="empty-state">
+    <div *ngIf="availableOrders.length === 0 && !noCitiesConfigured" class="empty-state">
       <p>😕 No orders available right now. Check back shortly!</p>
     </div>
 
@@ -7751,6 +7765,17 @@ FILE (72/123): frontend/src/app/agent/agent-dashboard/agent-dashboard.component.
 .city-info-bar.city-info-all {
   background: rgba(255,255,255,0.03);
   border-color: #2d3158;
+}
+.city-info-bar.city-info-warn {
+  background: rgba(251,191,36,0.07);
+  border-color: rgba(251,191,36,0.35);
+  color: #fbbf24;
+  font-weight: 600;
+  animation: warnPulse 2.5s ease infinite;
+}
+@keyframes warnPulse {
+  0%, 100% { border-color: rgba(251,191,36,0.35); }
+  50%       { border-color: rgba(251,191,36,0.7); }
 }
 .ci-icon { font-size: 16px; flex-shrink: 0; }
 .ci-link {
